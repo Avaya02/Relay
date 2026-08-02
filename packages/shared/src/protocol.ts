@@ -1,8 +1,7 @@
 // WS message contract shared between packages/web and packages/server.
 // Phase 1: session join, live agent event broadcast, catch-up history.
-// Driver-lock messages (request_control / hand_over / release_control /
-// control_changed / control_requested) land in Phase 3, when there's
-// server-side logic to actually back them.
+// Phase 3: the driver lock (request_control / hand_over / release_control /
+// control_changed / control_requested).
 
 export type SessionStatus = "idle" | "working" | "done" | "error";
 
@@ -46,7 +45,29 @@ export type InstructMessage = {
 
 export type PingMessage = { type: "ping" };
 
-export type ClientMessage = JoinMessage | InstructMessage | PingMessage;
+// Ask the current driver to hand over. If nobody is driving, the server
+// grants this immediately instead of leaving it stranded with no one to
+// approve it.
+export type RequestControlMessage = { type: "request_control" };
+
+// Driver only. Not just a reply to a request — the driver can hand over to
+// any connected participant directly (spec §7's own copy: "Hand over to
+// alex").
+export type HandOverMessage = {
+  type: "hand_over";
+  toParticipantId: string;
+};
+
+// Driver only. Drops the lock; nobody drives until someone requests it.
+export type ReleaseControlMessage = { type: "release_control" };
+
+export type ClientMessage =
+  | JoinMessage
+  | InstructMessage
+  | PingMessage
+  | RequestControlMessage
+  | HandOverMessage
+  | ReleaseControlMessage;
 
 // --- Server -> Client ---
 
@@ -99,6 +120,19 @@ export type ErrorMessage = {
 
 export type PongMessage = { type: "pong" };
 
+// The lock moved (hand-over, release, auto-grant, or the driver disconnected).
+export type ControlChangedMessage = {
+  type: "control_changed";
+  driverId: string | null;
+};
+
+// Sent to the current driver only — drives the "grant?" prompt.
+export type ControlRequestedMessage = {
+  type: "control_requested";
+  participantId: string;
+  displayName: string;
+};
+
 export type ServerMessage =
   | JoinedMessage
   | SessionStateMessage
@@ -108,4 +142,6 @@ export type ServerMessage =
   | ParticipantJoinedMessage
   | ParticipantLeftMessage
   | ErrorMessage
-  | PongMessage;
+  | PongMessage
+  | ControlChangedMessage
+  | ControlRequestedMessage;
