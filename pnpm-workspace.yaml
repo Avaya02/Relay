@@ -1,0 +1,10 @@
+packages:
+  - "packages/*"
+
+# esbuild's install script picks the correct platform binary and tsx (the
+# server dev runner) needs it at runtime. sharp/unrs-resolver are optional
+# native deps of create-next-app that this project doesn't use.
+allowBuilds:
+  esbuild: true
+  sharp: false
+  unrs-resolver: false

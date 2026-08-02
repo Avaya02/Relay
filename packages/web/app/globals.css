@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+/*
+ * Relay design tokens (RELAY_BUILD_SPEC.md §7).
+ * Dark by default, no light-mode fallback — this app has one theme.
+ * Fonts, shadcn theming, and the action-ledger signature land with the
+ * real components that need them; this is just the base surface/text scale.
+ */
+:root {
+  --bg: #0e1116;
+  --surface: #151a21;
+  --surface-2: #1c232c;
+  --border: #232b35;
+
+  --text: #e6eaf0;
+  --text-dim: #8a94a6;
+
+  --accent: #4dd0c7;
+  --state-error: #d98a6a;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-dim: var(--text-dim);
+  --color-accent: var(--accent);
+  --color-state-error: var(--state-error);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}

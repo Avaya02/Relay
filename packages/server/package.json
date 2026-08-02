@@ -1,0 +1,22 @@
+{
+  "name": "@relay/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@relay/shared": "workspace:*",
+    "ws": "8.21.1"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.2",
+    "@types/ws": "8.18.1",
+    "tsx": "4.23.1",
+    "typescript": "7.0.2"
+  }
+}

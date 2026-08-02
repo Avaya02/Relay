@@ -1,0 +1,38 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# next.js
+.next/
+out/
+next-env.d.ts
+
+# server build output
+dist/
+
+# env
+.env
+.env*.local
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# typescript
+*.tsbuildinfo
+
+# test coverage
+coverage/
+
+# misc
+.DS_Store
+*.pem
+
+# demo repo working checkouts (server-managed, not source)
+packages/server/.demo-repo/
+packages/server/.sessions/
+
+# editor
+.vscode/*
+!.vscode/extensions.json
