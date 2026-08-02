@@ -1,10 +1,16 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+/*
+ ---break---
+ */
+@custom-variant dark (&:is(.dark *));
 
 /*
  * Relay design tokens (RELAY_BUILD_SPEC.md §7).
- * Dark by default, no light-mode fallback — this app has one theme.
- * Fonts, shadcn theming, and the action-ledger signature land with the
- * real components that need them; this is just the base surface/text scale.
+ * Dark is the only theme (no toggle) — `.dark` stays permanently on <html>
+ * (see layout.tsx) purely so shadcn's `dark:`-prefixed utility refinements
+ * apply deterministically, not based on OS preference.
  */
 :root {
   --bg: #0e1116;
@@ -15,8 +21,39 @@
   --text: #e6eaf0;
   --text-dim: #8a94a6;
 
+  /* Reserved for "live / active / you-are-driving" only — nothing
+     decorative. See RELAY_BUILD_SPEC.md §7. */
   --accent: #4dd0c7;
   --state-error: #d98a6a;
+
+  /* Small fixed palette assigned per participant (name dot, driving
+     cursor) — muted, not neon. Cycled by join order in Presence.tsx. */
+  --presence-1: #e5a3b3;
+  --presence-2: #9bb4e0;
+  --presence-3: #b9e0a5;
+  --presence-4: #e0c48a;
+
+  /* shadcn semantic roles, mapped onto the tokens above rather than left at
+     shadcn's own defaults. */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--surface-2);
+  --popover-foreground: var(--text);
+  --primary: var(--accent);
+  --primary-foreground: var(--bg);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--text-dim);
+  --accent-foreground: var(--bg);
+  --destructive: var(--state-error);
+  --destructive-foreground: var(--bg);
+  --border: #232b35;
+  --input: var(--border);
+  --ring: var(--accent);
+  --radius: 0.625rem;
 }
 
 @theme inline {
@@ -28,12 +65,48 @@
   --color-text-dim: var(--text-dim);
   --color-accent: var(--accent);
   --color-state-error: var(--state-error);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Characterful display face — landing hero + session title ONLY. Never
+     used for buttons, labels, or data (RELAY_BUILD_SPEC.md §7 + product-
+     register typography rules: one working family everywhere else). */
+  --font-heading: var(--font-display);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
 }

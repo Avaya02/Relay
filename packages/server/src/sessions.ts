@@ -1,3 +1,4 @@
+import { customAlphabet } from "nanoid";
 import type { WebSocket } from "ws";
 import type {
   Event,
@@ -19,6 +20,13 @@ export type Session = {
 
 const sessions = new Map<string, Session>();
 
+// Unambiguous alphabet (no 0/O/1/I/l) — these ids get read aloud and typed
+// when sharing a session link.
+const nextId = customAlphabet(
+  "23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz",
+  10,
+);
+
 function createSession(id: string): Session {
   const session: Session = {
     id,
@@ -36,9 +44,13 @@ export function getSession(id: string): Session | undefined {
   return sessions.get(id);
 }
 
-// Phase 1 has no POST /sessions yet (that's Phase 2) and no real repo working
-// dir (Phase 4/6.6) — just one fixed in-memory session so two browser windows
-// have somewhere to join: /session/demo.
+// Phase 2: POST /sessions calls this to mint a real, shareable session.
+export function createNewSession(): Session {
+  return createSession(nextId());
+}
+
+// The one fixed session from Phase 1, kept around for quick manual testing —
+// POST /sessions (above) is the real path now.
 export function bootstrapDemoSession(): Session {
   return getSession("demo") ?? createSession("demo");
 }
