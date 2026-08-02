@@ -81,6 +81,14 @@ export function attachWs(wss: WebSocketServer): void {
           }
           const { session, participant } = state;
 
+          if (participant.id !== session.driverId) {
+            send(socket, {
+              type: "error",
+              message: "only the driver can send instructions",
+            });
+            return;
+          }
+
           appendEvent(session, {
             kind: "user_instruction",
             by: participant.id,
@@ -88,6 +96,66 @@ export function attachWs(wss: WebSocketServer): void {
           });
           setStatus(session, "working");
           runMockAgent(session, msg.text);
+          break;
+        }
+
+        case "request_control": {
+          const state = connections.get(socket);
+          if (!state) return;
+          const { session, participant } = state;
+
+          if (session.driverId === null) {
+            // Nobody's driving — nothing to grant, nothing to wait for.
+            session.driverId = participant.id;
+            broadcast(session, {
+              type: "control_changed",
+              driverId: participant.id,
+            });
+            return;
+          }
+
+          const driver = session.participants.get(session.driverId);
+          if (driver) {
+            send(driver.socket, {
+              type: "control_requested",
+              participantId: participant.id,
+              displayName: participant.displayName,
+            });
+          }
+          break;
+        }
+
+        case "hand_over": {
+          const state = connections.get(socket);
+          if (!state) return;
+          const { session, participant } = state;
+
+          if (participant.id !== session.driverId) {
+            send(socket, {
+              type: "error",
+              message: "only the driver can hand over control",
+            });
+            return;
+          }
+          if (!session.participants.has(msg.toParticipantId)) return;
+
+          session.driverId = msg.toParticipantId;
+          broadcast(session, {
+            type: "control_changed",
+            driverId: session.driverId,
+          });
+          break;
+        }
+
+        case "release_control": {
+          const state = connections.get(socket);
+          if (!state) return;
+          const { session, participant } = state;
+
+          if (participant.id !== session.driverId) return;
+
+          session.driverId = null;
+          broadcast(session, { type: "control_changed", driverId: null });
           break;
         }
       }
@@ -100,12 +168,22 @@ export function attachWs(wss: WebSocketServer): void {
 
       const { session, participant } = state;
       session.participants.delete(participant.id);
+
+      // A disconnected driver can't be handed a lock back, so free it rather
+      // than leaving the session permanently stuck. No auto-reassignment to
+      // another participant — same "nobody drives until someone claims it"
+      // rule as an explicit release.
+      if (session.driverId === participant.id) {
+        session.driverId = null;
+        broadcast(session, { type: "control_changed", driverId: null });
+      }
+
       broadcast(session, { type: "participant_left", participant });
       for (const other of session.participants.values()) {
         send(other.socket, sessionStateMessage(session));
       }
-      // Driver reassignment on disconnect and session teardown (spec §6.2)
-      // are Phase 3 concerns — the fixed demo session just stays alive.
+      // Full session teardown (spec §6.2) is still not built — the fixed
+      // demo session just stays alive with no participants.
     });
   });
 }

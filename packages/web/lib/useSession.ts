@@ -20,8 +20,12 @@ export type UseSessionResult = {
   driverId: string | null;
   status: SessionStatus;
   lastError: string | null;
+  pendingRequests: Participant[];
   join: (displayName: string) => void;
   instruct: (text: string) => void;
+  requestControl: () => void;
+  handOver: (toParticipantId: string) => void;
+  releaseControl: () => void;
 };
 
 // Connects once per mount, sends `join`, and reduces every incoming
@@ -39,6 +43,7 @@ export function useSession(sessionId: string): UseSessionResult {
   const [driverId, setDriverId] = useState<string | null>(null);
   const [status, setStatus] = useState<SessionStatus>("idle");
   const [lastError, setLastError] = useState<string | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<Participant[]>([]);
 
   useEffect(() => {
     const socket = new WebSocket(WS_URL);
@@ -85,6 +90,21 @@ export function useSession(sessionId: string): UseSessionResult {
           // session_state is sent alongside these and is the source of
           // truth for the participant list — nothing to do here.
           break;
+        case "control_changed":
+          setDriverId(msg.driverId);
+          // Whoever it moved to, every outstanding request is now stale.
+          setPendingRequests([]);
+          break;
+        case "control_requested":
+          setPendingRequests((prev) =>
+            prev.some((p) => p.id === msg.participantId)
+              ? prev
+              : [
+                  ...prev,
+                  { id: msg.participantId, displayName: msg.displayName },
+                ],
+          );
+          break;
         case "error":
           setLastError(msg.message);
           break;
@@ -111,6 +131,27 @@ export function useSession(sessionId: string): UseSessionResult {
     }
   }
 
+  function requestControl() {
+    const socket = socketRef.current;
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: "request_control" }));
+    }
+  }
+
+  function handOver(toParticipantId: string) {
+    const socket = socketRef.current;
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: "hand_over", toParticipantId }));
+    }
+  }
+
+  function releaseControl() {
+    const socket = socketRef.current;
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: "release_control" }));
+    }
+  }
+
   return {
     connection,
     selfId,
@@ -119,7 +160,11 @@ export function useSession(sessionId: string): UseSessionResult {
     driverId,
     status,
     lastError,
+    pendingRequests,
     join,
     instruct,
+    requestControl,
+    handOver,
+    releaseControl,
   };
 }
