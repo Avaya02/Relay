@@ -3,7 +3,7 @@
 > Companion to `RELAY_BUILD_SPEC.md`. This tracks what's actually been built,
 > against the phase order in spec §9. Update this after each phase.
 
-**Current state: Phase 0, 1, 2, and 3 complete and verified. Phase 4 not started.**
+**Current state: Phase 0–4 complete and verified. Phase 5 not started.**
 
 No git commits yet — the working tree is untracked, waiting on you.
 
@@ -24,7 +24,9 @@ relay/
 │  │  ├─ sessions.ts               # in-memory Session registry, createNewSession(),
 │  │  │                              broadcast(), setStatus()
 │  │  ├─ transcript.ts             # appendEvent() — the one place seq gets assigned
-│  │  ├─ agent.ts                  # MOCK agent — canned event script on a timer, no SDK
+│  │  ├─ agent.ts                  # REAL Agent SDK wrapper + RELAY_AGENT flag (default mock)
+│  │  ├─ agent-mock.ts             # the Phase 1 scripted mock, kept as the offline path
+│  │  ├─ repo.ts                   # pristine clone + per-session working dirs (§6.6)
 │  │  └─ ws.ts                     # connection handling, instruct guard, the lock itself
 │  └─ web/
 │     ├─ app/page.tsx              # real landing page: hero, "Start a session" → redirect
@@ -88,24 +90,69 @@ Verified by actually driving headless browser windows against the live app
 - Zero console errors through every scenario above.
 - Holds up at a 375px viewport; keyboard focus rings are genuinely visible
   (see judgment calls below).
+- **The real agent, end to end (Phase 4):** a live two-turn run against a
+  session clone of PromptGuard — the agent read the README, wrote `HELLO.md`
+  with an accurate summary, and every step streamed as correctly-ordered
+  ledger events. Turn 2 ("what file did you just create?") answered from
+  memory with **zero tool calls**, proving `resume` carries context across
+  instructions, and `seq` continued unbroken across turns. Confirmed
+  afterwards that the file landed in the session clone and that the source
+  repo at `/Applications/Projects/PromptGuard` was untouched.
+
+## The real agent (Phase 4)
+
+**It defaults to the mock.** Nothing spends API credit unless you explicitly
+set `RELAY_AGENT=real`. Two env knobs:
+
+```sh
+RELAY_AGENT=real      # opt in to the real Agent SDK (default: mock)
+RELAY_MODEL=...       # default: claude-haiku-4-5
+RELAY_SOURCE_REPO=... # default: /Applications/Projects/PromptGuard
+```
+
+**The demo repo is your own PromptGuard, and the server only ever reads it.**
+`repo.ts` `git clone`s it once into `packages/server/.demo-repo` (committed
+state only — 1.8 MB of tracked source, not the 573 MB working tree), then gives
+each session its own disposable clone under `.sessions/<id>`. The agent's `cwd`
+is always a session clone; **no code path points it at the source**. Both
+scratch dirs are gitignored. Working dirs are deleted when the last participant
+disconnects, which also aborts any in-flight run so an abandoned tab can't keep
+burning credit.
+
+**Verified against the shipped `.d.ts`, not the docs pages** — the published TS
+reference disagreed with `@anthropic-ai/claude-agent-sdk@0.3.220` in ways that
+would have broken the mapping: assistant content lives at `message.content`
+(not a flat `content[]`), tool *results* arrive as `type: "user"` messages, and
+`PermissionMode` has six values rather than four.
+
+**Choices made:** §4's option (a) — coalesce text into one `agent_text` per
+assistant message. That makes partial streaming unnecessary (the deltas would
+be discarded), so `includePartialMessages` is off. Multi-turn uses `resume`
+rather than streaming-input mode, because instructions arrive as discrete WS
+events at unpredictable times, which fits resumed queries far better than
+holding an async iterable open across the session; the spec sanctions both.
+
+**Billing — the spec's caveat was right, and it changed.** Since 2026-06-15
+Agent SDK usage no longer draws on Pro/Max interactive limits; it draws on a
+**separate monthly Agent SDK credit you must claim**, per-user and non-poolable
+([docs](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan)).
+Auth needs no key — the SDK picks up the existing `claude` CLI subscription
+login, and `ANTHROPIC_API_KEY` is unset on this machine.
 
 ## Deliberately not built yet
 
 Everything here is a named future phase, not an oversight:
 
-- **No real agent.** `agent.ts` is a scripted mock — no
-  `@anthropic-ai/claude-agent-sdk` import anywhere. Swapping it in is Phase 4.
 - **No persistence.** Transcript lives only in server memory; a restart
   loses everything. Postgres mirror is Phase 5.
-- **No repo working dir.** There's nothing for the agent to actually operate
-  on yet — that arrives with the real SDK in Phase 4 (§6.6).
 - **The action ledger itself is untouched.** `StreamView.tsx`'s rows render
   exactly as they did in Phase 1 — no enter-animation, no mono-font swap to
   JetBrains/Berkeley Mono. That polish pass is still Phase 5. The display
   font (Space Grotesk) is scoped *only* to the landing hero and the session
   title — never body text, buttons, or the ledger.
-- **No session teardown.** Sessions never get disposed when everyone
-  disconnects — they just sit in memory. Fine for now; revisit later.
+- **Partial session teardown.** Working dirs and in-flight agent runs *are*
+  now cleaned up on last disconnect, but the in-memory session record itself
+  still lingers (deliberately — a quick refresh can rejoin).
 - **No "cancel a pending request" affordance.** Once a viewer clicks
   Request control, the button just sits on "Requested — waiting" until the
   driver acts (or hands over to someone else, which clears it). Minor,
@@ -171,8 +218,14 @@ Everything here is a named future phase, not an oversight:
 
 ## Next up
 
-Phase 4 (spec §9): swap the mock for the real Agent SDK. This is the first
-phase that costs real API money and needs subscription auth — worth talking
-through before I start (which auth path, whether to keep the mock behind a
-flag for offline dev, what demo repo the agent should work against). Say the
-word when you're ready.
+Phase 5 (spec §9), the last phase: the Postgres transcript mirror (§6.5), the
+full action-ledger design pass (§7 — real mono font, enter animation,
+`prefers-reduced-motion`), tidied empty/error states, and the recorded
+walkthrough. Stop there — everything past it (free-for-all input, sandboxing,
+GitHub OAuth, auth) is future work to describe, not build.
+
+**Worth deciding before Phase 5:** Haiku 4.5 fumbled the `Read` tool three
+times in the verified run (it passed relative paths where the tool wants
+absolute) before recovering on its own. Harmless and honest to watch, but a
+recorded demo would look noticeably crisper on Sonnet 5 or Opus 5 — a one-word
+change to `RELAY_MODEL`.
