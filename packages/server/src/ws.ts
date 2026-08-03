@@ -5,7 +5,8 @@ import { getSession, sessionStateMessage, setStatus } from "./sessions.js";
 import type { Session, SessionParticipant } from "./sessions.js";
 import { broadcast } from "./sessions.js";
 import { appendEvent } from "./transcript.js";
-import { runMockAgent } from "./agent.js";
+import { runAgent } from "./agent.js";
+import { disposeWorkingDir } from "./repo.js";
 
 type ConnectionState = {
   session: Session;
@@ -95,7 +96,7 @@ export function attachWs(wss: WebSocketServer): void {
             data: { text: msg.text },
           });
           setStatus(session, "working");
-          runMockAgent(session, msg.text);
+          runAgent(session, msg.text);
           break;
         }
 
@@ -182,8 +183,19 @@ export function attachWs(wss: WebSocketServer): void {
       for (const other of session.participants.values()) {
         send(other.socket, sessionStateMessage(session));
       }
-      // Full session teardown (spec §6.2) is still not built — the fixed
-      // demo session just stays alive with no participants.
+
+      // Nobody left watching: stop the agent rather than let an abandoned
+      // session keep spending API credit, and drop its working dir. The
+      // session row itself stays so a quick refresh can still rejoin.
+      if (session.participants.size === 0) {
+        session.agentAbort?.abort();
+        session.agentAbort = null;
+        if (session.workingDir) {
+          session.workingDir = null;
+          session.agentSessionId = null;
+          void disposeWorkingDir(session.id);
+        }
+      }
     });
   });
 }
