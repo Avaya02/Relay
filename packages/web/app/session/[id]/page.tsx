@@ -5,6 +5,7 @@ import { useSession } from "@/lib/useSession";
 import { StreamView } from "@/components/StreamView";
 import { Composer } from "@/components/Composer";
 import { Presence } from "@/components/Presence";
+import { ControlBar } from "@/components/ControlBar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -31,6 +32,8 @@ export default function SessionPage({
     );
   }
 
+  const isDriver = session.selfId !== null && session.selfId === session.driverId;
+
   return (
     <div className="flex h-screen flex-col bg-[var(--bg)]">
       <Header sessionId={sessionId} session={session} />
@@ -39,7 +42,16 @@ export default function SessionPage({
         participants={session.participants}
         selfId={session.selfId}
       />
-      <Composer onSend={(text) => session.instruct(text)} />
+      <ControlBar
+        participants={session.participants}
+        driverId={session.driverId}
+        selfId={session.selfId}
+        pendingRequests={session.pendingRequests}
+        onRequestControl={session.requestControl}
+        onHandOver={session.handOver}
+        onRelease={session.releaseControl}
+      />
+      {isDriver && <Composer onSend={(text) => session.instruct(text)} />}
     </div>
   );
 }

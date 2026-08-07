@@ -16,6 +16,15 @@ export type Session = {
   participants: Map<string, SessionParticipant>;
   events: Event[];
   seq: number;
+  // The demo-repo checkout this session's agent works in (spec §6.2/§6.6).
+  // Prepared lazily on first instruct — creating a session shouldn't pay for
+  // a clone nobody uses.
+  workingDir: string | null;
+  // Lets us stop an in-flight agent run (disconnect, teardown).
+  agentAbort: AbortController | null;
+  // The SDK's own session id, so follow-up instructions resume the same agent
+  // conversation instead of starting a fresh one each turn.
+  agentSessionId: string | null;
 };
 
 const sessions = new Map<string, Session>();
@@ -35,6 +44,9 @@ function createSession(id: string): Session {
     participants: new Map(),
     events: [],
     seq: 0,
+    workingDir: null,
+    agentAbort: null,
+    agentSessionId: null,
   };
   sessions.set(id, session);
   return session;
