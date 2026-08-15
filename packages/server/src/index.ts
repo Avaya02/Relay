@@ -3,6 +3,27 @@ import { WebSocketServer } from "ws";
 import { attachWs } from "./ws.js";
 import { bootstrapDemoSession, createNewSession } from "./sessions.js";
 
+// Optional convenience: packages/server/.env, if present, saves retyping
+// RELAY_AGENT etc. on every `pnpm dev`. Loaded first so agent.ts/repo.ts see
+// it via process.env. Silently skipped if the file doesn't exist — the
+// export-in-shell workflow still works exactly as before.
+try {
+  process.loadEnvFile();
+} catch {
+  // no .env file — fine, env vars can still be set in the shell
+}
+
+// Backstop only — the real fix for the known crash source (an unmasked/
+// malformed WS frame) is the per-socket 'error' handler in ws.ts. This is
+// here so a bug we haven't found yet degrades to one bad request instead of
+// killing every session on the process.
+process.on("uncaughtException", (err) => {
+  console.error("uncaught exception:", err);
+});
+process.on("unhandledRejection", (err) => {
+  console.error("unhandled rejection:", err);
+});
+
 const PORT = Number(process.env.PORT ?? 4000);
 
 // Local dev only (spec §8 — the server isn't deployed publicly yet), so a

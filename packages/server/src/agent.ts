@@ -1,5 +1,6 @@
 import path from "node:path";
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import type { DiffLine, ToolDetail } from "@relay/shared";
 import { setStatus, type Session } from "./sessions.js";
 import { appendEvent } from "./transcript.js";
 import { prepareWorkingDir } from "./repo.js";
@@ -12,27 +13,45 @@ import { runMockAgent } from "./agent-mock.js";
 //
 // Defaults to the mock so nothing spends API credit by accident — set
 // RELAY_AGENT=real to run the real thing.
-const USE_REAL_AGENT = process.env.RELAY_AGENT === "real";
-
-// Chosen explicitly; overridable without touching code.
-const MODEL = process.env.RELAY_MODEL ?? "claude-haiku-4-5";
-
+//
+// Read inside the function, not as a module-level const: ESM evaluates a
+// file's imports before its own top-level code runs, so index.ts's
+// `import { attachWs } from "./ws.js"` (which reaches this file) would
+// resolve before index.ts's process.loadEnvFile() call ever executed. A
+// frozen const here would permanently miss anything loaded from .env.
 export function runAgent(session: Session, instruction: string): void {
-  if (!USE_REAL_AGENT) {
-    runMockAgent(session, instruction);
+  if (process.env.RELAY_AGENT !== "real") {
+    runMockAgent(session, instruction, () => onRunSettled(session));
     return;
   }
-  void runRealAgent(session, instruction);
+  void runRealAgent(session, instruction).then(() => onRunSettled(session));
 }
 
-// Human-readable one-liners for the action ledger. The spec is explicit that
-// raw tool args must not be dumped into the UI (§5) — the ledger should read
-// like a flight recorder, not a debug log.
+// Runs once a turn ends — success, error, or abort. Starts the next queued
+// instruction if the driver sent one while this run was in flight (see the
+// instruct handler in ws.ts); this is also what makes the queue safe to run
+// unattended, since only one run is ever in flight per session at a time.
+// Skipped once the last participant has left: teardown already aborted the
+// run and disposed the working dir, so there's nothing left to continue.
+function onRunSettled(session: Session): void {
+  if (session.participants.size === 0) return;
+  const next = session.instructionQueue.shift();
+  if (next !== undefined) {
+    setStatus(session, "working");
+    runAgent(session, next);
+  }
+}
+
+// Split into (verb, target) rather than one string so the ledger can align
+// them as columns and the eye can scan down a column instead of parsing each
+// line (DESIGN.md, ledger rule 3). The spec is explicit that raw tool args
+// must not be dumped into the UI (§5) — anything bulky goes in collapsed
+// detail instead.
 function summarizeToolCall(
   tool: string,
   input: Record<string, unknown>,
   workingDir: string,
-): string {
+): { verb: string; target: string } {
   // Paths render relative to the repo root. An agent that guesses a path
   // outside the working dir would otherwise produce a "../../../../.." chain,
   // so fall back to the bare filename in that case.
@@ -49,38 +68,107 @@ function summarizeToolCall(
 
   switch (tool) {
     case "Bash":
-      return `ran ${clip(input.command)}`;
+      return { verb: "ran", target: clip(input.command, 120) };
     case "Read":
-      return `read ${rel(input.file_path)}`;
+      return { verb: "read", target: rel(input.file_path) };
     case "Write":
-      return `wrote ${rel(input.file_path)}`;
+      return { verb: "wrote", target: rel(input.file_path) };
     case "Edit":
-      return `edited ${rel(input.file_path)}`;
+      return { verb: "edited", target: rel(input.file_path) };
     case "NotebookEdit":
-      return `edited ${rel(input.notebook_path)}`;
+      return { verb: "edited", target: rel(input.notebook_path) };
     case "Glob":
-      return `searched ${clip(input.pattern, 40)}`;
+      return { verb: "globbed", target: clip(input.pattern, 60) };
     case "Grep":
-      return `grepped ${clip(input.pattern, 40)}`;
+      return { verb: "grepped", target: clip(input.pattern, 60) };
     case "WebFetch":
-      return `fetched ${clip(input.url, 50)}`;
+      return { verb: "fetched", target: clip(input.url, 70) };
     case "WebSearch":
-      return `searched the web for ${clip(input.query, 40)}`;
+      return { verb: "searched", target: clip(input.query, 60) };
     case "Task":
-      return `delegated: ${clip(input.description, 50)}`;
+      return { verb: "delegated", target: clip(input.description, 70) };
     case "TodoWrite":
-      return "updated its plan";
+      return { verb: "planned", target: "updated its plan" };
     default:
-      return tool;
+      return { verb: tool.toLowerCase(), target: "" };
   }
+}
+
+// Line-level diff for the expandable detail on an edit row. Written here
+// rather than pulled from a package: the inputs are one Edit's old/new
+// strings (small), and this avoids shipping a diff library to the browser —
+// the ledger receives finished lines, not two blobs to diff client-side.
+function lineDiff(oldStr: string, newStr: string): DiffLine[] {
+  const a = oldStr.split("\n");
+  const b = newStr.split("\n");
+
+  // Guard against a pathological LCS table on a huge Write. Above this,
+  // fall back to showing the change wholesale rather than hanging the run.
+  if (a.length * b.length > 40_000) {
+    return [
+      ...a.map((text) => ({ op: "-" as const, text })),
+      ...b.map((text) => ({ op: "+" as const, text })),
+    ];
+  }
+
+  // Standard LCS table, then walk it backwards to emit the edit script.
+  const dp: number[][] = Array.from({ length: a.length + 1 }, () =>
+    new Array<number>(b.length + 1).fill(0),
+  );
+  for (let i = a.length - 1; i >= 0; i--) {
+    for (let j = b.length - 1; j >= 0; j--) {
+      dp[i][j] =
+        a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    }
+  }
+
+  const out: DiffLine[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) {
+      out.push({ op: " ", text: a[i] });
+      i++;
+      j++;
+    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+      out.push({ op: "-", text: a[i++] });
+    } else {
+      out.push({ op: "+", text: b[j++] });
+    }
+  }
+  while (i < a.length) out.push({ op: "-", text: a[i++] });
+  while (j < b.length) out.push({ op: "+", text: b[j++] });
+  return out;
+}
+
+// What, if anything, is worth showing when a row is expanded. Only edits get
+// a diff — a Read's contents are the agent's business, not the watcher's.
+function detailForCall(
+  tool: string,
+  input: Record<string, unknown>,
+  path: string,
+): ToolDetail | undefined {
+  if (tool === "Edit" && typeof input.old_string === "string" && typeof input.new_string === "string") {
+    return { type: "diff", path, lines: lineDiff(input.old_string, input.new_string) };
+  }
+  if (tool === "Write" && typeof input.content === "string") {
+    // A new file is all additions — that IS the diff, and it reads correctly
+    // in the same renderer.
+    return {
+      type: "diff",
+      path,
+      lines: input.content.split("\n").map((text) => ({ op: "+" as const, text })),
+    };
+  }
+  return undefined;
 }
 
 // Tool results come back detached from the call, so keep enough context to
 // render a meaningful result row.
-type PendingTool = { tool: string; summary: string };
+type PendingTool = { tool: string; verb: string; target: string };
 
-function summarizeToolResult(content: unknown, workingDir: string): string {
-  const text = Array.isArray(content)
+function resultText(content: unknown): string {
+  return Array.isArray(content)
     ? content
         .map((b) =>
           b && typeof b === "object" && "text" in b ? String(b.text) : "",
@@ -89,18 +177,63 @@ function summarizeToolResult(content: unknown, workingDir: string): string {
     : typeof content === "string"
       ? content
       : "";
+}
+
+// Phrasing the SDK writes for the model's benefit, not the watcher's. Left in,
+// it surfaces as "File created successfully at: REPORT.md (file state is
+// current in your…" — an internal aside truncated mid-sentence.
+const SDK_ASIDES = [
+  /\s*\(file state is current in your context[^)]*\)/gi,
+  /\s*<system-reminder>[\s\S]*?<\/system-reminder>/gi,
+];
+
+// Per-tool result summaries. The generic "N lines" fallback told a watcher
+// nothing on 12 of 13 rows in a real run (see RELAY_PRODUCTION_PLAN.md §A3).
+function summarizeToolResult(
+  tool: string,
+  content: unknown,
+  workingDir: string,
+  ok: boolean,
+): string {
+  let text = resultText(content);
+  for (const aside of SDK_ASIDES) text = text.replace(aside, "");
 
   // Server-side absolute paths are noise in the ledger (and leak the host's
   // directory layout) — show them relative to the repo root instead.
-  const cleaned = text
-    .split(`${workingDir}/`)
-    .join("")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!cleaned) return "done";
-  const lineCount = text.trim().split("\n").length;
-  if (lineCount > 1) return `${lineCount} lines`;
-  return cleaned.length > 70 ? `${cleaned.slice(0, 70)}…` : cleaned;
+  const cleaned = text.split(`${workingDir}/`).join("").trim();
+  const oneLine = cleaned.replace(/\s+/g, " ").trim();
+  const lines = cleaned ? cleaned.split("\n") : [];
+  const clip = (s: string, n = 70) => (s.length > n ? `${s.slice(0, n)}…` : s);
+
+  // A failure's reason is the whole point of the row — never flatten it to
+  // a bare "failed" (spec §5, DESIGN.md ledger rule 7).
+  if (!ok) return oneLine ? clip(oneLine, 90) : "failed";
+
+  switch (tool) {
+    case "Read":
+      return lines.length ? `${lines.length} lines` : "empty";
+    case "Write":
+      return "written";
+    case "Edit":
+    case "NotebookEdit":
+      return "applied";
+    case "Bash": {
+      if (!oneLine) return "no output";
+      // One-line output is usually the answer itself; multi-line is bulk the
+      // watcher can expand into.
+      return lines.length > 1 ? `${lines.length} lines` : clip(oneLine);
+    }
+    case "Glob":
+    case "Grep": {
+      const n = lines.filter((l) => l.trim()).length;
+      return n === 1 ? "1 match" : `${n} matches`;
+    }
+    case "TodoWrite":
+      return "updated";
+    default:
+      if (!oneLine) return "done";
+      return lines.length > 1 ? `${lines.length} lines` : clip(oneLine);
+  }
 }
 
 async function runRealAgent(
@@ -111,6 +244,9 @@ async function runRealAgent(
   session.agentAbort = abort;
 
   const pending = new Map<string, PendingTool>();
+  // Same reasoning as RELAY_AGENT above — read per-call, not frozen at
+  // module load, so .env changes actually take effect.
+  const model = process.env.RELAY_MODEL ?? "claude-haiku-4-5";
 
   try {
     // Clone lazily: a session that never gets an instruction never pays for it.
@@ -121,7 +257,7 @@ async function runRealAgent(
       prompt: instruction,
       options: {
         cwd: workingDir,
-        model: MODEL,
+        model,
         abortController: abort,
         // Headless: there is no human to approve each tool call. Scoped to a
         // disposable per-session clone — never the source repo (see repo.ts).
@@ -145,15 +281,25 @@ async function runRealAgent(
             const text = block.text.trim();
             if (text) appendEvent(session, { kind: "agent_text", data: { text } });
           } else if (block.type === "tool_use") {
-            const summary = summarizeToolCall(
+            const input = (block.input ?? {}) as Record<string, unknown>;
+            const { verb, target } = summarizeToolCall(
               block.name,
-              (block.input ?? {}) as Record<string, unknown>,
+              input,
               workingDir,
             );
-            pending.set(block.id, { tool: block.name, summary });
+            pending.set(block.id, { tool: block.name, verb, target });
             appendEvent(session, {
               kind: "tool_call",
-              data: { tool: block.name, summary },
+              // `id` pairs this with its result so the ledger renders ONE row
+              // per action; the row appears now, pending, and completes when
+              // the result lands.
+              data: {
+                id: block.id,
+                tool: block.name,
+                verb,
+                target,
+                detail: detailForCall(block.name, input, target),
+              },
             });
           }
         }
@@ -165,24 +311,39 @@ async function runRealAgent(
             if (block.type !== "tool_result") continue;
             const call = pending.get(block.tool_use_id);
             pending.delete(block.tool_use_id);
+            const ok = block.is_error !== true;
+            const tool = call?.tool ?? "tool";
+            const full = resultText(block.content).trim();
             appendEvent(session, {
               kind: "tool_result",
               data: {
-                tool: call?.tool ?? "tool",
-                ok: block.is_error !== true,
-                // Surface *why* a step failed — a bare "failed" row tells a
-                // watcher nothing, and recovering from tool errors is a normal
-                // part of the agent's work.
-                summary: block.is_error
-                  ? `failed — ${summarizeToolResult(block.content, workingDir)}`
-                  : summarizeToolResult(block.content, workingDir),
+                id: block.tool_use_id,
+                tool,
+                ok,
+                summary: summarizeToolResult(tool, block.content, workingDir, ok),
+                // Bulk output goes behind the disclosure rather than being
+                // truncated away — the summary stays scannable, the detail
+                // stays available.
+                detail:
+                  full.split("\n").length > 1
+                    ? ({ type: "text", text: full.split(`${workingDir}/`).join("") } as const)
+                    : undefined,
               },
             });
           }
         }
       } else if (msg.type === "result") {
         if (msg.subtype === "success") {
-          appendEvent(session, { kind: "agent_done", data: {} });
+          // The SDK already carries run economics on the result message;
+          // previously all of it was dropped and agent_done carried `{}`.
+          appendEvent(session, {
+            kind: "agent_done",
+            data: {
+              steps: msg.num_turns,
+              durationMs: msg.duration_ms,
+              costUsd: msg.total_cost_usd,
+            },
+          });
           setStatus(session, "done");
         } else {
           appendEvent(session, {
@@ -194,8 +355,13 @@ async function runRealAgent(
       }
     }
   } catch (err) {
-    // An abort is a deliberate stop, not a failure to report as one.
-    if (abort.signal.aborted) return;
+    // An abort is a deliberate stop, not a failure to report as one. Still
+    // clear "working" so a driver who reconnects later isn't stuck watching
+    // a status that will never resolve on its own.
+    if (abort.signal.aborted) {
+      setStatus(session, "idle");
+      return;
+    }
     appendEvent(session, {
       kind: "agent_error",
       data: { message: err instanceof Error ? err.message : String(err) },

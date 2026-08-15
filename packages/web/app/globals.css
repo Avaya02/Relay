@@ -110,3 +110,821 @@ body {
     @apply border-border outline-ring/50;
   }
 }
+
+/* ==================================================================
+   LANDING PAGE (brand register)
+   Aesthetic lane, named deliberately: INSTRUMENTATION — cockpit
+   placards, oscilloscope faceplates, a recorder running. Not
+   editorial-typographic, not Stripe-minimal, not acid-maximalism.
+   The palette is the app's own committed graphite + signal cyan;
+   the accent is allowed to carry far more here than in the app,
+   because "live" is the whole pitch.
+   ================================================================== */
+
+.landing {
+  /* One shared measure. Every section's content sits on the same left edge —
+     the nav mark, the hero headline, and each section title line up. */
+  --measure: 84rem;
+  --gutter: clamp(1.25rem, 5vw, 4rem);
+
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.landing-nav {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: var(--measure);
+  margin-inline: auto;
+  width: 100%;
+  padding: 1.5rem var(--gutter);
+}
+.landing-mark {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.landing-nav-link {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 150ms ease-out;
+}
+.landing-nav-link:hover {
+  color: var(--accent);
+}
+
+/* --- Hero: asymmetric. Copy holds the left rail, the running session
+   takes the larger share, because the session IS the argument. --- */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: clamp(2rem, 5vw, 4.5rem);
+  align-items: center;
+  padding: clamp(2rem, 5vw, 4rem) var(--gutter) clamp(3.5rem, 9vw, 7rem);
+  max-width: var(--measure);
+  margin-inline: auto;
+  width: 100%;
+}
+.hero-title {
+  font-family: var(--font-display);
+  /* Ceiling well under the 6rem cap; this is a tool, not a billboard. */
+  font-size: clamp(2.5rem, 5.4vw, 4.25rem);
+  font-weight: 600;
+  line-height: 1.03;
+  letter-spacing: -0.035em;
+  color: var(--text);
+  text-wrap: balance;
+  margin: 0;
+}
+.hero-title em {
+  font-style: normal;
+  color: var(--accent);
+}
+.hero-sub {
+  margin: 1.5rem 0 0;
+  max-width: 46ch;
+  font-size: 1.0625rem;
+  /* Light-on-dark needs the extra leading. */
+  line-height: 1.65;
+  color: var(--text-dim);
+  text-wrap: pretty;
+}
+.hero-cta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 2.25rem;
+}
+.hero-cta-note {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+.hero-error {
+  margin-top: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--state-error);
+}
+.hero-demo-note {
+  margin: 0.875rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  opacity: 0.85;
+  text-align: center;
+}
+
+/* --- The demo frame: the app's own surface, framed as an instrument. --- */
+.demo-frame {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow:
+    0 1px 0 0 rgb(255 255 255 / 0.03) inset,
+    0 24px 60px -30px rgb(0 0 0 / 0.7);
+}
+.demo-chrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.demo-chrome-left {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.demo-chrome-right {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  min-width: 0;
+}
+.demo-mark {
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.demo-session,
+.demo-status,
+.demo-person {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.demo-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.demo-person b {
+  color: var(--text);
+  font-weight: 500;
+}
+.demo-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  flex: none;
+}
+.demo-status--live {
+  color: var(--accent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .demo-status--live {
+    animation: demo-pulse 1.9s ease-in-out infinite;
+  }
+}
+@keyframes demo-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.demo-body {
+  /* Fixed height so the frame doesn't jitter as rows land during replay.
+     Top-aligned: rows fill downward, so the unused space reads as "more to
+     come" rather than as a void above the content. */
+  height: 19.5rem;
+  overflow: hidden;
+  padding: 0.875rem 1rem;
+}
+.demo-handover {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  padding-block: 0.375rem;
+}
+
+.demo-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0.875rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 0.8125rem;
+}
+.demo-bar-label {
+  color: var(--text-dim);
+}
+.demo-bar-label b {
+  color: var(--text);
+  font-weight: 500;
+}
+.demo-bar-action {
+  font-size: 0.75rem;
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 0.375rem;
+  padding: 0.3125rem 0.6875rem;
+  white-space: nowrap;
+}
+.demo-bar-input {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.625rem;
+  font-size: 0.75rem;
+}
+.demo-bar-send {
+  font-size: 0.75rem;
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.75rem;
+}
+
+/* --- Shared section furniture --- */
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--text);
+  margin: 0;
+  text-wrap: balance;
+}
+
+.lock,
+.how {
+  border-top: 1px solid var(--border);
+  padding-block: clamp(3rem, 7vw, 5.5rem);
+}
+.lock-inner,
+.how-inner {
+  max-width: var(--measure);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+.lock-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: clamp(1.75rem, 4vw, 4rem);
+  /* start, not stretch — the shorter column shouldn't inherit the taller
+     one's height and leave a void under its content. */
+  align-items: start;
+}
+.lock-lede {
+  margin: 1.25rem 0 0;
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--text-dim);
+  max-width: 42ch;
+}
+.lock-facts {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.lock-facts dt {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--accent);
+  margin-bottom: 0.375rem;
+}
+.lock-facts dd {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--text-dim);
+  max-width: 52ch;
+}
+
+.how-list {
+  list-style: none;
+  margin: 2rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.how-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 11rem) minmax(0, 1fr);
+  gap: clamp(1rem, 3vw, 2.5rem);
+  padding: 1.25rem 0;
+  border-top: 1px solid var(--border);
+}
+.how-list li:last-child {
+  border-bottom: 1px solid var(--border);
+}
+.how-k {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--text);
+}
+.how-v {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--text-dim);
+  max-width: 62ch;
+}
+
+.close {
+  border-top: 1px solid var(--border);
+  padding: clamp(3.5rem, 8vw, 6rem) var(--gutter);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.75rem;
+  text-align: center;
+}
+.close-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3.5vw, 2.75rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin: 0;
+}
+
+.landing-foot {
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  padding: 1.5rem var(--gutter);
+  max-width: var(--measure);
+  margin-inline: auto;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2.5rem;
+  }
+  .lock-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .how-list li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+  .demo-body {
+    height: 17rem;
+  }
+}
+
+/* ------------------------------------------------------------------
+   THE ACTION LEDGER — the signature surface (RELAY_BUILD_SPEC.md §7,
+   DESIGN.md § action ledger). Everything here serves one goal: make a
+   30+ event run scannable as a machine record, not readable as a chat.
+   ------------------------------------------------------------------ */
+
+/* ONE continuous rule down the whole ledger, with rows hanging off it.
+   Not a per-row border-left — that renders as a dashed ladder of stubs
+   and breaks the flight-recorder read. */
+.ledger-rail {
+  position: relative;
+  padding-left: 0.875rem;
+}
+.ledger-rail::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  width: 1px;
+  background: var(--border);
+}
+
+.ledger-item {
+  padding-block: 0.1875rem;
+}
+
+/* No ligatures anywhere in the ledger. JetBrains Mono renders `=>` as `⇒` and
+   `!=` as `≠` by default — pretty, but this surface is a record of what the
+   agent actually did, and a diff that shows characters the file doesn't
+   contain is editorializing (PRODUCT.md principle 2). */
+.ledger-action,
+.ledger-diff,
+.ledger-output,
+.ledger-detail-path,
+.ledger-done {
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+}
+
+/* Enter animation: the ledger is the only animated surface in the app, and
+   the animation has exactly one job — convey that this is happening NOW.
+   Applied via CSS animation (not a transition gated on a class) so content
+   is visible by default and never depends on JS to appear. */
+@media (prefers-reduced-motion: no-preference) {
+  .ledger-item {
+    animation: ledger-enter 140ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+@keyframes ledger-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Action rows: fixed columns so the eye scans a column instead of parsing
+   each line. verb | target | result | time | chevron */
+.ledger-action {
+  display: grid;
+  /* The target column carries a floor so a long result never collapses it to
+     zero — knowing the agent ran `npm test` matters more than reading the
+     last few characters of why it failed. Result truncates instead. */
+  grid-template-columns: 1rem 4.25rem minmax(7rem, 1fr) minmax(0, auto) 4.5rem 0.75rem;
+  align-items: baseline;
+  gap: 0.5rem;
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+  text-align: left;
+}
+.ledger-marker {
+  text-align: center;
+}
+.ledger-verb {
+  color: var(--text-dim);
+}
+.ledger-target {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Truncatable: a long failure reason ("1 failing — App renders a counter")
+   must not push the target column to zero width and overflow the row. The
+   full text stays available via the row's title/aria-label. */
+.ledger-result {
+  color: var(--text-dim);
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ledger-pending {
+  color: var(--accent);
+}
+.ledger-time {
+  color: var(--text-dim);
+  opacity: 0.7;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ledger-chevron {
+  color: var(--text-dim);
+  opacity: 0.6;
+  text-align: center;
+}
+
+/* Expandable rows are real buttons — full interactive state vocabulary. */
+.ledger-action--expandable {
+  cursor: pointer;
+  border-radius: 0.25rem;
+  margin-inline: -0.375rem;
+  padding-inline: 0.375rem;
+  transition: background-color 150ms ease-out;
+}
+.ledger-action--expandable:hover {
+  background: var(--surface);
+}
+.ledger-action--expandable:hover .ledger-chevron {
+  opacity: 1;
+  color: var(--accent);
+}
+.ledger-action--expandable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.ledger-action--expandable[aria-expanded="true"] {
+  background: var(--surface);
+}
+.ledger-action--expandable[aria-expanded="true"] .ledger-chevron {
+  color: var(--accent);
+  opacity: 1;
+}
+
+/* Expanded detail — diffs and bulk output. */
+.ledger-detail {
+  margin: 0.25rem 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  overflow: hidden;
+}
+.ledger-detail-path {
+  padding: 0.375rem 0.625rem;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+.ledger-diff,
+.ledger-output {
+  margin: 0;
+  padding: 0.5rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  line-height: 1.6;
+  overflow-x: auto;
+  max-height: 22rem;
+  overflow-y: auto;
+  color: var(--text-dim);
+}
+.ledger-output {
+  padding: 0.625rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.diff-line {
+  display: block;
+  padding-inline: 0.625rem;
+  white-space: pre;
+  color: var(--text-dim);
+}
+.diff-op {
+  display: inline-block;
+  width: 1ch;
+  margin-right: 0.75ch;
+  opacity: 0.7;
+}
+/* Diff color carries meaning, so it's allowed here — and the +/- glyph
+   carries the same meaning for anyone who can't distinguish the hues. */
+.diff-add {
+  background: color-mix(in oklch, var(--accent) 12%, transparent);
+  color: var(--text);
+}
+.diff-del {
+  background: color-mix(in oklch, var(--state-error) 12%, transparent);
+  color: var(--text);
+}
+
+/* Non-action rows. */
+.ledger-instruction {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  padding-block: 0.5rem;
+}
+.ledger-prose {
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: var(--text);
+  max-width: 72ch;
+  padding-block: 0.375rem;
+}
+.ledger-done,
+.ledger-error {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding-block: 0.5rem;
+}
+.ledger-done {
+  color: var(--text-dim);
+}
+.ledger-error {
+  color: var(--state-error);
+}
+
+/* Narrow viewports: drop the time column rather than let rows wrap into
+   an unreadable stack. The timestamp is the least load-bearing column. */
+@media (max-width: 640px) {
+  .ledger-action {
+    /* minmax(0, auto) on the result column so it can shrink and ellipsis
+       rather than overflow the row on a long failure reason. */
+    grid-template-columns: 1rem 3.75rem minmax(4.5rem, 1fr) minmax(0, auto) 0.75rem;
+    gap: 0.375rem;
+  }
+  .ledger-time {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------
+   SESSION CHANGES — what the run actually produced. Sits between the
+   ledger and the control bar; collapsed until asked for.
+   ------------------------------------------------------------------ */
+.changes {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.changes-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+}
+.changes-toggle {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  background: none;
+  border: 0;
+  padding: 0.25rem;
+  margin: -0.25rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+.changes-toggle:hover {
+  color: var(--text);
+}
+.changes-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.changes-chevron {
+  color: var(--text-dim);
+}
+.changes-count {
+  color: var(--text);
+}
+.changes-stat {
+  font-variant-numeric: tabular-nums;
+}
+.changes-add {
+  color: var(--accent);
+}
+.changes-del {
+  color: var(--state-error);
+}
+.changes-note {
+  margin: 0;
+  padding: 0 1rem 0.625rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+.changes-note code {
+  color: var(--text);
+}
+.changes-note a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+}
+.changes-note--error {
+  color: var(--state-error);
+}
+.changes-panel {
+  border-top: 1px solid var(--border);
+  max-height: 22rem;
+  overflow-y: auto;
+}
+.changes-files {
+  list-style: none;
+  margin: 0;
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.changes-files li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+}
+.changes-file-path {
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.changes-diff {
+  margin: 0;
+  padding: 0.5rem 0;
+  font-family: var(--font-mono);
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+  font-size: 0.7rem;
+  line-height: 1.6;
+  overflow-x: auto;
+  color: var(--text-dim);
+}
+.diff-file {
+  color: var(--text-dim);
+  opacity: 0.7;
+}
+.diff-hunk {
+  color: var(--accent);
+  opacity: 0.85;
+}
+
+/* agent_text rendering (StreamView) — agent output is markdown; render it as
+   such instead of a run-on paragraph of literal asterisks and backticks.
+   Scoped to .markdown-body rather than global tag selectors so it can't leak
+   into shadcn components elsewhere on the page. */
+.markdown-body p {
+  margin: 0;
+}
+.markdown-body > * + * {
+  margin-top: 0.5rem;
+}
+.markdown-body code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--surface-2);
+  border-radius: 0.25rem;
+  padding: 0.1em 0.35em;
+}
+.markdown-body pre {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  line-height: 1.5;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  overflow-x: auto;
+}
+.markdown-body pre code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 1.25rem;
+}
+.markdown-body li + li {
+  margin-top: 0.15rem;
+}
+.markdown-body a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.markdown-body strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3 {
+  font-weight: 600;
+  color: var(--text);
+}
+.markdown-body h1 {
+  font-size: 1rem;
+}
+.markdown-body h2 {
+  font-size: 0.95rem;
+}
+.markdown-body h3 {
+  font-size: 0.9rem;
+}
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85em;
+}
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid var(--border);
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+}
+.markdown-body th {
+  color: var(--text-dim);
+  font-weight: 500;
+}
