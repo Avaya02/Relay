@@ -12,6 +12,22 @@ const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:4000";
 
 export type ConnectionState = "connecting" | "open" | "closed" | "error";
 
+export type SessionChanges = {
+  files: { path: string; insertions: number; deletions: number }[];
+  insertions: number;
+  deletions: number;
+  patch: string;
+};
+
+export type PublishState = {
+  ok: boolean;
+  branch?: string;
+  pushed?: boolean;
+  prUrl?: string | null;
+  note?: string;
+  error?: string;
+};
+
 export type UseSessionResult = {
   connection: ConnectionState;
   selfId: string | null;
@@ -21,11 +37,16 @@ export type UseSessionResult = {
   status: SessionStatus;
   lastError: string | null;
   pendingRequests: Participant[];
+  changes: SessionChanges | null;
+  publishState: PublishState | null;
+  publishing: boolean;
   join: (displayName: string) => void;
   instruct: (text: string) => void;
   requestControl: () => void;
   handOver: (toParticipantId: string) => void;
   releaseControl: () => void;
+  requestChanges: () => void;
+  publish: (title: string) => void;
 };
 
 // Connects once per mount, sends `join`, and reduces every incoming
@@ -44,6 +65,9 @@ export function useSession(sessionId: string): UseSessionResult {
   const [status, setStatus] = useState<SessionStatus>("idle");
   const [lastError, setLastError] = useState<string | null>(null);
   const [pendingRequests, setPendingRequests] = useState<Participant[]>([]);
+  const [changes, setChanges] = useState<SessionChanges | null>(null);
+  const [publishState, setPublishState] = useState<PublishState | null>(null);
+  const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
     const socket = new WebSocket(WS_URL);
@@ -84,6 +108,31 @@ export function useSession(sessionId: string): UseSessionResult {
           break;
         case "status":
           setStatus(msg.status);
+          // A finished turn is exactly when "so what changed?" becomes the
+          // question. Asking here (inside the socket's message handler, not an
+          // effect) keeps it a plain event-driven request.
+          if (msg.status === "done") {
+            socket.send(JSON.stringify({ type: "request_changes" }));
+          }
+          break;
+        case "session_changes":
+          setChanges({
+            files: msg.files,
+            insertions: msg.insertions,
+            deletions: msg.deletions,
+            patch: msg.patch,
+          });
+          break;
+        case "publish_result":
+          setPublishing(false);
+          setPublishState({
+            ok: msg.ok,
+            branch: msg.branch,
+            pushed: msg.pushed,
+            prUrl: msg.prUrl,
+            note: msg.note,
+            error: msg.error,
+          });
           break;
         case "participant_joined":
         case "participant_left":
@@ -152,6 +201,22 @@ export function useSession(sessionId: string): UseSessionResult {
     }
   }
 
+  function requestChanges() {
+    const socket = socketRef.current;
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: "request_changes" }));
+    }
+  }
+
+  function publish(title: string) {
+    const socket = socketRef.current;
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      setPublishing(true);
+      setPublishState(null);
+      socket.send(JSON.stringify({ type: "publish", title }));
+    }
+  }
+
   return {
     connection,
     selfId,
@@ -161,10 +226,15 @@ export function useSession(sessionId: string): UseSessionResult {
     status,
     lastError,
     pendingRequests,
+    changes,
+    publishState,
+    publishing,
     join,
     instruct,
     requestControl,
     handOver,
     releaseControl,
+    requestChanges,
+    publish,
   };
 }

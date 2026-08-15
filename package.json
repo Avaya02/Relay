@@ -5,8 +5,8 @@
     "node": ">=20.9.0"
   },
   "scripts": {
-    "dev": "pnpm --parallel --filter ./packages/** dev",
-    "build": "pnpm --recursive --filter ./packages/** build",
-    "typecheck": "pnpm --recursive --filter ./packages/** typecheck"
+    "dev": "pnpm --parallel --filter \"./packages/**\" dev",
+    "build": "pnpm --recursive --filter \"./packages/**\" build",
+    "typecheck": "pnpm --recursive --filter \"./packages/**\" typecheck"
   }
 }

@@ -30,6 +30,47 @@ export type Event = {
   data: Record<string, unknown>;
 };
 
+// --- Well-known `data` shapes ---------------------------------------------
+// `data` stays a loose Record (spec §4), but these document what the server
+// actually puts in it so both sides agree without casting at every use site.
+
+// Expandable detail behind a ledger row. Collapsed by default — the row's
+// summary is the honest one-liner, this is the "show me what actually
+// happened" layer (spec §5: summarize, don't dump raw args into the UI).
+export type ToolDetail =
+  | { type: "diff"; path: string; lines: DiffLine[] }
+  | { type: "text"; text: string };
+
+export type DiffLine = { op: " " | "-" | "+"; text: string };
+
+// tool_call — rendered immediately, in a pending state, before its result
+// exists. `id` pairs it with the matching tool_result so the client can
+// render ONE row per action instead of two (DESIGN.md, ledger rule 1).
+export type ToolCallData = {
+  id: string;
+  tool: string;
+  verb: string; // "read" | "edited" | "ran" — the action, for column 1
+  target: string; // "README.md" | "npm test" — what it acted on
+  detail?: ToolDetail;
+};
+
+// tool_result — folded into its tool_call's row on arrival.
+export type ToolResultData = {
+  id: string;
+  tool: string;
+  ok: boolean;
+  summary: string;
+  detail?: ToolDetail;
+};
+
+// agent_done — the ledger's capstone row. Metrics come straight off the
+// SDK's result message, which already carries all of them.
+export type AgentDoneData = {
+  steps?: number;
+  durationMs?: number;
+  costUsd?: number;
+};
+
 // --- Client -> Server ---
 
 export type JoinMessage = {
@@ -61,13 +102,22 @@ export type HandOverMessage = {
 // Driver only. Drops the lock; nobody drives until someone requests it.
 export type ReleaseControlMessage = { type: "release_control" };
 
+// Anyone: "what has this session actually changed?" Read-only.
+export type RequestChangesMessage = { type: "request_changes" };
+
+// Driver only: commit the session's work to a branch, and push + open a PR if
+// the server is configured for it.
+export type PublishMessage = { type: "publish"; title: string };
+
 export type ClientMessage =
   | JoinMessage
   | InstructMessage
   | PingMessage
   | RequestControlMessage
   | HandOverMessage
-  | ReleaseControlMessage;
+  | ReleaseControlMessage
+  | RequestChangesMessage
+  | PublishMessage;
 
 // --- Server -> Client ---
 
@@ -133,8 +183,33 @@ export type ControlRequestedMessage = {
   displayName: string;
 };
 
+// What the agent changed, cumulatively, this session. Broadcast to everyone —
+// the point is that the room sees the result, not just the driver.
+export type SessionChangesMessage = {
+  type: "session_changes";
+  files: { path: string; insertions: number; deletions: number }[];
+  insertions: number;
+  deletions: number;
+  patch: string;
+};
+
+// Outcome of a publish. `pushed: false` with `ok: true` means the work landed
+// on a local branch but no GitHub repo/token is configured on the server —
+// which is a success, not a failure.
+export type PublishResultMessage = {
+  type: "publish_result";
+  ok: boolean;
+  branch?: string;
+  pushed?: boolean;
+  prUrl?: string | null;
+  note?: string;
+  error?: string;
+};
+
 export type ServerMessage =
   | JoinedMessage
+  | SessionChangesMessage
+  | PublishResultMessage
   | SessionStateMessage
   | HistoryMessage
   | AgentEventMessage

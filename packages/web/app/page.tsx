@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { DemoLedger } from "@/components/landing/DemoLedger";
 import { createSession } from "@/lib/api";
 
 export default function Home() {
@@ -23,51 +24,152 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[var(--bg)] px-6 text-center">
-      <h1 className="font-heading text-6xl font-medium tracking-tight text-[var(--text)]">
-        relay
-      </h1>
-      <p className="max-w-md text-balance text-base leading-relaxed text-[var(--text-dim)]">
-        Watch a live AI coding session with anyone who has the link — one
-        person drives, everyone watches in real time.
-      </p>
-      <div className="flex flex-col items-center gap-3">
-        <Button onClick={handleStart} disabled={creating} className="h-10 px-6 text-sm">
-          {creating ? "Starting…" : "Start a session"}
-        </Button>
-        <p className="font-mono text-xs text-[var(--text-dim)]">
-          No sign-up — just a name and a link.
-        </p>
-      </div>
-      {error && (
-        <p className="font-mono text-xs text-[var(--state-error)]">{error}</p>
-      )}
-      <LedgerPreview />
-    </div>
-  );
-}
+    <div className="landing">
+      <header className="landing-nav">
+        <span className="landing-mark">relay</span>
+        <a
+          className="landing-nav-link"
+          href="https://github.com/anthropics/claude-agent-sdk-typescript"
+          target="_blank"
+          rel="noreferrer"
+        >
+          built on the Claude Agent SDK ↗
+        </a>
+      </header>
 
-// A quiet, static preview of the action ledger — the same visual language
-// as the real StreamView, so a first-time visitor sees what they're about
-// to watch rather than taking the tagline's word for it.
-function LedgerPreview() {
-  return (
-    <div
-      aria-hidden
-      className="mt-4 w-full max-w-sm rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-left"
-    >
-      <div className="flex items-baseline justify-between gap-4 border-l-2 border-[var(--border)] pl-3 font-mono text-xs text-[var(--text-dim)]">
-        <span>
-          <span className="text-[var(--text)]">▸ </span>edited src/App.tsx
-        </span>
-        <span className="shrink-0">12:04:02</span>
-      </div>
-      <div className="mt-2 flex items-baseline justify-between gap-4 border-l-2 border-[var(--border)] pl-3 font-mono text-xs text-[var(--text-dim)]">
-        <span>
-          <span className="text-[var(--text)]">✓ </span>ran npm test — 4 passed
-        </span>
-        <span className="shrink-0">12:04:09</span>
-      </div>
+      <main>
+        {/* Fold 1 — the claim, and the thing itself. */}
+        <section className="hero">
+          <div className="hero-copy">
+            <h1 className="hero-title">
+              Watch an agent work.
+              <br />
+              <em>Together.</em>
+            </h1>
+            <p className="hero-sub">
+              Everyone with the link watches the same coding session, live, in
+              the same moment. One person drives — and can hand over the wheel
+              mid-task.
+            </p>
+            <div className="hero-cta">
+              <Button
+                onClick={handleStart}
+                disabled={creating}
+                className="h-11 px-6 text-sm"
+              >
+                {creating ? "Starting…" : "Start a session"}
+              </Button>
+              <span className="hero-cta-note">
+                No sign-up — a name and a link.
+              </span>
+            </div>
+            {error && <p className="hero-error">{error}</p>}
+          </div>
+
+          <div className="hero-demo">
+            <DemoLedger />
+            <p className="hero-demo-note">
+              A recording of a real session — 13 tool calls against a live
+              repository.
+            </p>
+          </div>
+        </section>
+
+        {/* Fold 2 — the lock. The part nobody else has. */}
+        <section className="lock">
+          <div className="lock-inner lock-grid">
+            <div className="lock-head">
+              <h2 className="section-title">One writer. Never two.</h2>
+              <p className="lock-lede">
+                Screen-sharing an agent gets you an audience. Relay gets you a
+                relay: exactly one person holds the wheel, the server enforces
+                it, and control passes cleanly when someone else should take
+                over.
+              </p>
+            </div>
+            <dl className="lock-facts">
+                <div>
+                  <dt>Request → hand over → release</dt>
+                  <dd>
+                    A viewer asks, the driver grants. The lock moves; every
+                    screen updates at once.
+                  </dd>
+                </div>
+                <div>
+                  <dt>Enforced on the server</dt>
+                  <dd>
+                    Not a disabled button. An instruction from anyone who
+                    isn&apos;t the driver is rejected before it reaches the
+                    agent.
+                  </dd>
+                </div>
+                <div>
+                  <dt>No input races, by construction</dt>
+                  <dd>
+                    One writer means competing instructions can&apos;t
+                    interleave — there is nothing to reconcile.
+                  </dd>
+                </div>
+            </dl>
+          </div>
+        </section>
+
+        {/* Fold 3 — how it holds up. Credibility, stated plainly. */}
+        <section className="how">
+          <div className="how-inner">
+            <h2 className="section-title">What&apos;s actually running</h2>
+            <ul className="how-list">
+              <li>
+                <span className="how-k">The agent</span>
+                <span className="how-v">
+                  The Claude Agent SDK — the same engine Claude Code runs. Relay
+                  adds the room around it, not a different model.
+                </span>
+              </li>
+              <li>
+                <span className="how-k">The repo</span>
+                <span className="how-v">
+                  A disposable per-session clone. The agent&apos;s working
+                  directory is never your source checkout, and it&apos;s deleted
+                  when the last person leaves.
+                </span>
+              </li>
+              <li>
+                <span className="how-k">The ordering</span>
+                <span className="how-v">
+                  One server-owned counter stamps every event. Clients render in
+                  that order and never trust their own clock — which is why two
+                  screens agree.
+                </span>
+              </li>
+              <li>
+                <span className="how-k">Catching up</span>
+                <span className="how-v">
+                  Join an hour in and you get the whole transcript first, then
+                  the live stream. Same path a dropped connection recovers
+                  through.
+                </span>
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="close">
+          <h2 className="close-title">Start one and send the link.</h2>
+          <Button
+            onClick={handleStart}
+            disabled={creating}
+            className="h-11 px-6 text-sm"
+          >
+            {creating ? "Starting…" : "Start a session"}
+          </Button>
+        </section>
+      </main>
+
+      <footer className="landing-foot">
+        <span>relay</span>
+        <span>Live agent sessions, shared.</span>
+      </footer>
     </div>
   );
 }

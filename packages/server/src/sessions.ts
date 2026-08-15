@@ -25,6 +25,10 @@ export type Session = {
   // The SDK's own session id, so follow-up instructions resume the same agent
   // conversation instead of starting a fresh one each turn.
   agentSessionId: string | null;
+  // Instructions sent while a run is already in flight. Never run two agents
+  // concurrently against the same working dir/resumed conversation — queue
+  // instead and drain one at a time once the current run settles.
+  instructionQueue: string[];
 };
 
 const sessions = new Map<string, Session>();
@@ -47,6 +51,7 @@ function createSession(id: string): Session {
     workingDir: null,
     agentAbort: null,
     agentSessionId: null,
+    instructionQueue: [],
   };
   sessions.set(id, session);
   return session;
