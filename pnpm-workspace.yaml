@@ -5,6 +5,8 @@ packages:
 # server dev runner) needs it at runtime. sharp/unrs-resolver are optional
 # native deps of create-next-app that this project doesn't use.
 allowBuilds:
+  '@prisma/engines': true
   esbuild: true
+  prisma: true
   sharp: false
   unrs-resolver: false

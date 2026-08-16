@@ -78,10 +78,14 @@ export function StreamView({
   events,
   participants,
   selfId,
+  emptyHint,
 }: {
   events: Event[];
   participants: Participant[];
   selfId: string | null;
+  // Written by the caller because only it knows the viewer's role — a
+  // watcher with no composer must not be told to type an instruction.
+  emptyHint: string;
 }) {
   const scrollerRef = useRef<HTMLElement>(null);
   const [pinnedToBottom, setPinnedToBottom] = useState(true);
@@ -149,9 +153,10 @@ export function StreamView({
         aria-label="Agent action ledger"
       >
         {rows.length === 0 ? (
-          <p className="text-sm text-[var(--text-dim)]">
-            Nothing running yet — type an instruction to start.
-          </p>
+          <div className="ledger-empty">
+            <p className="ledger-empty-title">No actions recorded yet</p>
+            <p className="ledger-empty-hint">{emptyHint}</p>
+          </div>
         ) : (
           <div className="ledger-rail flex flex-col">
             {rows.map((row) => (

@@ -54,6 +54,7 @@ export function SessionChanges({
         {isDriver && (
           <Button
             size="sm"
+            variant="outline"
             className="h-7 px-3 text-xs"
             disabled={publishing}
             onClick={() => onPublish(`Relay session — ${n} files changed`)}
