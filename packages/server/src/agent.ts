@@ -1,10 +1,11 @@
 import path from "node:path";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { DiffLine, ToolDetail } from "@relay/shared";
-import { setStatus, type Session } from "./sessions.js";
+import { liveParticipantCount, setStatus, type Session } from "./sessions.js";
 import { appendEvent } from "./transcript.js";
 import { prepareWorkingDir } from "./repo.js";
 import { runMockAgent } from "./agent-mock.js";
+import { mirrorSessionMeta } from "./persist.js";
 
 // Agent SDK wrapper (spec §5). Verified against the shipped types of
 // @anthropic-ai/claude-agent-sdk@0.3.220 rather than the docs pages, which
@@ -34,7 +35,7 @@ export function runAgent(session: Session, instruction: string): void {
 // Skipped once the last participant has left: teardown already aborted the
 // run and disposed the working dir, so there's nothing left to continue.
 function onRunSettled(session: Session): void {
-  if (session.participants.size === 0) return;
+  if (liveParticipantCount(session) === 0) return;
   const next = session.instructionQueue.shift();
   if (next !== undefined) {
     setStatus(session, "working");
@@ -271,8 +272,12 @@ async function runRealAgent(
 
     for await (const msg of q) {
       // Capture the SDK's session id so the next instruction can resume it.
-      if ("session_id" in msg && msg.session_id) {
+      // Guarded on an actual change: the SDK repeats session_id on nearly
+      // every message, and mirroring it to Postgres on each one would fire
+      // an upsert per tool call instead of once per run.
+      if ("session_id" in msg && msg.session_id && msg.session_id !== session.agentSessionId) {
         session.agentSessionId = msg.session_id;
+        mirrorSessionMeta(session);
       }
 
       if (msg.type === "assistant") {

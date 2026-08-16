@@ -126,7 +126,24 @@ export function runMockAgent(
   let i = 0;
   void applyMockEdits(session);
 
+  // The mock needs a real AbortController too — otherwise the Stop button
+  // only ever works against the real SDK, and the one path that's testable
+  // without spending API credit is exactly the one it can't be tested on.
+  const abort = new AbortController();
+  session.agentAbort = abort;
+  abort.signal.addEventListener(
+    "abort",
+    () => {
+      setStatus(session, "idle");
+      if (session.agentAbort === abort) session.agentAbort = null;
+      onSettled();
+    },
+    { once: true },
+  );
+
   const runNext = () => {
+    if (abort.signal.aborted) return; // the listener above already settled this run
+
     if (i >= script.length) {
       appendEvent(session, {
         kind: "agent_done",
@@ -135,6 +152,7 @@ export function runMockAgent(
         data: { steps: 4, durationMs: Date.now() - startedAt, costUsd: 0.0128 },
       });
       setStatus(session, "done");
+      if (session.agentAbort === abort) session.agentAbort = null;
       onSettled();
       return;
     }

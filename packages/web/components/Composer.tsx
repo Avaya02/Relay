@@ -1,11 +1,21 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import type { SessionStatus } from "@relay/shared";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-export function Composer({ onSend }: { onSend: (text: string) => void }) {
+export function Composer({
+  onSend,
+  status,
+  onStop,
+}: {
+  onSend: (text: string) => void;
+  status: SessionStatus;
+  onStop: () => void;
+}) {
   const [text, setText] = useState("");
+  const working = status === "working";
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -16,18 +26,25 @@ export function Composer({ onSend }: { onSend: (text: string) => void }) {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex gap-2 border-t border-[var(--border)] bg-[var(--surface-2)] p-3"
-    >
+    <form onSubmit={handleSubmit} className="composer">
       <Input
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Type an instruction…"
-        className="h-9 bg-[var(--surface)] text-sm"
+        // Says what happens to it, since a run is already in flight and the
+        // server queues rather than interrupts.
+        placeholder={
+          working ? "Queue the next instruction…" : "Type an instruction…"
+        }
+        aria-label="Instruction for the agent"
+        className="composer-input h-9 bg-[var(--surface)] text-sm"
       />
+      {working && (
+        <button type="button" className="composer-stop" onClick={onStop}>
+          Stop
+        </button>
+      )}
       <Button type="submit" disabled={!text.trim()} className="h-9 px-4">
-        Send
+        {working ? "Queue" : "Send"}
       </Button>
     </form>
   );

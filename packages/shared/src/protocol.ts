@@ -77,12 +77,23 @@ export type JoinMessage = {
   type: "join";
   sessionId: string;
   displayName: string;
+  // Present on a reconnect: lets the server reattach to the same participant
+  // identity (and keep driving, if it was driving) instead of appearing as a
+  // stranger. Absent on a first join.
+  resumeToken?: string;
 };
 
 export type InstructMessage = {
   type: "instruct";
   text: string;
 };
+
+// Driver only. Aborts the in-flight run and drops anything queued behind it —
+// "stop" means stop, not "skip to the next instruction."
+export type StopMessage = { type: "stop" };
+
+// Withdraw a control request before the driver acts on it.
+export type CancelRequestMessage = { type: "cancel_request" };
 
 export type PingMessage = { type: "ping" };
 
@@ -112,6 +123,8 @@ export type PublishMessage = { type: "publish"; title: string };
 export type ClientMessage =
   | JoinMessage
   | InstructMessage
+  | StopMessage
+  | CancelRequestMessage
   | PingMessage
   | RequestControlMessage
   | HandOverMessage
@@ -129,6 +142,20 @@ export type ClientMessage =
 export type JoinedMessage = {
   type: "joined";
   participantId: string;
+  // Hand this back on `join` after a reconnect to reattach to this same
+  // participant (see JoinMessage.resumeToken). Never persisted server-side
+  // beyond the grace window — losing it just means rejoining as a new person.
+  token: string;
+};
+
+// Sent instead of `joined`/`history` when the session isn't live but its
+// transcript survived a restart. There's no participant identity here — a
+// dead session has nobody to be.
+export type ReplayMessage = {
+  type: "replay";
+  status: SessionStatus;
+  driverId: string | null;
+  events: Event[];
 };
 
 export type SessionStateMessage = {
@@ -183,6 +210,13 @@ export type ControlRequestedMessage = {
   displayName: string;
 };
 
+// The requester withdrew before the driver acted on it — drop it from the
+// driver's pending list.
+export type ControlRequestCancelledMessage = {
+  type: "control_request_cancelled";
+  participantId: string;
+};
+
 // What the agent changed, cumulatively, this session. Broadcast to everyone —
 // the point is that the room sees the result, not just the driver.
 export type SessionChangesMessage = {
@@ -208,6 +242,7 @@ export type PublishResultMessage = {
 
 export type ServerMessage =
   | JoinedMessage
+  | ReplayMessage
   | SessionChangesMessage
   | PublishResultMessage
   | SessionStateMessage
@@ -219,4 +254,5 @@ export type ServerMessage =
   | ErrorMessage
   | PongMessage
   | ControlChangedMessage
-  | ControlRequestedMessage;
+  | ControlRequestedMessage
+  | ControlRequestCancelledMessage;
