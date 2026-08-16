@@ -47,8 +47,8 @@ export function SessionChanges({
           <span className="changes-count">
             {n} {n === 1 ? "file" : "files"} changed
           </span>
-          <span className="changes-stat changes-add">+{changes.insertions}</span>
-          <span className="changes-stat changes-del">−{changes.deletions}</span>
+          <Stat kind="add" value={changes.insertions} />
+          <Stat kind="del" value={changes.deletions} />
         </button>
 
         {isDriver && (
@@ -72,8 +72,8 @@ export function SessionChanges({
             {changes.files.map((f) => (
               <li key={f.path}>
                 <span className="changes-file-path">{f.path}</span>
-                <span className="changes-stat changes-add">+{f.insertions}</span>
-                <span className="changes-stat changes-del">−{f.deletions}</span>
+                <Stat kind="add" value={f.insertions} />
+                <Stat kind="del" value={f.deletions} />
               </li>
             ))}
           </ul>
@@ -81,6 +81,18 @@ export function SessionChanges({
         </div>
       )}
     </div>
+  );
+}
+
+// A zero is not a deletion — colouring "−0" the same as a real deletion put
+// signal colour on the absence of the thing it signals.
+function Stat({ kind, value }: { kind: "add" | "del"; value: number }) {
+  const tone = value === 0 ? "changes-zero" : `changes-${kind}`;
+  return (
+    <span className={`changes-stat ${tone}`}>
+      {kind === "add" ? "+" : "−"}
+      {value}
+    </span>
   );
 }
 
