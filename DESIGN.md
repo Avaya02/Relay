@@ -115,7 +115,12 @@ convey *liveness* — that this is happening now, not being replayed.
   instantly — watching 200 rows animate in would be a stutter, not a signal.
 - Under `prefers-reduced-motion: reduce`, entries appear with no transition at all.
   Nothing depends on motion to become visible.
-- Nothing else in the app moves.
+- **One deliberate exception:** the status dot pulses (2s, opacity 1 → 0.35) while
+  `status === "working"`, and the connection banner's dot pulses faster (1.4s) while
+  reconnecting. The rule's purpose is that chrome must never *compete* with the ledger;
+  a 6px dot does not, and it is the only thing answering "is this live right now",
+  which PRODUCT.md principle 5 requires be answerable at a glance. Both are gated on
+  `prefers-reduced-motion: no-preference`. Nothing else in the app moves.
 
 ## Landing page (brand register)
 
@@ -180,10 +185,35 @@ per-instance overrides.
 
 | Component | Notes |
 |---|---|
-| `StreamView` | The ledger. See rules above. |
-| `Composer` | Driver only — rendered, not merely disabled, so its absence is the signal. |
-| `ControlBar` | Driving state + hand-over. Collapses to a menu past ~4 participants. |
-| `Presence` | Hashed presence-color dots, driving indicator. Overflows to `+N` past 4. |
+| `StreamView` | The ledger. See rules above. Takes an `emptyHint` from the caller, because only the caller knows whether the viewer can actually act on it. |
+| `Composer` | Driver only — rendered, not merely disabled, so its absence is the signal. While a run is in flight the primary action reads **Queue**, not Send, because the server queues rather than interrupts. |
+| `ControlBar` | Driving state + hand-over. Pending requesters are promoted to their own row; everyone else lives behind the hand-over menu. |
+| `Presence` | Hashed presence-color dots, driving indicator. Overflows to `+N` past 4; the driver always sorts first so it survives both the cut and the mobile name-collapse. |
+
+### Session chrome
+
+Everything framing the ledger — header, status, presence, control bar, composer, join
+gate, banners — shares one named CSS block (`.chrome-*`, `.status-*`, `.presence-*`,
+`.control-*`, `.composer-*`, `.join-*`, `.banner-*`) in the same style as `.ledger-*`
+and `.landing-*`. It was previously inline utility classes, and that split is exactly
+why it drifted: an unstyled native `<select>` rendered as a light-mode macOS control
+inside a dark instrument.
+
+Rules that govern it:
+
+- **Chrome never uses accent unless it carries live state.** Accent in the chrome means
+  *working*, *you are driving*, or *someone is asking to drive*. Nothing decorative.
+- **The hand-over control is a themed native `<select>`,** not a custom menu. Its popup
+  can never be clipped by the scrolling ledger above it, and it is keyboard- and
+  screen-reader-complete for free — product register's "don't reinvent standard
+  affordances", applied by restyling one rather than replacing it.
+- **Stop is quieter than Send.** Both were filled buttons of similar weight; the
+  destructive action competed with the primary one on every keystroke.
+- **Empty states are role-aware.** The ledger's empty state used to tell every viewer to
+  "type an instruction to start" — including watchers with no composer to type into.
+- **At ≤640px the presence list keeps dots and drops names,** except the driver's. Four
+  participants plus a session id overflowed a 375px header and forced the document to
+  scroll sideways.
 
 Focus rings use `--accent` with a 4px `ring-offset` — without the offset, a same-hue
 ring is perceptually invisible against an accent-filled button.
