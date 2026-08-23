@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { DemoLedger } from "@/components/landing/DemoLedger";
 import { createSession } from "@/lib/api";
+import { RecentSessions } from "@/components/RecentSessions";
 
 export default function Home() {
   const router = useRouter();
@@ -64,6 +65,10 @@ export default function Home() {
               </span>
             </div>
             {error && <p className="hero-error">{error}</p>}
+            {/* The way back into something you were already in. Renders
+                nothing until this browser has actually been in one, so a
+                first-time visitor never sees an empty shelf. */}
+            <RecentSessions />
           </div>
 
           <div className="hero-demo">

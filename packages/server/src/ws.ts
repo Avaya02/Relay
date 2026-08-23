@@ -2,8 +2,10 @@ import { randomUUID } from "node:crypto";
 import type { WebSocket, WebSocketServer } from "ws";
 import type { ClientMessage, JoinMessage, ServerMessage } from "@relay/shared";
 import {
+  byoKeysAllowed,
   cancelParticipantGrace,
   cancelReap,
+  clearSessionKey,
   findParticipantByToken,
   getSession,
   liveParticipantCount,
@@ -13,6 +15,8 @@ import {
   setDriver,
   setStatus,
 } from "./sessions.js";
+import * as validate from "./validate.js";
+import { verifyApiKey } from "./sessionKey.js";
 import type { Session, SessionParticipant } from "./sessions.js";
 import { broadcast } from "./sessions.js";
 import { appendEvent } from "./transcript.js";
@@ -62,6 +66,12 @@ export function attachWs(wss: WebSocketServer): void {
     participant: SessionParticipant,
   ): void {
     session.participants.delete(participant.id);
+
+    // Their key goes with them. Someone who supplied credentials and then
+    // left the room should not keep being billed for whatever the people
+    // still in it decide to run — and this is past the 30s grace window, so
+    // it isn't triggered by a wifi blip.
+    if (session.apiKeyOwner === participant.id) clearSessionKey(session);
 
     // A disconnected driver can't be handed a lock back, so free it rather
     // than leaving the session permanently stuck. No auto-reassignment to
@@ -126,6 +136,14 @@ export function attachWs(wss: WebSocketServer): void {
       return;
     }
 
+    // Checked before the session lookup: a bad name is the client's mistake
+    // either way, and there's no reason to touch Postgres to tell them so.
+    const name = validate.displayName(msg.displayName);
+    if (!name.ok) {
+      send(socket, { type: "error", message: name.error });
+      return;
+    }
+
     const session = getSession(msg.sessionId);
     if (!session) {
       const persisted = await loadPersistedSession(msg.sessionId);
@@ -172,7 +190,7 @@ export function attachWs(wss: WebSocketServer): void {
 
     const participant: SessionParticipant = {
       id: randomUUID(),
-      displayName: msg.displayName,
+      displayName: name.value,
       socket,
       token: randomUUID(),
       graceTimer: null,
@@ -248,10 +266,16 @@ export function attachWs(wss: WebSocketServer): void {
             return;
           }
 
+          const text = validate.instruction(msg.text);
+          if (!text.ok) {
+            send(socket, { type: "error", message: text.error });
+            return;
+          }
+
           appendEvent(session, {
             kind: "user_instruction",
             by: participant.id,
-            data: { text: msg.text },
+            data: { text: text.value },
           });
 
           // Never run two agents concurrently against the same working dir /
@@ -259,10 +283,10 @@ export function attachWs(wss: WebSocketServer): void {
           // transcript immediately (above), but the run itself waits until
           // the in-flight one settles. onRunSettled() drains this queue.
           if (session.status === "working") {
-            session.instructionQueue.push(msg.text);
+            session.instructionQueue.push(text.value);
           } else {
             setStatus(session, "working");
-            runAgent(session, msg.text);
+            runAgent(session, text.value);
           }
           break;
         }
@@ -376,6 +400,88 @@ export function attachWs(wss: WebSocketServer): void {
           break;
         }
 
+        // Bring-your-own-key. The value never leaves this handler except as
+        // its last four characters (agentInfo -> session_state), and it is
+        // deliberately absent from every log line here — an "invalid key"
+        // message that prints the key is the classic way these leak.
+        case "set_key": {
+          const state = connections.get(socket);
+          if (!state) return;
+          const { session, participant } = state;
+
+          if (!byoKeysAllowed()) {
+            send(socket, {
+              type: "error",
+              message:
+                "this deployment doesn't accept user-supplied keys — run Relay yourself to use your own",
+            });
+            return;
+          }
+          if (participant.id !== session.driverId) {
+            send(socket, {
+              type: "error",
+              message: "only the driver can set the session key",
+            });
+            return;
+          }
+
+          const key = validate.apiKey(msg.key);
+          if (!key.ok) {
+            send(socket, { type: "error", message: key.error });
+            return;
+          }
+
+          // Checked against Anthropic before it's accepted. A bad key that
+          // gets stored surfaces three minutes later as the agent's answer
+          // (measured) instead of as an answer to the question just asked.
+          const epoch = ++session.apiKeyEpoch;
+          void verifyApiKey(key.value).then((check) => {
+            if (!check.ok) {
+              send(socket, { type: "error", message: check.error });
+              return;
+            }
+            // Re-read state: the round trip above means the socket may have
+            // gone, the wheel may have moved, or the key may have been
+            // cleared or replaced since the request was made.
+            if (session.apiKeyEpoch !== epoch) return;
+            const now = connections.get(socket);
+            if (!now || now.session !== session) return;
+            if (participant.id !== session.driverId) return;
+
+            session.apiKey = key.value;
+            session.apiKeyHint = validate.keyHint(key.value);
+            session.apiKeyOwner = participant.id;
+
+            // Everyone, not just the setter: "whose money is this run
+            // spending" is the room's business, and the header says so on
+            // every screen.
+            broadcast(session, sessionStateMessage(session));
+          });
+          break;
+        }
+
+        case "clear_key": {
+          const state = connections.get(socket);
+          if (!state) return;
+          const { session, participant } = state;
+
+          // The owner can always take their own key back, even if the wheel
+          // has since moved on to someone else.
+          const owner = session.apiKeyOwner === participant.id;
+          if (!owner && participant.id !== session.driverId) {
+            send(socket, {
+              type: "error",
+              message: "only the driver or the key's owner can clear it",
+            });
+            return;
+          }
+
+          if (clearSessionKey(session)) {
+            broadcast(session, sessionStateMessage(session));
+          }
+          break;
+        }
+
         case "publish": {
           const state = connections.get(socket);
           if (!state) return;
@@ -399,10 +505,13 @@ export function attachWs(wss: WebSocketServer): void {
             return;
           }
 
-          const title =
-            typeof msg.title === "string" && msg.title.trim()
-              ? msg.title.trim().slice(0, 120)
-              : `Relay session ${session.id}`;
+          // Falls back rather than erroring: the title is a convenience on a
+          // commit message, and refusing to publish real work over a bad one
+          // would be the wrong trade.
+          const checked = validate.publishTitle(msg.title);
+          const title = checked.ok
+            ? checked.value
+            : `Relay session ${session.id}`;
 
           void publishSession(session.workingDir, session.id, title)
             .then((r) => {

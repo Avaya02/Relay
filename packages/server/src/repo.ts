@@ -18,6 +18,14 @@ function sourceRepo(): string {
   return process.env.RELAY_SOURCE_REPO ?? "/Applications/Projects/PromptGuard";
 }
 
+// Just the folder name, for the session header. A watcher needs to know
+// which codebase they're watching an agent edit; the full server-side path
+// is both noise and a needless disclosure of the host's directory layout.
+export function repoName(): string | null {
+  const base = path.basename(sourceRepo());
+  return base || null;
+}
+
 // Server-managed scratch space (gitignored). PRISTINE_DIR is cloned once and
 // then only reset; each session gets its own disposable copy under SESSIONS_DIR.
 const SERVER_ROOT = path.resolve(import.meta.dirname, "..");
@@ -51,10 +59,12 @@ export async function prepareWorkingDir(sessionId: string): Promise<string> {
 }
 
 export async function disposeWorkingDir(sessionId: string): Promise<void> {
-  await rm(path.join(SESSIONS_DIR, sessionId), {
-    recursive: true,
-    force: true,
-  });
+  const dir = path.join(SESSIONS_DIR, sessionId);
+  await rm(dir, { recursive: true, force: true });
+  // Otherwise repoLocks accumulates one entry per session for the life of
+  // the process — nothing else ever removes a directory's key once it's
+  // been queued on.
+  repoLocks.delete(dir);
 }
 
 // Spec §6.6's reset, for reusing a working dir in place rather than recloning.
@@ -84,11 +94,46 @@ export type SessionChanges = {
 // shouldn't push a multi-MB string down every participant's socket.
 const MAX_PATCH_BYTES = 400_000;
 
+// Serializes git operations per working directory.
+//
+// `sessionChanges` and `publishSession` both run a sequence of raw git
+// commands against a session's clone, and both are reachable from more than
+// one caller at once in the ordinary course of things: two participants
+// joining within the same second each trigger a `request_changes`
+// (useSession.ts requests it on `history`, so every joiner does), and a
+// publish can land while a watcher's request is still in flight. Without
+// this, concurrent `git add -A` calls collide on `.git/index.lock` — caught
+// live while generating screenshots against a two-participant session,
+// where it surfaced as `session_changes` failing outright.
+//
+// A promise-chain per directory rather than a real mutex library: the only
+// property needed is "the next operation on this dir waits for the last
+// one", and a chain gives that in a few lines. The tail is dropped once
+// nothing is queued behind it, so this never accumulates memory for
+// sessions that finish.
+const repoLocks = new Map<string, Promise<unknown>>();
+
+// The map entry is cleared by disposeWorkingDir, not here — clearing it as
+// soon as one caller's turn ends would let two callers race again if a
+// second one queued in the meantime but arrived a tick late.
+function withRepoLock<T>(dir: string, fn: () => Promise<T>): Promise<T> {
+  const prior = repoLocks.get(dir) ?? Promise.resolve();
+  // Chained even through a rejection: the operation ahead of this one
+  // failing must not wedge every later caller on this directory.
+  const run = prior.catch(() => {}).then(fn);
+  repoLocks.set(dir, run.catch(() => {}));
+  return run;
+}
+
 // Everything the agent touched this session, relative to the clone's starting
 // commit. Staging first is what makes new files (the common case — the agent
 // writes REPORT.md) show up at all; `git diff` alone ignores untracked paths.
 // The working dir is disposable, so leaving things staged costs nothing.
-export async function sessionChanges(dir: string): Promise<SessionChanges> {
+//
+// Unlocked core: `publishSession` needs to call this from *inside* its own
+// lock (it computes changes as its first step), and the lock isn't
+// reentrant — taking it twice from the same call stack would deadlock.
+async function computeSessionChanges(dir: string): Promise<SessionChanges> {
   await run("git", ["add", "-A"], { cwd: dir });
 
   const { stdout: numstat } = await run(
@@ -126,6 +171,12 @@ export async function sessionChanges(dir: string): Promise<SessionChanges> {
   };
 }
 
+// Public entry point: queued behind anything else already running against
+// this directory (see withRepoLock above).
+export function sessionChanges(dir: string): Promise<SessionChanges> {
+  return withRepoLock(dir, () => computeSessionChanges(dir));
+}
+
 export type PublishResult =
   | {
       ok: true;
@@ -150,7 +201,19 @@ function githubToken(): string | null {
 
 // Commit the session's work to a branch, and — only if a repo and a
 // least-privilege token are configured — push it and open a pull request.
-export async function publishSession(
+export function publishSession(
+  dir: string,
+  sessionId: string,
+  message: string,
+): Promise<PublishResult> {
+  // The whole sequence — measuring changes, checkout, commit, push — is one
+  // queued unit. Calls computeSessionChanges directly rather than the
+  // exported sessionChanges: that one takes this same lock, and taking it
+  // twice from inside itself would deadlock.
+  return withRepoLock(dir, () => doPublish(dir, sessionId, message));
+}
+
+async function doPublish(
   dir: string,
   sessionId: string,
   message: string,
@@ -158,7 +221,7 @@ export async function publishSession(
   const branch = `relay/session-${sessionId}`;
 
   try {
-    const changes = await sessionChanges(dir);
+    const changes = await computeSessionChanges(dir);
     if (changes.files.length === 0) {
       return { ok: false, error: "nothing to publish — no files changed" };
     }

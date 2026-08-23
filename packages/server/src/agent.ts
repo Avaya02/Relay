@@ -1,11 +1,13 @@
 import path from "node:path";
-import { query } from "@anthropic-ai/claude-agent-sdk";
-import type { DiffLine, ToolDetail } from "@relay/shared";
+import { query, type Settings } from "@anthropic-ai/claude-agent-sdk";
+import type { DiffLine, PlanItem, ToolDetail } from "@relay/shared";
 import { liveParticipantCount, setStatus, type Session } from "./sessions.js";
 import { appendEvent } from "./transcript.js";
 import { prepareWorkingDir } from "./repo.js";
 import { runMockAgent } from "./agent-mock.js";
 import { mirrorSessionMeta } from "./persist.js";
+import { redactKeys } from "./validate.js";
+import { apiKeyHelperPath, SESSION_KEY_ENV } from "./sessionKey.js";
 
 // Agent SDK wrapper (spec §5). Verified against the shipped types of
 // @anthropic-ai/claude-agent-sdk@0.3.220 rather than the docs pages, which
@@ -21,7 +23,27 @@ import { mirrorSessionMeta } from "./persist.js";
 // resolve before index.ts's process.loadEnvFile() call ever executed. A
 // frozen const here would permanently miss anything loaded from .env.
 export function runAgent(session: Session, instruction: string): void {
-  if (process.env.RELAY_AGENT !== "real") {
+  // A supplied key that can't actually be honoured must not fall through to
+  // the host's own credentials. That would bill the wrong account behind a UI
+  // saying the opposite — the one outcome worse than refusing to run.
+  if (session.apiKey !== null && !apiKeyHelperPath()) {
+    appendEvent(session, {
+      kind: "agent_error",
+      data: {
+        message:
+          "this server can't apply a supplied API key, so the run was not started",
+      },
+    });
+    setStatus(session, "error");
+    onRunSettled(session);
+    return;
+  }
+
+  // A session key wins over server config. Someone supplied credentials for
+  // this room expecting a real run; quietly giving them the scripted mock
+  // instead would be the worse failure of the two.
+  const real = session.apiKey !== null || process.env.RELAY_AGENT === "real";
+  if (!real) {
     runMockAgent(session, instruction, () => onRunSettled(session));
     return;
   }
@@ -41,6 +63,51 @@ function onRunSettled(session: Session): void {
     setStatus(session, "working");
     runAgent(session, next);
   }
+}
+
+// The query options that put a session-supplied key into play, or null when
+// there isn't one (the ordinary case: the host's own credentials, untouched).
+//
+// Returns null too if the helper script can't be written. Falling back to the
+// host's credentials there would bill the wrong account behind a UI that says
+// otherwise, so runAgent treats null as "can't honour this key" and runs the
+// mock instead.
+function sessionKeyOptions(
+  session: Session,
+): { env: Record<string, string | undefined>; settings: Settings } | null {
+  if (!session.apiKey) return null;
+  const helper = apiKeyHelperPath();
+  if (!helper) return null;
+  return {
+    env: { ...process.env, [SESSION_KEY_ENV]: session.apiKey },
+    // Inline settings, so this run is unaffected by whatever the host has in
+    // its own settings files — appropriate for a run on someone else's
+    // credentials, and it keeps the helper from being overridden.
+    settings: { apiKeyHelper: helper },
+  };
+}
+
+// TodoWrite's payload, defensively parsed. It arrives as untyped tool input,
+// and a malformed one must degrade to "no plan" rather than throw inside the
+// message loop and kill the run.
+function planItems(raw: unknown): PlanItem[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PlanItem[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const t = item as Record<string, unknown>;
+    if (typeof t.content !== "string") continue;
+    const status =
+      t.status === "in_progress" || t.status === "completed"
+        ? t.status
+        : "pending";
+    out.push({
+      content: t.content,
+      status,
+      activeForm: typeof t.activeForm === "string" ? t.activeForm : undefined,
+    });
+  }
+  return out;
 }
 
 // Split into (verb, target) rather than one string so the ledger can align
@@ -88,8 +155,23 @@ function summarizeToolCall(
       return { verb: "searched", target: clip(input.query, 60) };
     case "Task":
       return { verb: "delegated", target: clip(input.description, 70) };
-    case "TodoWrite":
-      return { verb: "planned", target: "updated its plan" };
+    case "TodoWrite": {
+      // "updated its plan" said nothing. Name the step it just started, so
+      // the ledger row carries the same information the plan strip does.
+      const todos = planItems(input.todos);
+      const active = todos.find((t) => t.status === "in_progress");
+      const done = todos.filter((t) => t.status === "completed").length;
+      if (active) {
+        return { verb: "planned", target: active.activeForm ?? active.content };
+      }
+      if (todos.length && done === todos.length) {
+        return { verb: "planned", target: "all steps complete" };
+      }
+      return {
+        verb: "planned",
+        target: todos.length ? `${todos.length} steps` : "updated its plan",
+      };
+    }
     default:
       return { verb: tool.toLowerCase(), target: "" };
   }
@@ -161,6 +243,14 @@ function detailForCall(
       lines: input.content.split("\n").map((text) => ({ op: "+" as const, text })),
     };
   }
+  if (tool === "TodoWrite") {
+    // The whole checklist rides along on the event. The client takes the
+    // newest one as the session's current plan (see PlanItem in the
+    // protocol), which is what makes it survive replay and late joins for
+    // free — no separate plan message, no server-side plan state.
+    const todos = planItems(input.todos);
+    if (todos.length) return { type: "plan", todos };
+  }
   return undefined;
 }
 
@@ -230,7 +320,7 @@ function summarizeToolResult(
       return n === 1 ? "1 match" : `${n} matches`;
     }
     case "TodoWrite":
-      return "updated";
+      return "plan updated";
     default:
       if (!oneLine) return "done";
       return lines.length > 1 ? `${lines.length} lines` : clip(oneLine);
@@ -264,6 +354,16 @@ async function runRealAgent(
         // disposable per-session clone — never the source repo (see repo.ts).
         permissionMode: "bypassPermissions",
         allowDangerouslySkipPermissions: true,
+        // A key supplied for this session bills that person instead of the
+        // host. It goes in via `apiKeyHelper`, NOT via ANTHROPIC_API_KEY —
+        // see apiKeyHelper.ts, which documents the measurement showing that
+        // the env var is silently ignored whenever the host has Claude Code
+        // credentials of its own.
+        //
+        // `env` REPLACES the subprocess environment rather than merging with
+        // it (the SDK's own types say so), so process.env has to be spread or
+        // the agent loses PATH and HOME and never starts.
+        ...(sessionKeyOptions(session) ?? {}),
         // Continue the same agent conversation across instructions, so
         // follow-ups are steering rather than a cold restart (spec §5).
         ...(session.agentSessionId ? { resume: session.agentSessionId } : {}),
@@ -367,9 +467,14 @@ async function runRealAgent(
       setStatus(session, "idle");
       return;
     }
+    // Redacted on the way in: an agent_error is appended to the transcript,
+    // broadcast to the whole room, and mirrored to Postgres. A failed auth
+    // that echoes the key back would otherwise put it in all three.
     appendEvent(session, {
       kind: "agent_error",
-      data: { message: err instanceof Error ? err.message : String(err) },
+      data: {
+        message: redactKeys(err instanceof Error ? err.message : String(err)),
+      },
     });
     setStatus(session, "error");
   } finally {

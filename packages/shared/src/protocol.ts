@@ -39,9 +39,26 @@ export type Event = {
 // happened" layer (spec §5: summarize, don't dump raw args into the UI).
 export type ToolDetail =
   | { type: "diff"; path: string; lines: DiffLine[] }
-  | { type: "text"; text: string };
+  | { type: "text"; text: string }
+  | { type: "plan"; todos: PlanItem[] };
 
 export type DiffLine = { op: " " | "-" | "+"; text: string };
+
+// The agent's own checklist for a multi-step task, straight off its
+// TodoWrite calls. This is *state*, not a log entry: the newest one
+// supersedes the rest, and the client derives "the current plan" by taking
+// the last one in the transcript — which means replay and late-joiner
+// catch-up work with no extra protocol.
+//
+// It matters more here than in a single-player agent tool: most people in a
+// Relay session are watching, not driving, and a watcher can't ask "where
+// are we?". The plan is what makes a twenty-minute run legible to them.
+export type PlanItem = {
+  content: string;
+  status: "pending" | "in_progress" | "completed";
+  /** Present-tense label the agent shows while the step is running. */
+  activeForm?: string;
+};
 
 // tool_call — rendered immediately, in a pending state, before its result
 // exists. `id` pairs it with the matching tool_result so the client can
@@ -120,6 +137,17 @@ export type RequestChangesMessage = { type: "request_changes" };
 // the server is configured for it.
 export type PublishMessage = { type: "publish"; title: string };
 
+// Driver only. Supplies an Anthropic API key for THIS session, so a shared
+// deployment can run the real agent on the viewer's own credentials instead
+// of the host's. The key is held in memory for the session's lifetime and is
+// never persisted, logged, or sent back to any client — only `keyHint` (its
+// last four characters) ever leaves the server.
+export type SetKeyMessage = { type: "set_key"; key: string };
+
+// Driver only. Drops the session key; the session falls back to whatever the
+// server itself is configured with (usually the mock agent).
+export type ClearKeyMessage = { type: "clear_key" };
+
 export type ClientMessage =
   | JoinMessage
   | InstructMessage
@@ -130,7 +158,9 @@ export type ClientMessage =
   | HandOverMessage
   | ReleaseControlMessage
   | RequestChangesMessage
-  | PublishMessage;
+  | PublishMessage
+  | SetKeyMessage
+  | ClearKeyMessage;
 
 // --- Server -> Client ---
 
@@ -158,11 +188,45 @@ export type ReplayMessage = {
   events: Event[];
 };
 
+/**
+ * What will actually run when the driver sends the next instruction, and why.
+ *
+ * The room deserves to know this without asking. "The agent is scripted" and
+ * "the agent is real, on Sam's key, and Sam is being billed" are very
+ * different situations to be watching, and neither was visible before.
+ */
+export type AgentInfo = {
+  /** `mock` is the scripted offline agent; `real` runs the Agent SDK. */
+  mode: "mock" | "real";
+  /**
+   * Where the credentials come from. `server` means the host configured its
+   * own; `session` means someone in this room supplied a key for it.
+   */
+  source: "mock" | "server" | "session";
+  /** Last four characters of the session key, if one is set. Never the key. */
+  keyHint: string | null;
+  /** Display name of whoever supplied it, so the room knows who's paying. */
+  keyOwner: string | null;
+  /**
+   * Whether this deployment accepts a user-supplied key at all. False on a
+   * public demo: the agent has unrestricted shell access inside its clone, so
+   * letting strangers run it is a sandboxing problem, not a billing one.
+   */
+  byoAllowed: boolean;
+};
+
 export type SessionStateMessage = {
   type: "session_state";
   participants: Participant[];
   driverId: string | null;
   status: SessionStatus;
+  /**
+   * Which codebase this session's agent is working on. Server config, not
+   * per-session — but a watcher needs it to orient, and the UI previously
+   * never said what was being edited.
+   */
+  repo?: string | null;
+  agent?: AgentInfo;
 };
 
 export type HistoryMessage = {
