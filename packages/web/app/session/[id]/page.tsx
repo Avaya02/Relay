@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, type FormEvent } from "react";
+import { use, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import type { SessionStatus } from "@relay/shared";
 import { useSession, type ReplayedSession } from "@/lib/useSession";
@@ -8,7 +8,12 @@ import { StreamView } from "@/components/StreamView";
 import { Composer } from "@/components/Composer";
 import { Presence } from "@/components/Presence";
 import { ControlBar } from "@/components/ControlBar";
-import { SessionChanges } from "@/components/SessionChanges";
+import { PlanStrip } from "@/components/PlanStrip";
+import { WorkspaceRail } from "@/components/WorkspaceRail";
+import { SessionsRail } from "@/components/SessionsRail";
+import { AgentChip } from "@/components/AgentChip";
+import { ShareControls } from "@/components/ShareControls";
+import { rememberSession } from "@/lib/recentSessions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -20,6 +25,37 @@ export default function SessionPage({
   const { id: sessionId } = use(params);
   const session = useSession(sessionId);
   const [attemptedJoin, setAttemptedJoin] = useState(false);
+
+  const selfName =
+    session.participants.find((p) => p.id === session.selfId)?.displayName ??
+    null;
+  const fileCount = session.changes?.files.length ?? 0;
+
+  // Remember this session in the sidebar, but only once the server has
+  // actually confirmed the join — a link to a session that rejected you is
+  // not a session you were in. Runs above the early returns below because a
+  // hook can't be called conditionally.
+  useEffect(() => {
+    if (session.selfId === null) return;
+    rememberSession({
+      id: sessionId,
+      name: selfName ?? "",
+      repo: session.repo,
+      files: fileCount,
+      runs: session.runCount,
+      costUsd: session.totalCostUsd,
+      status: session.status,
+    });
+  }, [
+    sessionId,
+    session.selfId,
+    selfName,
+    session.repo,
+    fileCount,
+    session.runCount,
+    session.totalCostUsd,
+    session.status,
+  ]);
 
   // Checked before the join gate: a session that isn't live but whose
   // transcript survived a restart replies to `join` with `replay` instead
@@ -58,9 +94,41 @@ export default function SessionPage({
       <header className="chrome-bar">
         <div className="chrome-mark">
           <span className="chrome-wordmark">relay</span>
+          {/* What the agent is editing. Watching code change without being
+              told which codebase is a real orientation gap. */}
+          {session.repo && (
+            <span className="chrome-repo" title="Working on this repository">
+              {session.repo}
+            </span>
+          )}
           <span className="chrome-session-id">{sessionId}</span>
         </div>
         <div className="chrome-right">
+          <ShareControls sessionId={sessionId} />
+          {/* What's actually running, and on whose credentials. The mock is
+              the default and was previously indistinguishable from a real
+              run. */}
+          <AgentChip
+            agent={session.agent}
+            isDriver={isDriver}
+            selfName={selfName}
+            onSetKey={session.setKey}
+            onClearKey={session.clearKey}
+          />
+          <span className="chrome-divider" aria-hidden />
+          {/* Per-run cost already rode on each agent_done; nothing summed
+              them, so a six-turn session showed six prices and no total. */}
+          {session.runCount > 0 && (
+            <>
+              <span
+                className="chrome-cost"
+                title={`${session.runCount} ${session.runCount === 1 ? "run" : "runs"} this session`}
+              >
+                ${session.totalCostUsd.toFixed(4)}
+              </span>
+              <span className="chrome-divider" aria-hidden />
+            </>
+          )}
           <StatusBadge status={session.status} />
           <span className="chrome-divider" aria-hidden />
           <Presence
@@ -71,60 +139,77 @@ export default function SessionPage({
         </div>
       </header>
 
-      <StreamView
-        events={session.events}
-        participants={session.participants}
-        selfId={session.selfId}
-        // Told from the viewer's own position: a watcher has no composer, so
-        // "type an instruction to start" was an instruction they could not
-        // follow.
-        emptyHint={
-          isDriver
-            ? "Type an instruction below and the agent's work will stream here, step by step."
-            : driver
-              ? `${driver.displayName} is driving. Anything the agent does will appear here as it happens.`
-              : "Nobody's driving yet. Take control below to send the first instruction."
-        }
-      />
+      {/* Two columns from here down: the stream and what it did to the repo.
+          The rail gets its own full-height column rather than sitting under
+          the ledger, so "what has it touched so far?" is answerable mid-run
+          instead of only once a turn settles. */}
+      <div className="session-body">
+        <SessionsRail currentId={sessionId} />
 
-      {session.connection === "open" ? (
-        <>
-          <SessionChanges
-            changes={session.changes}
-            isDriver={isDriver}
-            publishState={session.publishState}
-            publishing={session.publishing}
-            onPublish={session.publish}
-          />
-          <ControlBar
+        <div className="session-main">
+          {session.plan && <PlanStrip plan={session.plan} />}
+
+          <StreamView
+            events={session.events}
             participants={session.participants}
-            driverId={session.driverId}
             selfId={session.selfId}
-            pendingRequests={session.pendingRequests}
-            onRequestControl={session.requestControl}
-            onCancelRequest={session.cancelRequest}
-            onHandOver={session.handOver}
-            onRelease={session.releaseControl}
+            // Told from the viewer's own position: a watcher has no composer,
+            // so "type an instruction to start" was an instruction they could
+            // not follow.
+            emptyHint={
+              isDriver
+                ? "Type an instruction below and the agent's work will stream here, step by step."
+                : driver
+                  ? `${driver.displayName} is driving. Anything the agent does will appear here as it happens.`
+                  : "Nobody's driving yet. Take control below to send the first instruction."
+            }
           />
-          {isDriver && (
-            <Composer
-              onSend={(text) => session.instruct(text)}
-              status={session.status}
-              onStop={session.stop}
-            />
+
+          {session.connection === "open" ? (
+            <>
+              <ControlBar
+                participants={session.participants}
+                driverId={session.driverId}
+                selfId={session.selfId}
+                pendingRequests={session.pendingRequests}
+                onRequestControl={session.requestControl}
+                onCancelRequest={session.cancelRequest}
+                onHandOver={session.handOver}
+                onRelease={session.releaseControl}
+              />
+              {isDriver && (
+                <Composer
+                  onSend={(text) => session.instruct(text)}
+                  status={session.status}
+                  onStop={session.stop}
+                />
+              )}
+            </>
+          ) : (
+            // The socket retries itself with backoff (useSession) and rejoins
+            // on the same identity once it's back — this is honest status, not
+            // a dead end. Replacing (not just supplementing) the control bar
+            // here matters: driving or requesting control while the socket is
+            // down would silently no-op, same as sending an instruction does.
+            <div className="banner" role="status">
+              <span className="banner-dot" aria-hidden />
+              Connection lost — reconnecting. Your seat is held for 30 seconds.
+            </div>
           )}
-        </>
-      ) : (
-        // The socket retries itself with backoff (useSession) and rejoins
-        // on the same identity once it's back — this is honest status, not
-        // a dead end. Replacing (not just supplementing) the control bar
-        // here matters: driving or requesting control while the socket is
-        // down would silently no-op, same as sending an instruction does.
-        <div className="banner" role="status">
-          <span className="banner-dot" aria-hidden />
-          Connection lost — reconnecting. Your seat is held for 30 seconds.
         </div>
-      )}
+
+        {/* Publishing is driver-only *and* needs a live socket — a publish
+            sent while reconnecting would silently no-op, same as an
+            instruction does. The file list itself stays readable either way. */}
+        <WorkspaceRail
+          events={session.events}
+          changes={session.changes}
+          isDriver={isDriver && session.connection === "open"}
+          publishState={session.publishState}
+          publishing={session.publishing}
+          onPublish={session.publish}
+        />
+      </div>
     </div>
   );
 }

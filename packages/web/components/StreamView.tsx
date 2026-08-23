@@ -23,7 +23,7 @@ import type {
 //     behind a disclosure so the summary line stays scannable.
 
 type Row =
-  | { type: "instruction"; event: Event }
+  | { type: "instruction"; event: Event; turn: number; first: boolean }
   | { type: "text"; event: Event }
   | { type: "action"; event: Event; result: Event | null }
   | { type: "done"; event: Event }
@@ -43,10 +43,22 @@ function buildRows(events: Event[]): Row[] {
 
   const consumed = new Set<string>();
   const rows: Row[] = [];
+  // Turns are counted here rather than stored on the event: an instruction IS
+  // the turn boundary, so the number falls out of the transcript everyone
+  // already has, and a late joiner counts the same way from the same replay.
+  let turn = 0;
   for (const event of events) {
     switch (event.kind) {
       case "user_instruction":
-        rows.push({ type: "instruction", event });
+        turn++;
+        rows.push({
+          type: "instruction",
+          event,
+          turn,
+          // The first instruction opens the session; it needs no rule above it
+          // separating it from the nothing that precedes it.
+          first: rows.length === 0,
+        });
         break;
       case "agent_text":
         rows.push({ type: "text", event });
@@ -210,22 +222,25 @@ function LedgerRow({
           : (participants.find((p) => p.id === event.by)?.displayName ??
             "someone");
       return (
-        <div className="ledger-item ledger-instruction">
-          <span className="text-[var(--accent)]">{name}</span>
-          <span className="text-[var(--text-dim)]"> → </span>
-          <span className="text-[var(--text)]">{String(event.data.text)}</span>
+        <div
+          className={`ledger-item ledger-instruction ${
+            row.first ? "ledger-instruction--first" : ""
+          }`}
+        >
+          <span className="ledger-turn">turn {row.turn}</span>
+          <span className="ledger-instruction-body">
+            <span className="ledger-instruction-who">{name}</span>
+            <span className="ledger-instruction-arrow"> → </span>
+            <span className="ledger-instruction-text">
+              {String(event.data.text)}
+            </span>
+          </span>
         </div>
       );
     }
 
     case "text":
-      return (
-        <div className="ledger-item markdown-body ledger-prose">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {String(row.event.data.text)}
-          </ReactMarkdown>
-        </div>
-      );
+      return <ProseRow text={String(row.event.data.text)} />;
 
     case "action":
       return <ActionRow call={row.event} result={row.result} />;
@@ -259,6 +274,52 @@ function LedgerRow({
   }
 }
 
+// A single agent reply can be a 130-line file listing. Rendered whole, one
+// answer pushes every ledger row off screen and the flight-recorder read is
+// gone — the exact failure DESIGN.md's "optimize for the fiftieth event"
+// rule is about. Long replies collapse to a readable height and open in
+// place.
+//
+// The decision is made from the text itself during render rather than by
+// measuring the node in an effect: measurement would mean writing state from
+// an effect on every append, and the whole point is that this surface stays
+// cheap when events are arriving several times a second.
+const PROSE_CLAMP_LINES = 14;
+
+function ProseRow({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const lineCount = text.split("\n").length;
+  const long = lineCount > PROSE_CLAMP_LINES || text.length > 1200;
+
+  if (!long) {
+    return (
+      <div className="ledger-item markdown-body ledger-prose">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ledger-item ledger-prose">
+      <div
+        className={
+          open ? "markdown-body" : "markdown-body ledger-prose-clamped"
+        }
+      >
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+      </div>
+      <button
+        type="button"
+        className="ledger-prose-toggle"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        {open ? "Show less" : `Show all ${lineCount} lines`}
+      </button>
+    </div>
+  );
+}
+
 function ActionRow({ call, result }: { call: Event; result: Event | null }) {
   const [open, setOpen] = useState(false);
 
@@ -271,6 +332,13 @@ function ActionRow({ call, result }: { call: Event; result: Event | null }) {
     (call.data.detail as ToolDetail | undefined) ??
     (result?.data.detail as ToolDetail | undefined);
   const canExpand = Boolean(detail);
+
+  // A plan update is a timeline marker, not work. The agent revises its
+  // checklist often — on a real run that's a third of the rows — and at
+  // equal weight they crowd out the reads, edits and test runs that are the
+  // actual record. The live state lives in the plan strip; these stay as
+  // quiet "it reached step 3 at 19:55:14" anchors.
+  const muted = call.data.tool === "TodoWrite";
 
   // Pending → done is a state change, so it earns the marker swap: ▸ while
   // running, ✓/✗ once resolved. Glyph as well as color, so the row is
@@ -312,15 +380,17 @@ function ActionRow({ call, result }: { call: Event; result: Event | null }) {
     </>
   );
 
+  const rowClass = `ledger-item ledger-action${muted ? " ledger-action--muted" : ""}`;
+
   if (!canExpand) {
-    return <div className="ledger-item ledger-action">{body}</div>;
+    return <div className={rowClass}>{body}</div>;
   }
 
   return (
     <>
       <button
         type="button"
-        className="ledger-item ledger-action ledger-action--expandable"
+        className={`${rowClass} ledger-action--expandable`}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-label={`${verb} ${target}${summary ? `, ${summary}` : ""}. Show detail.`}
@@ -342,6 +412,33 @@ function DetailPanel({ detail }: { detail: ToolDetail }) {
             <DiffRow key={i} line={line} />
           ))}
         </pre>
+      </div>
+    );
+  }
+  if (detail.type === "plan") {
+    // The same checklist the plan strip shows, but frozen at this moment in
+    // the run — expanding a past TodoWrite row answers "what did the plan
+    // look like back then", which the live strip can't.
+    return (
+      <div className="ledger-detail">
+        <ol className="plan-list plan-list--inline">
+          {detail.todos.map((t, i) => (
+            <li key={i} className={`plan-item plan-item--${t.status}`}>
+              <span className="plan-mark" aria-hidden>
+                {t.status === "completed"
+                  ? "✓"
+                  : t.status === "in_progress"
+                    ? "▸"
+                    : "·"}
+              </span>
+              <span className="plan-text">
+                {t.status === "in_progress"
+                  ? (t.activeForm ?? t.content)
+                  : t.content}
+              </span>
+            </li>
+          ))}
+        </ol>
       </div>
     );
   }

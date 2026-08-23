@@ -122,6 +122,150 @@ convey *liveness* — that this is happening now, not being replayed.
   which PRODUCT.md principle 5 requires be answerable at a glance. Both are gated on
   `prefers-reduced-motion: no-preference`. Nothing else in the app moves.
 
+## The plan strip — the ledger's counterpart
+
+The ledger answers *what just happened*. The plan strip answers *where are we going,
+and how far in*. A flight recorder and a flight plan; neither is much use alone once a
+run passes a few minutes.
+
+This matters more for Relay than for a single-player agent tool, and that difference is
+the reason it exists. In Claude Code you are the driver and the plan is in your head. In
+Relay **most people in the room are watching, not driving**, and a watcher cannot ask
+"where are we?" without interrupting. The strip is what makes a twenty-minute run
+legible to someone who joined at minute twelve.
+
+Rules:
+
+1. **It's derived, never stored.** The agent's `TodoWrite` calls carry the checklist as
+   a `plan` tool-detail on the event; the client takes the newest one in the transcript.
+   That's why it survives replay, reconnect, and late joins for free — no plan message,
+   no server-side plan state, and no way for two viewers' plans to disagree.
+2. **One row tall when closed.** Pips (one per step) + the step currently running + a
+   count. It frames the ledger; it must never compete with it.
+3. **The in-progress pip is the only other thing that moves.** Same 2s pulse as the
+   status dot, same `prefers-reduced-motion` gate, same justification.
+4. **Completed steps are struck through *and* dimmed** — never colour alone.
+5. **Plan rows in the ledger are recessed.** The agent revises its checklist constantly;
+   on a real run that's roughly a third of all rows. At full weight they crowd out the
+   reads, edits and test runs that are the actual record, so they sit at a measured
+   4.9:1 rather than the usual 15.7:1 target colour — present as timeline anchors
+   ("it reached step 3 at 19:55:14"), not as work done.
+
+### Turn dividers
+
+A session is a conversation, but a six-turn one rendered as one continuous stream: your
+instruction, forty rows, another instruction, forty more. The boundary was there and
+invisible.
+
+An instruction **is** the boundary, so it carries the marker: a labelled rule above it,
+with the turn number sitting on the rule. The ledger's continuous left rule stays
+continuous and the horizontal one crosses it, the way a marker crosses a timeline rather
+than cutting it.
+
+The count is derived in `buildRows` from the `user_instruction` events themselves, never
+stored. Same reason as the plan strip: a late joiner replaying `history` counts to the
+same number from the same events. The first instruction gets no rule and no label —
+there is nothing above it to be separated from, and a divider there would be decoration.
+
+### Long agent replies
+
+A single reply can be a 130-line file listing. Rendered whole it pushes every row off
+screen and the flight-recorder read is gone — the exact failure "optimize for the
+fiftieth event" is about. Replies past ~14 lines clamp to a fixed height with a
+mask-fade and a `Show all N lines` toggle. The decision is made from the text during
+render, not by measuring the node in an effect, so an append-heavy surface stays cheap.
+
+### Session economics
+
+Each `agent_done` already carried `steps · duration · cost`; nothing summed them, so a
+six-turn session showed six separate prices and no total. The header now carries the
+cumulative figure, derived from the same events. Per-run detail stays on the capstone
+row — the two answer different questions and both are worth having.
+
+## The workspace rail — what the session did to the repo
+
+The ledger says a file was written. The rail says *which files stand changed right now,
+by how much, and what the change was*. Before it existed that question had one answer: a
+collapsed bar under the ledger that only appeared once a turn finished, held the entire
+patch in a single `<pre>`, and was easy to never notice.
+
+Rules:
+
+1. **Two sources, one list.** Live rows come from the transcript — every `Write`/`Edit`
+   the ledger has seen — and appear the instant the agent writes. Measured rows come
+   from `git diff --numstat` when a turn settles and supersede them with real counts,
+   real A/M/D status, and a per-file patch. Deriving the live half from events rather
+   than tracking it separately is the plan strip's trick again: it makes the rail
+   correct for a late joiner and after a reconnect with no extra protocol.
+2. **Never claim a number you haven't measured.** While every row is a live guess the
+   summary shows a file count and nothing else. `+0 −0` mid-run reads as "no changes",
+   which is the opposite of what's happening. Publish is hidden for the same reason —
+   there is nothing measured to publish yet.
+3. **Status is a letter, then a tone.** `A` / `M` / `D` carry the meaning; colour only
+   reinforces it. Same rule as the ledger's `✓`/`✗` and the plan strip's strikethrough.
+4. **Only measured rows are expandable.** A file with no patch yet is a plain row, not a
+   button that does nothing — a dead affordance is worse than none.
+5. **Path order, always.** Recency would be more useful for about a second, then
+   reshuffle the list under the reader's cursor every time a row gets measured.
+6. **Directory dim, filename bright,** and the directory truncates from the *right*.
+   The usual left-truncation trick (`direction: rtl`) silently reorders the trailing
+   separator, so `docs/` paints as `/docs` and the row reads `/docssession-log.md`. DOM
+   text order stays correct while this happens, which means a test that reads
+   `innerText` will pass — it was caught in a screenshot, not an assertion.
+
+## The sessions rail — the way back
+
+Relay has no accounts and shouldn't (`PRODUCT.md`: a link shared with people you're already
+talking to). That decision had a consequence nobody chose: close the tab and the session
+was gone unless you'd saved the URL somewhere.
+
+`localStorage` is the honest fix for that exact shape of problem — per-browser, no
+server-side identity, and it stores only what the person already knows: sessions they
+personally joined. It is not sync and doesn't pretend to be; another device shows a
+different list, which is correct for something with no account behind it.
+
+Rules:
+
+1. **A list, not a tree.** Flat, reverse-chronological, three date buckets (Today /
+   Yesterday / Earlier). The question is "what was I just in?", and a calendar answers a
+   question nobody asked.
+2. **The current session is marked, never filtered out.** A list that hides where you are
+   makes you count rows to work out where you are. Accent left border plus the word `here`.
+3. **Two sessions on one repo is the normal case,** so rows carry a short id when they
+   aren't the current one — labelled only by repo they're indistinguishable. `here` and the
+   id are mutually exclusive; both at once is clutter.
+4. **Subtitles are built from what's known.** No files and no runs means neither is shown.
+   "0 files" is noise dressed as information.
+5. **It's the first column to go.** Below 1100px the rail hides — the stream is the
+   product, and this is navigation reachable from the wordmark.
+6. **Forget removes the bookmark, not the session.** The link keeps working for anyone who
+   has it, and the control says so rather than reading as a delete.
+
+## The agent chip — what's running, and on whose money
+
+The mock agent is the default, and it was indistinguishable from a real one: a visitor
+watched a convincing run with no way to know no model was involved. On a shared instance
+the opposite question matters more — if this *is* real, someone is being billed, and the
+room should be able to see who.
+
+So the chip is always present and says one of three things: `Demo`, `Live`, or
+`Live ··4f2a` when someone here supplied a key.
+
+Rules:
+
+1. **Accent only when it carries live state.** The dot is `--text-dim` in demo and
+   `--accent` when a real agent is in play — the same rule the status dot and presence list
+   follow. A scripted run is not live state.
+2. **Four characters, never the key.** The key does not reach the browser at all; the
+   server sends a hint and a name. The panel says so, because a person pasting a
+   credential deserves to be told what happens to it.
+3. **The whole room sees it, not just the driver.** Whose account is paying for the run
+   you're watching is the room's business.
+4. **The locked case is explained, not hidden.** Where a deployment doesn't accept keys,
+   the panel says why: the agent has shell access inside its clone, so letting strangers
+   drive a real one is a sandboxing problem rather than a billing one. The reason is more
+   interesting than the feature would have been.
+
 ## Landing page (brand register)
 
 The one surface where design *is* the product. Different register from the app, same identity.
@@ -156,25 +300,33 @@ app — "live" is the entire pitch.
 ## Layout (session view)
 
 ```
-┌───────────────────────────────────────────────────────────┐
-│  relay · session id          status  ● you · ● alex(driving)│  header, --surface
-├───────────────────────────────────────────────────────────┤
-│                                                           │
-│   ACTION LEDGER (scrolls)                        --bg     │
-│   │ ▸ read   README.md          ✓ 100 lines   18:49:13    │
-│   │ ▸ edit   src/App.tsx        ✓ +12 −3  ⌄   18:49:15    │
-│   agent prose renders here as markdown                    │
-│                                                           │
-├───────────────────────────────────────────────────────────┤
-│  ControlBar — who's driving, request / hand over   --surface-2
-├───────────────────────────────────────────────────────────┤
-│  Composer — driver only                            --surface-2
-└───────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────┬────────────────┐
+│ relay · repo · id   status ● you · ● alex │                │  header, --surface
+├──────────────────────────────────────────┤  WORKSPACE     │
+│ ▸ Plan ●●○○  running the test suite  2/4 │  3 files +11 −0│  plan strip
+├──────────────────────────────────────────┤                │
+│                                          │  A docs/log.md │
+│  ACTION LEDGER (scrolls)          --bg   │  M README.md   │
+│  │ ▸ read   README.md   ✓ 100 lines      │  A NOTES.md    │
+│  │ ▸ edit   src/App.tsx ✓ +12 −3  ⌄      │    turn 1      │
+│  agent prose renders here as markdown    │                │
+│                                          │                │
+├──────────────────────────────────────────┤                │
+│  ControlBar — request / hand over        │                │
+├──────────────────────────────────────────┤────────────────┤
+│  Composer — driver only                  │ [Publish]      │
+└──────────────────────────────────────────┴────────────────┘
 ```
 
-Single column, full height, three fixed chrome bands around one scrolling pane. No
-sidebar, no file tree, no tabs — see anti-references in `PRODUCT.md`. Responsive down
-to 375px; the presence list and control bar collapse rather than wrap.
+Two columns: the stream, and what the stream did to the repo. The left column keeps its
+original shape — fixed chrome bands around one scrolling pane. Responsive down to 375px;
+below 900px the rail drops underneath as a capped panel, and the presence list and
+control bar collapse rather than wrap.
+
+The rail is **not** the file tree the anti-references rule out. A tree is for *browsing a
+codebase*; this lists only what this session changed, and it's empty until the agent
+writes something. The distinction is the one `PRODUCT.md` draws — Relay is a surface for
+watching and steering, and borrowing IDE chrome would promise an editor it isn't.
 
 ## Components
 

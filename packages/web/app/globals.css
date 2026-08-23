@@ -734,114 +734,19 @@ body {
 }
 
 /* ------------------------------------------------------------------
-   SESSION CHANGES — what the run actually produced. Sits between the
-   ledger and the control bar; collapsed until asked for.
+   DIFF STATS — the +n / −n pair, shared by the workspace rail's
+   summary and its per-file rows.
    ------------------------------------------------------------------ */
-.changes {
-  border-top: 1px solid var(--border);
-  background: var(--surface);
-}
-.changes-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.5rem 1rem;
-}
-.changes-toggle {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  background: none;
-  border: 0;
-  padding: 0.25rem;
-  margin: -0.25rem;
-  border-radius: 0.25rem;
-  cursor: pointer;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--text-dim);
-}
-.changes-toggle:hover {
-  color: var(--text);
-}
-.changes-toggle:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-.changes-chevron {
-  color: var(--text-dim);
-}
-.changes-count {
-  color: var(--text);
-}
-.changes-stat {
+.workspace-stat {
   font-variant-numeric: tabular-nums;
 }
-.changes-add {
+.workspace-add {
   color: var(--accent);
 }
-.changes-del {
+.workspace-del {
   color: var(--state-error);
 }
-.changes-zero {
-  color: var(--text-dim);
-}
-.changes-note {
-  margin: 0;
-  padding: 0 1rem 0.625rem;
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  color: var(--text-dim);
-}
-.changes-note code {
-  color: var(--text);
-}
-.changes-note a {
-  color: var(--accent);
-  text-underline-offset: 2px;
-}
-.changes-note--error {
-  color: var(--state-error);
-}
-.changes-panel {
-  border-top: 1px solid var(--border);
-  max-height: 22rem;
-  overflow-y: auto;
-}
-.changes-files {
-  list-style: none;
-  margin: 0;
-  padding: 0.625rem 1rem;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-.changes-files li {
-  display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-}
-.changes-file-path {
-  color: var(--text);
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.changes-diff {
-  margin: 0;
-  padding: 0.5rem 0;
-  font-family: var(--font-mono);
-  font-variant-ligatures: none;
-  font-feature-settings: "liga" 0, "calt" 0;
-  font-size: 0.7rem;
-  line-height: 1.6;
-  overflow-x: auto;
+.workspace-zero {
   color: var(--text-dim);
 }
 .diff-file {
@@ -860,7 +765,7 @@ body {
    These were inline utility classes while the ledger, changes panel
    and landing page all had named blocks; that split is why the chrome
    drifted (a raw <select> reading as a light-mode macOS control in a
-   dark instrument). Same vocabulary as .ledger-* / .changes-* now.
+   dark instrument). Same vocabulary as .ledger-* / .workspace-* now.
 
    Rule that governs all of it: the chrome frames the ledger and never
    competes with it (PRODUCT.md principle 1). Nothing here is accent
@@ -895,6 +800,27 @@ body {
   color: var(--text-dim);
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The repository under edit. Sits closer to the wordmark than the session
+   id does, because "what am I watching" outranks "which room is this". */
+.chrome-repo {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text);
+  padding: 0.0625rem 0.375rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 12rem;
+}
+.chrome-cost {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .chrome-right {
@@ -1188,6 +1114,180 @@ body {
   border-top-color: var(--border);
 }
 
+/* --- Plan strip --------------------------------------------------- */
+/* Sits between the header and the ledger. Deliberately one row tall when
+   closed: it frames the ledger, it does not compete with it. */
+.plan {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.plan-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+.plan-bar:hover .plan-label,
+.plan-bar:hover .plan-now {
+  color: var(--text);
+}
+.plan-bar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.plan-chevron {
+  color: var(--text-dim);
+  width: 0.5rem;
+  flex-shrink: 0;
+}
+.plan-label {
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+.plan-pips {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1875rem;
+  flex-shrink: 0;
+}
+.plan-pip {
+  width: 0.3125rem;
+  height: 0.3125rem;
+  border-radius: 50%;
+  background: var(--border);
+}
+.plan-pip--completed {
+  background: color-mix(in oklch, var(--accent) 55%, var(--border));
+}
+.plan-pip--in_progress {
+  background: var(--accent);
+}
+/* The single moving element in the chrome besides the status dot, and only
+   while a step is genuinely running. Same reasoning as .status--working. */
+@media (prefers-reduced-motion: no-preference) {
+  .plan-pip--in_progress {
+    animation: status-pulse 2s ease-in-out infinite;
+  }
+}
+.plan-now {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-dim);
+}
+.plan-now--active {
+  color: var(--text);
+}
+.plan-count {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+.plan--complete .plan-pip--completed {
+  background: color-mix(in oklch, var(--accent) 35%, var(--border));
+}
+
+.plan-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 1rem 0.75rem 2.4375rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+}
+.plan-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-wrap: pretty;
+}
+.plan-mark {
+  width: 0.75rem;
+  flex-shrink: 0;
+  text-align: center;
+}
+.plan-item--completed .plan-mark {
+  color: var(--accent);
+}
+.plan-item--completed .plan-text {
+  /* Struck through *and* dimmed: never colour alone (PRODUCT.md). */
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in oklch, var(--text-dim) 60%, transparent);
+}
+.plan-item--in_progress {
+  color: var(--text);
+}
+.plan-item--in_progress .plan-mark {
+  color: var(--accent);
+}
+
+.plan-list--inline {
+  padding: 0.25rem 0 0.25rem 0.25rem;
+}
+
+@media (max-width: 640px) {
+  /* The step name is the first thing to go — the pips and count still say
+     how far along the run is. */
+  .plan-now {
+    display: none;
+  }
+}
+
+/* Plan-update rows: present in the record, but recessed so they don't read
+   as work done. See the `muted` note in StreamView's ActionRow. */
+/* 85%, not lower: the recession mostly comes from dropping `target` off
+   --text (15.7:1) down to this, and anything past ~85% toward the ground
+   puts the row under 4.5:1. Measured at 4.9:1 on --bg. */
+.ledger-action--muted .ledger-verb,
+.ledger-action--muted .ledger-target,
+.ledger-action--muted .ledger-result,
+.ledger-action--muted .ledger-marker {
+  color: color-mix(in oklch, var(--text-dim) 85%, var(--bg));
+}
+.ledger-action--muted:hover .ledger-target {
+  color: var(--text-dim);
+}
+
+/* Long agent replies collapse rather than pushing the ledger off screen. */
+.ledger-prose-clamped {
+  max-height: 19rem;
+  overflow: hidden;
+  /* Fades into the cut instead of slicing a line in half. */
+  mask-image: linear-gradient(to bottom, #000 74%, transparent 100%);
+}
+.ledger-prose-toggle {
+  margin-top: 0.375rem;
+  padding: 0.125rem 0.25rem;
+  margin-left: -0.25rem;
+  background: none;
+  border: 0;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+.ledger-prose-toggle:hover {
+  color: var(--accent);
+}
+.ledger-prose-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* --- Ledger empty state ------------------------------------------- */
 /* "Empty states are invitations, not moods" (PRODUCT.md). This was a
    dim caption pinned to the top-left of a 600px void; worse, it told
@@ -1300,8 +1400,16 @@ body {
   .presence-item--driver .presence-name {
     display: inline;
   }
+  /* At 375px the header can carry the repo or the session id, not both —
+     the repo wins, because it says what is being changed. */
   .chrome-session-id {
-    max-width: 6rem;
+    display: none;
+  }
+  .chrome-repo {
+    max-width: 7rem;
+  }
+  .chrome-cost {
+    display: none;
   }
   .chrome-right {
     gap: 0.625rem;
@@ -1390,4 +1498,774 @@ body {
 .markdown-body th {
   color: var(--text-dim);
   font-weight: 500;
+}
+
+/* ==================================================================
+   WORKSPACE RAIL — what the session did to the repo, standing in its
+   own column rather than summoned from under the ledger.
+
+   Rules that govern it:
+
+   1. It frames, never competes. Same surface as the chrome, one
+      border away from the ledger. Accent appears only on real
+      insertions, error tone only on real deletions — a "+0" is
+      neither, and renders dim (.workspace-zero).
+   2. Status is never colour alone. Every row carries an A / M / D
+      letter as well as a tone, so the list survives any form of
+      colour blindness (PRODUCT.md: never colour-alone).
+   3. Only measured rows are expandable. A file the agent has written
+      but the server hasn't diffed yet is a plain row, not a button
+      that does nothing.
+   4. Path order, always. Sorting by recency would reshuffle the list
+      under the reader's cursor every time a row gets measured.
+   ================================================================== */
+
+.session-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.session-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 20rem;
+  min-height: 0;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+}
+@media (min-width: 1600px) {
+  .workspace {
+    width: 24rem;
+  }
+}
+
+.workspace-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+}
+.workspace-title {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text);
+}
+.workspace-collapse,
+.workspace-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  background: none;
+  border: 0;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 120ms ease-out;
+}
+.workspace-collapse:hover,
+.workspace-expand:hover {
+  color: var(--text);
+}
+.workspace-collapse:focus-visible,
+.workspace-expand:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Collapsed: a strip narrow enough to give the space back, wide enough
+   to still answer "is there anything in there?" with a count. */
+.workspace--collapsed {
+  width: 2.5rem;
+  align-items: center;
+  padding-top: 0.625rem;
+}
+.workspace-expand {
+  flex-direction: column;
+  padding: 0.375rem 0.25rem;
+}
+.workspace-expand-count {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.6875rem;
+  color: var(--text);
+}
+
+.workspace-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+}
+.workspace-count {
+  color: var(--text-dim);
+}
+
+.workspace-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.workspace-empty {
+  margin: 0;
+  padding: 1rem 0.875rem;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.workspace-files {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+}
+.workspace-file {
+  position: relative;
+}
+.workspace-file-row {
+  display: grid;
+  grid-template-columns: 0.875rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.3125rem 0.875rem;
+  background: none;
+  border: 0;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+.workspace-file-row--open {
+  cursor: pointer;
+  transition: background-color 120ms ease-out;
+}
+.workspace-file-row--open:hover {
+  background: var(--surface-2);
+}
+.workspace-file-row--open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.workspace-mark {
+  font-size: 0.6875rem;
+  text-align: center;
+}
+.workspace-mark--added {
+  color: var(--accent);
+}
+.workspace-mark--modified {
+  color: var(--presence-4);
+}
+.workspace-mark--deleted {
+  color: var(--state-error);
+}
+.workspace-mark--pending {
+  color: var(--text-dim);
+}
+
+/* Directory dim, filename bright: the eye lands on the name it's looking
+   for, and a long path truncates from the *left* so the name survives. */
+.workspace-path {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+}
+/* No `direction: rtl` here. It's the usual trick for truncating a path from
+   the left, and it silently reorders the trailing separator — "docs/" renders
+   as "/docs", so the row reads "/docssession-log.md". Truncating the
+   directory from the right instead keeps the separator where it belongs, and
+   the filename is a separate span so it never truncates at all. */
+.workspace-dir {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-dim);
+}
+.workspace-base {
+  flex: none;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.workspace-stats {
+  display: flex;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
+}
+.workspace-pending {
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+
+/* Dimmed by size, not by colour. Mixing --text-dim 85% toward --bg was the
+   obvious way to recess this and measured 4.27:1 — under the 4.5:1 floor for
+   text this small. The size difference alone carries the hierarchy. */
+.workspace-turn {
+  display: block;
+  padding: 0 0.875rem 0.25rem 2.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--text-dim);
+}
+
+.workspace-diff {
+  margin: 0 0 0.5rem;
+  padding: 0.5rem 0.875rem;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+  font-size: 0.6875rem;
+  line-height: 1.6;
+  max-height: 22rem;
+  overflow: auto;
+  color: var(--text-dim);
+}
+
+.workspace-foot {
+  padding: 0.625rem 0.875rem;
+  border-top: 1px solid var(--border);
+}
+.workspace-note {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.workspace-note code {
+  color: var(--text);
+}
+.workspace-note a {
+  color: var(--accent);
+}
+.workspace-note--error {
+  color: var(--state-error);
+}
+
+/* Below this the rail can't be a column without starving the ledger, so
+   it drops underneath as a capped, scrollable panel. */
+@media (max-width: 900px) {
+  .session-body {
+    flex-direction: column;
+  }
+  .workspace,
+  .workspace--collapsed {
+    width: auto;
+    max-height: 40vh;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+  .workspace--collapsed {
+    align-items: stretch;
+    padding-top: 0;
+  }
+  .workspace-expand {
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 0.5rem 0.875rem;
+  }
+  .workspace-expand-chevron {
+    transform: rotate(90deg);
+  }
+}
+
+/* ==================================================================
+   SESSIONS RAIL — the way back.
+
+   Relay has no accounts, so this is per-browser (localStorage). It is a
+   short reverse-chronological list, not a nav tree: the question it
+   answers is "what was I just in?", and three date buckets answer it
+   better than a calendar would.
+
+   Mirrors the workspace rail's grammar exactly — same head, same
+   collapse affordance, same surface — because they are the same kind
+   of object on opposite sides of the stream.
+   ================================================================== */
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 14rem;
+  min-height: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+.rail--collapsed {
+  width: 2.5rem;
+  align-items: center;
+  padding-top: 0.625rem;
+}
+
+.rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+}
+.rail-title {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text);
+}
+.rail-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+}
+.rail-new,
+.rail-collapse,
+.rail-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  min-width: 1.25rem;
+  padding: 0.25rem;
+  border: 0;
+  background: none;
+  border-radius: 0.25rem;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 120ms ease-out;
+}
+.rail-new:hover,
+.rail-collapse:hover,
+.rail-expand:hover {
+  color: var(--text);
+}
+.rail-new:focus-visible,
+.rail-collapse:focus-visible,
+.rail-expand:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.rail-expand {
+  flex-direction: column;
+  padding: 0.375rem 0.25rem;
+}
+.rail-expand-count {
+  font-size: 0.6875rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.rail-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 0.5rem;
+}
+.rail-empty {
+  margin: 0;
+  padding: 1rem 0.875rem;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.rail-group-label {
+  margin: 0;
+  padding: 0.75rem 0.875rem 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--text-dim);
+}
+.rail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.rail-item {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+.rail-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0.375rem 0.875rem;
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  transition: background-color 120ms ease-out;
+}
+.rail-link:hover {
+  background: var(--surface-2);
+}
+.rail-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+/* The session you're in is marked, never hidden. A list that omits where
+   you are makes you count rows to work out where you are. */
+.rail-item--current .rail-link {
+  border-left-color: var(--accent);
+  background: var(--surface-2);
+}
+.rail-name {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text);
+  min-width: 0;
+}
+/* The repo is the part that may be long, so it's the part that truncates —
+   the marker beside it stays whole. */
+.rail-repo {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rail-here {
+  flex: none;
+  font-size: 0.625rem;
+  color: var(--accent);
+}
+.rail-id {
+  flex: none;
+  font-size: 0.625rem;
+  color: var(--text-dim);
+}
+.rail-meta {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--text-dim);
+}
+/* Appears on hover/focus only: it's a tidying control, not something the
+   eye should have to skip past on every row. */
+.rail-forget {
+  flex: none;
+  width: 1.5rem;
+  border: 0;
+  background: none;
+  color: var(--text-dim);
+  font-size: 0.875rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease-out, color 120ms ease-out;
+}
+.rail-item:hover .rail-forget,
+.rail-forget:focus-visible {
+  opacity: 1;
+}
+.rail-forget:hover {
+  color: var(--text);
+}
+.rail-forget:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* ==================================================================
+   AGENT CHIP — what's running, and on whose money.
+
+   The mock agent is the default and was indistinguishable from a real
+   run. On a shared instance the opposite question matters more: if this
+   IS real, someone is paying, and the room should see who.
+   ================================================================== */
+
+.agent {
+  position: relative;
+}
+.agent-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.1875rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: none;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 120ms ease-out, border-color 120ms ease-out;
+}
+.agent-chip:hover {
+  color: var(--text);
+  border-color: var(--text-dim);
+}
+.agent-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.agent-chip--live {
+  color: var(--text);
+}
+.agent-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: var(--text-dim);
+}
+/* Accent only when it carries live state — the same rule the status dot
+   and the presence list follow. A demo run is not live state. */
+.agent-chip--live .agent-dot {
+  background: var(--accent);
+}
+.agent-hint {
+  color: var(--text-dim);
+}
+
+.agent-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 40;
+  width: 20rem;
+  max-width: calc(100vw - 2rem);
+  padding: 0.75rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
+}
+.agent-title {
+  margin: 0 0 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text);
+}
+.agent-body {
+  margin: 0 0 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+.agent-body strong {
+  color: var(--text);
+  font-weight: 500;
+}
+.agent-body code {
+  font-family: var(--font-mono);
+  color: var(--text);
+}
+.agent-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.6875rem;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+.agent-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.agent-label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+.agent-input {
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+.agent-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.agent-error {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--state-error);
+}
+
+/* ==================================================================
+   SHARE — getting a second person into the room. The differentiator is
+   invisible in one tab, which is the state every first visit is in.
+   ================================================================== */
+
+.share {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.share-button {
+  padding: 0.1875rem 0.5rem;
+  border: 0;
+  border-radius: 0.25rem;
+  background: none;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 120ms ease-out;
+}
+.share-button:hover {
+  color: var(--text);
+}
+.share-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ==================================================================
+   TURN DIVIDERS — a multi-turn session read as one undifferentiated
+   stream. An instruction is the boundary, so it gets a labelled rule:
+   the ledger's own left rule stays continuous and the horizontal one
+   crosses it, the way a marker crosses a timeline.
+   ================================================================== */
+
+.ledger-instruction {
+  position: relative;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  padding-block-end: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+.ledger-instruction--first {
+  margin-top: 0;
+  padding-top: 0.5rem;
+  border-top: 0;
+}
+.ledger-turn {
+  position: absolute;
+  top: -0.4375rem;
+  left: 0;
+  padding-right: 0.5rem;
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  line-height: 1;
+  color: var(--text-dim);
+}
+.ledger-instruction--first .ledger-turn {
+  display: none;
+}
+.ledger-instruction-who {
+  color: var(--accent);
+}
+.ledger-instruction-arrow {
+  color: var(--text-dim);
+}
+.ledger-instruction-text {
+  color: var(--text);
+}
+
+/* ==================================================================
+   RECENT SESSIONS (landing) — a short "pick up where you left off"
+   strip, not a navigator. Renders nothing until there's something.
+   ================================================================== */
+
+.recents {
+  margin-top: 2rem;
+}
+.recents-label {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+.recents-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+.recents-link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.375rem 0.5rem;
+  margin-inline: -0.5rem;
+  border-radius: 0.25rem;
+  text-decoration: none;
+  transition: background-color 120ms ease-out;
+}
+.recents-link:hover {
+  background: var(--surface);
+}
+.recents-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.recents-name {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recents-meta {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+
+/* Below 1100px the sessions rail is the first thing to go: the stream is
+   the product, and the rail is navigation you can reach from the mark. */
+@media (max-width: 1100px) {
+  .rail {
+    display: none;
+  }
+}
+@media (max-width: 900px) {
+  .share-button + .share-button {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .share {
+    display: none;
+  }
+  .agent-panel {
+    position: fixed;
+    top: auto;
+    right: 0.5rem;
+    left: 0.5rem;
+    width: auto;
+  }
 }

@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
+  AgentInfo,
   Event,
   Participant,
+  PlanItem,
   ServerMessage,
   SessionStatus,
+  ToolDetail,
 } from "@relay/shared";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:4000";
@@ -50,6 +53,14 @@ export type UseSessionResult = {
   publishState: PublishState | null;
   publishing: boolean;
   replayed: ReplayedSession | null;
+  repo: string | null;
+  /** What runs on the next instruction, and on whose credentials. */
+  agent: AgentInfo | null;
+  /** Newest plan in the transcript, or null if the agent never made one. */
+  plan: PlanItem[] | null;
+  /** Every run this session has paid for, summed. */
+  totalCostUsd: number;
+  runCount: number;
   join: (displayName: string) => void;
   instruct: (text: string) => void;
   stop: () => void;
@@ -59,7 +70,43 @@ export type UseSessionResult = {
   releaseControl: () => void;
   requestChanges: () => void;
   publish: (title: string) => void;
+  /** Driver only. The key goes to the server and never comes back. */
+  setKey: (key: string) => void;
+  clearKey: () => void;
 };
+
+// The agent's newest plan wins — a TodoWrite supersedes every earlier one,
+// so this walks backwards and stops at the first it finds. Scanning the
+// transcript (rather than storing plan state) is what makes the plan correct
+// for a late joiner and after a reconnect: both replay `history`, and the
+// answer falls out of the same events everyone else already has.
+function latestPlan(events: Event[]): PlanItem[] | null {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i];
+    if (event.kind !== "tool_call") continue;
+    const detail = (event.data as { detail?: ToolDetail }).detail;
+    if (detail?.type === "plan" && detail.todos.length) return detail.todos;
+  }
+  return null;
+}
+
+// What this session has actually cost, across every turn. The per-run figure
+// already rides on each agent_done; nothing was adding them up, so a session
+// with six turns showed six separate prices and no total.
+function runTotals(events: Event[]): {
+  totalCostUsd: number;
+  runCount: number;
+} {
+  let totalCostUsd = 0;
+  let runCount = 0;
+  for (const event of events) {
+    if (event.kind !== "agent_done") continue;
+    runCount++;
+    const cost = (event.data as { costUsd?: number }).costUsd;
+    if (typeof cost === "number" && Number.isFinite(cost)) totalCostUsd += cost;
+  }
+  return { totalCostUsd, runCount };
+}
 
 // Connects once per mount, sends `join`, and reduces every incoming
 // ServerMessage into local state. Rendering strictly follows the server's
@@ -88,6 +135,16 @@ export function useSession(sessionId: string): UseSessionResult {
   const [publishState, setPublishState] = useState<PublishState | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [replayed, setReplayed] = useState<ReplayedSession | null>(null);
+  const [repo, setRepo] = useState<string | null>(null);
+  const [agent, setAgent] = useState<AgentInfo | null>(null);
+
+  // Both derived from the transcript rather than tracked as their own state:
+  // the events are already the source of truth, already ordered by the
+  // server, and already replayed to late joiners — so a watcher who arrives
+  // mid-run gets the current plan and the running cost with no extra
+  // protocol and no chance of the two disagreeing.
+  const plan = useMemo(() => latestPlan(events), [events]);
+  const { totalCostUsd, runCount } = useMemo(() => runTotals(events), [events]);
 
   useEffect(() => {
     let cancelled = false;
@@ -152,6 +209,14 @@ export function useSession(sessionId: string): UseSessionResult {
             break;
           case "history":
             setEvents(msg.events);
+            // Catching up on the transcript is only half the picture — the
+            // other half is what the repo looks like now. Without this,
+            // someone who joins after a turn finished sees the ledger say a
+            // file was written and the workspace not list it, because
+            // `session_changes` was only ever sent in reply to a turn ending.
+            // Cheap and idempotent: a session that never ran has no working
+            // dir and the server answers with an empty set.
+            socket.send(JSON.stringify({ type: "request_changes" }));
             break;
           case "agent_event":
             setEvents((prev) => [...prev, msg.event]);
@@ -160,6 +225,8 @@ export function useSession(sessionId: string): UseSessionResult {
             setParticipants(msg.participants);
             setDriverId(msg.driverId);
             setStatus(msg.status);
+            if (msg.repo !== undefined) setRepo(msg.repo);
+            if (msg.agent !== undefined) setAgent(msg.agent);
             break;
           case "status":
             setStatus(msg.status);
@@ -289,6 +356,23 @@ export function useSession(sessionId: string): UseSessionResult {
     }
   }
 
+  // The key is written to the socket and never held in React state — there is
+  // no component that needs it back, and the less of it that exists on the
+  // client the better. The server answers with a hint, not the key.
+  function setKey(key: string) {
+    const socket = socketRef.current;
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: "set_key", key }));
+    }
+  }
+
+  function clearKey() {
+    const socket = socketRef.current;
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: "clear_key" }));
+    }
+  }
+
   function publish(title: string) {
     const socket = socketRef.current;
     if (socket && socket.readyState === WebSocket.OPEN) {
@@ -311,6 +395,11 @@ export function useSession(sessionId: string): UseSessionResult {
     publishState,
     publishing,
     replayed,
+    repo,
+    agent,
+    plan,
+    totalCostUsd,
+    runCount,
     join,
     instruct,
     stop,
@@ -320,5 +409,7 @@ export function useSession(sessionId: string): UseSessionResult {
     releaseControl,
     requestChanges,
     publish,
+    setKey,
+    clearKey,
   };
 }
