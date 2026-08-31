@@ -1,0 +1,44 @@
+// Transcript persistence (spec §6.5). This is an audit mirror, not the
+// source of truth: live session state (open sockets, the driver lock, the
+// agent's AbortController, the working dir) only ever exists in memory
+// (sessions.ts) and cannot survive a restart no matter what's modeled here.
+// What this buys: a transcript that survives a restart, and a dead link that
+// can render a read-only replay instead of an error.
+
+// Prisma 7: the connection string lives in prisma.config.ts (CLI/migrate)
+// and is passed explicitly to the driver adapter at runtime (db.ts) — the
+// schema's datasource block no longer carries a `url` itself.
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Session {
+  id        String   @id
+  status    String
+  driverId  String?
+  // The SDK's own conversation id. Not used to resume a dead session today
+  // (spec: full resume is out of scope) — persisted because it costs one
+  // column and keeps that door open.
+  agentSessionId String?
+  createdAt DateTime @default(now())
+  events    Event[]
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  sessionId String
+  seq       Int
+  ts        DateTime @default(now())
+  kind      String
+  by        String?
+  data      Json
+  session   Session  @relation(fields: [sessionId], references: [id])
+
+  @@unique([sessionId, seq])
+  @@index([sessionId])
+}

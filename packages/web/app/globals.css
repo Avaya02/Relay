@@ -13,18 +13,41 @@
  * apply deterministically, not based on OS preference.
  */
 :root {
-  --bg: #0e1116;
-  --surface: #151a21;
-  --surface-2: #1c232c;
-  --border: #232b35;
+  /* Ground. Pure black is the commitment the graphite was hedging on: this is
+     an instrument watched in a dark room, and a near-black that isn't quite
+     black reads as a web app that chose a dark theme. */
+  --bg: #000000;
+  --surface: #0a0b0d; /* header, rails, panels */
+  --surface-2: #131519; /* raised: composer, expanded detail, popovers */
 
-  --text: #e6eaf0;
-  --text-dim: #8a94a6;
+  /* Structure carries the design now, so it gets two weights: hairlines that
+     separate, and a lit edge for frames and focus. */
+  --border: #1e2024;
+  --border-lit: #2c2f35;
+
+  /* Near-white, deliberately not #FFF — pure white on pure black halates on
+     OLED and makes long transcripts tiring to read. */
+  --text: #f4f5f7;
+  --text-dim: #8c9098;
+  /* Timestamps and tertiary labels. #70747C was the intuitive choice and
+     measured 3.90:1 on --surface-2 — under the 4.5:1 floor for normal text.
+     Lightened until the *worst* of the three grounds clears it. */
+  --text-faint: #7b8088;
 
   /* Reserved for "live / active / you-are-driving" only — nothing
-     decorative. See RELAY_BUILD_SPEC.md §7. */
+     decorative. See RELAY_BUILD_SPEC.md §7.
+
+     The reference this palette borrows from has no brand colour at all. Relay
+     keeps one because its entire subject is liveness: an accent that means
+     "this is happening now" is load-bearing, not decoration. Black and mono do
+     the styling; cyan only ever marks what's live. */
   --accent: #4dd0c7;
-  --state-error: #d98a6a;
+
+  /* Status. Rectangular tinted badges need a full set, not just an error
+     colour — idle/working/done/error were previously plain text. */
+  --state-ok: #5fd68a;
+  --state-warn: #e0b155;
+  --state-error: #e0715a;
 
   /* Small fixed palette assigned per participant (name dot, driving
      cursor) — muted, not neon. Cycled by join order in Presence.tsx. */
@@ -50,10 +73,12 @@
   --accent-foreground: var(--bg);
   --destructive: var(--state-error);
   --destructive-foreground: var(--bg);
-  --border: #232b35;
   --input: var(--border);
   --ring: var(--accent);
-  --radius: 0.625rem;
+  /* Sharp. The 10px radius was the single strongest "generic web app" signal
+     in the old system, and this one line flows through every shadcn primitive
+     via the --radius-sm/md/lg chain below. */
+  --radius: 0.125rem;
 }
 
 @theme inline {
@@ -61,9 +86,13 @@
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-border: var(--border);
+  --color-border-lit: var(--border-lit);
   --color-text: var(--text);
   --color-text-dim: var(--text-dim);
+  --color-text-faint: var(--text-faint);
   --color-accent: var(--accent);
+  --color-state-ok: var(--state-ok);
+  --color-state-warn: var(--state-warn);
   --color-state-error: var(--state-error);
 
   --font-sans: var(--font-geist-sans);
@@ -108,5 +137,2558 @@ body {
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+}
+
+/* ==================================================================
+   PRIMITIVES — the four pieces the whole visual language rests on.
+   Everything in the landing page and the session chrome composes
+   these rather than restating them.
+
+   The look is an instrument faceplate: pure black ground, structure
+   carried by hairlines rather than fills or shadows, chrome set in
+   mono, corners effectively square. Depth comes from a lit border
+   edge, never from a drop shadow.
+   ================================================================== */
+
+/* --- The frame -----------------------------------------------------
+   Content sits inside visible vertical rails, with every section
+   separated by a full-width hairline. This is what reads as technical
+   drawing rather than web page. */
+.frame {
+  max-width: var(--measure, 84rem);
+  margin-inline: auto;
+  width: 100%;
+  border-inline: 1px solid var(--border);
+}
+.frame > section {
+  border-bottom: 1px solid var(--border);
+}
+.frame > section:last-child {
+  border-bottom: 0;
+}
+
+/* --- The hatch band ------------------------------------------------
+   Diagonal-striped divider. Pure CSS: no asset to load, no image to
+   go stale, and it scales to any width for free. */
+.hatch {
+  height: 3.5rem;
+  border-bottom: 1px solid var(--border);
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--border) 0 1px,
+    transparent 1px 9px
+  );
+}
+
+/* --- Texture -------------------------------------------------------
+   Relay's own, deliberately NOT the reference's dithered photography:
+   that is someone else's brand texture, and lifting it is what makes
+   a copy obvious. A plotter-style dot grid says the same thing —
+   measured, technical, printed — and costs one gradient.
+
+   Applied as a large low-contrast field behind sections. Never behind
+   running text. */
+.texture-dots {
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 8px 8px;
+}
+
+/* --- Badge ---------------------------------------------------------
+   Rectangular, mono, hairline-bordered. Colour is carried by the text
+   and border together — never a fill, which would compete with the
+   ledger for attention.
+
+   Every variant is measured against --surface: ok 10.76:1, warn
+   9.93:1, error 6.26:1, live 10.47:1, neutral 6.15:1. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.1875rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: none;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--text-dim);
+}
+.badge--ok {
+  color: var(--state-ok);
+  border-color: color-mix(in oklch, var(--state-ok) 35%, transparent);
+}
+.badge--warn {
+  color: var(--state-warn);
+  border-color: color-mix(in oklch, var(--state-warn) 35%, transparent);
+}
+.badge--error {
+  color: var(--state-error);
+  border-color: color-mix(in oklch, var(--state-error) 35%, transparent);
+}
+.badge--live {
+  color: var(--accent);
+  border-color: color-mix(in oklch, var(--accent) 35%, transparent);
+}
+
+/* ==================================================================
+   LANDING PAGE (brand register)
+   Aesthetic lane, named deliberately: INSTRUMENTATION — cockpit
+   placards, oscilloscope faceplates, a recorder running. Not
+   editorial-typographic, not Stripe-minimal, not acid-maximalism.
+   The palette is the app's own committed graphite + signal cyan;
+   the accent is allowed to carry far more here than in the app,
+   because "live" is the whole pitch.
+   ================================================================== */
+
+.landing {
+  /* One shared measure. Every section's content sits on the same left edge —
+     the nav mark, the hero headline, and each section title line up. The
+     .frame wrapper reads --measure to draw the vertical rails. */
+  --measure: 84rem;
+  --gutter: clamp(1.25rem, 5vw, 4rem);
+
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+/* Nav is a section of the frame, so the frame owns the width and the rails —
+   it only owns its own padding. */
+.landing-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1rem var(--gutter);
+  border-bottom: 1px solid var(--border);
+}
+.landing-mark {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.landing-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-left: auto;
+}
+.landing-nav-link {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 150ms ease-out;
+}
+.landing-nav-link:hover {
+  color: var(--text);
+}
+
+/* --- Buttons -------------------------------------------------------
+   One primary button shape, shared by the landing page and the app's
+   composer. Square, mono, white-filled: the reference's most literal
+   move, and the one place the two registers should look identical. */
+.btn-solid {
+  height: 2.25rem;
+  padding-inline: 1rem;
+  border-radius: 2px;
+  background: var(--text);
+  color: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: background-color 140ms ease-out;
+}
+.btn-solid:hover:not(:disabled) {
+  background: #ffffff;
+}
+.btn-lg {
+  height: 2.75rem;
+  padding-inline: 1.5rem;
+  font-size: 0.8125rem;
+}
+
+/* The secondary shape. Outlined rather than filled, so it can sit beside a
+   solid button without the two competing — same rule that made Stop quieter
+   than Send in the composer. */
+.btn-quiet {
+  height: 2.25rem;
+  padding-inline: 1rem;
+  border: 1px solid var(--border-lit);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition:
+    border-color 140ms ease-out,
+    color 140ms ease-out;
+}
+.btn-quiet:hover:not(:disabled) {
+  border-color: var(--text-dim);
+}
+.btn-quiet:disabled {
+  color: var(--text-faint);
+  border-color: var(--border);
+  cursor: not-allowed;
+}
+
+/* An <a> carrying a button shape needs the centring a <button> gets free. */
+.landing-nav-cta {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Visually hidden, still announced. For live-region text that would be
+   redundant on screen. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --- Hero: asymmetric. Copy holds the left rail, the running session
+   takes the larger share, because the session IS the argument. --- */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: clamp(2rem, 5vw, 4.5rem);
+  align-items: center;
+  padding: clamp(2.5rem, 6vw, 5rem) var(--gutter) clamp(3rem, 7vw, 5.5rem);
+}
+.hero-eyebrow {
+  margin-bottom: 1.5rem;
+}
+/* The dot is the live signal itself, so it keeps the status dot's pulse and
+   the same reduced-motion gate. */
+.badge-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+/* The pulse itself lives with the session chrome, next to the note explaining
+   why it's the one deliberate exception to "nothing else in the app moves".
+   Keeping one definition means the hero badge and the session status badge
+   can't drift apart. */
+.hero-title {
+  font-family: var(--font-display);
+  /* Ceiling well under the 6rem cap; this is a tool, not a billboard. */
+  font-size: clamp(2.5rem, 5.4vw, 4.25rem);
+  font-weight: 600;
+  line-height: 1.03;
+  letter-spacing: -0.035em;
+  color: var(--text);
+  text-wrap: balance;
+  margin: 0;
+}
+.hero-title em {
+  font-style: normal;
+  color: var(--accent);
+}
+.hero-sub {
+  margin: 1.5rem 0 0;
+  max-width: 46ch;
+  font-size: 1.0625rem;
+  /* Light-on-dark needs the extra leading. */
+  line-height: 1.65;
+  color: var(--text-dim);
+  text-wrap: pretty;
+}
+.hero-cta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 2.25rem;
+}
+.hero-cta-note {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+/* --- The command block ---------------------------------------------
+   The page's primary action. Sessions are created by the CLI, so the
+   honest call to action is the command itself rather than a button that
+   would have to invent a repository.
+
+   The whole block is the button: a command line with a small separate
+   copy target makes people aim for it. Depth is the lit border edge on
+   hover — no shadow, no glow, same rule as everything else. */
+.cmd {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  height: 2.75rem;
+  padding-inline: 0.875rem 0.75rem;
+  border: 1px solid var(--border-lit);
+  border-radius: 2px;
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  text-align: left;
+  transition: border-color 140ms ease-out;
+}
+.cmd:hover {
+  border-color: var(--text-faint);
+}
+.cmd:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+/* Not selectable, so dragging across the line yields the command and never a
+   shell prompt someone then pastes into their terminal. */
+.cmd-prompt {
+  color: var(--text-faint);
+  user-select: none;
+}
+.cmd-text {
+  color: var(--text);
+  white-space: nowrap;
+}
+/* Reserves its own width so the label swapping to "Copied" can't reflow the
+   block under the cursor mid-click. */
+.cmd-state {
+  min-width: 3.5rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--border);
+  color: var(--text-faint);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  transition: color 140ms ease-out;
+}
+/* An outcome, not liveness — so state-ok, not accent. Accent stays reserved
+   for things happening right now. */
+.cmd-state--on {
+  color: var(--state-ok);
+}
+
+/* --- Join by link --------------------------------------------------
+   The counterpart to the command: the host runs one, everyone else
+   arrives with a link. Quiet by comparison — most people reach a session
+   by clicking, and this is the fallback for a link that was pasted into
+   a chat window as plain text.
+
+   Namespaced `hero-join`, NOT `join`: the session view already owns
+   `.join-*` for its full-screen join gate, and the bare name inherited
+   that gate's `min-height: 900px` — which opened a screen of dead space
+   in the middle of the hero. */
+.hero-join {
+  margin-top: 2rem;
+  max-width: 27rem;
+}
+.hero-join-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+.hero-join-row {
+  display: flex;
+  gap: 0.5rem;
+}
+.hero-join-input {
+  flex: 1;
+  min-width: 0;
+  height: 2.25rem;
+  padding-inline: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  transition: border-color 140ms ease-out;
+}
+.hero-join-input::placeholder {
+  color: var(--text-faint);
+}
+.hero-join-input:hover {
+  border-color: var(--border-lit);
+}
+.hero-join-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-color: transparent;
+}
+.close-cta {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+.hero-error {
+  margin-top: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--state-error);
+}
+.hero-demo-note {
+  margin: 0.875rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  opacity: 0.85;
+  text-align: center;
+}
+
+/* --- The demo frame: the app's own surface, framed as an instrument. --- */
+.demo-frame {
+  /* Square, and lit at the edge rather than floated on a shadow — the whole
+     system gets its depth from border weight, not from blur. */
+  border: 1px solid var(--border-lit);
+  border-radius: 2px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.demo-chrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.demo-chrome-left {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.demo-chrome-right {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  min-width: 0;
+}
+.demo-mark {
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.demo-session,
+.demo-status,
+.demo-person {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.demo-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.demo-person b {
+  color: var(--text);
+  font-weight: 500;
+}
+.demo-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  flex: none;
+}
+.demo-status--live {
+  color: var(--accent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .demo-status--live {
+    animation: demo-pulse 1.9s ease-in-out infinite;
+  }
+}
+@keyframes demo-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.demo-body {
+  /* Fixed height so the frame doesn't jitter as rows land during replay.
+     Top-aligned: rows fill downward, so the unused space reads as "more to
+     come" rather than as a void above the content. */
+  height: 19.5rem;
+  overflow: hidden;
+  padding: 0.875rem 1rem;
+}
+.demo-handover {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  padding-block: 0.375rem;
+}
+
+.demo-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0.875rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 0.8125rem;
+}
+.demo-bar-label {
+  color: var(--text-dim);
+}
+.demo-bar-label b {
+  color: var(--text);
+  font-weight: 500;
+}
+.demo-bar-action {
+  font-size: 0.75rem;
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 0.375rem;
+  padding: 0.3125rem 0.6875rem;
+  white-space: nowrap;
+}
+.demo-bar-input {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.625rem;
+  font-size: 0.75rem;
+}
+.demo-bar-send {
+  font-size: 0.75rem;
+  color: var(--bg);
+  background: var(--text);
+  border-radius: 2px;
+  padding: 0.375rem 0.75rem;
+}
+
+/* --- Shared section furniture --- */
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-weight: 600;
+  /* Matched to the hero's tracking — the reference's headings are noticeably
+     tighter than a default, and the two sizes have to agree. */
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  color: var(--text);
+  margin: 0;
+  text-wrap: balance;
+}
+
+/* Section rules come from .frame > section now, so these only own padding. */
+.lock,
+.how,
+.spec {
+  padding-block: clamp(3rem, 7vw, 5.5rem);
+}
+.lock-inner,
+.how-inner,
+.spec-inner {
+  padding-inline: var(--gutter);
+}
+.lock-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: clamp(1.75rem, 4vw, 4rem);
+  /* start, not stretch — the shorter column shouldn't inherit the taller
+     one's height and leave a void under its content. */
+  align-items: start;
+}
+.lock-lede {
+  margin: 1.25rem 0 0;
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--text-dim);
+  max-width: 42ch;
+}
+.lock-facts {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.lock-facts dt {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--text);
+  margin-bottom: 0.375rem;
+}
+.lock-facts dd {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--text-dim);
+  max-width: 52ch;
+}
+
+/* --- The sequence --------------------------------------------------
+   Numbered because this genuinely is an ordered process and the order
+   carries the information. Numbering sections that AREN'T sequences is
+   the reflex this deliberately avoids doing everywhere else. */
+.steps {
+  list-style: none;
+  margin: 2.5rem 0 0;
+  padding: 0;
+}
+.step {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  gap: clamp(1rem, 3vw, 2rem);
+  padding: 1.5rem 0;
+  border-top: 1px solid var(--border);
+}
+.step:last-child {
+  border-bottom: 1px solid var(--border);
+}
+.step-n {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.step-title {
+  margin: 0 0 0.375rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text);
+}
+.step-text {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--text-dim);
+  max-width: 64ch;
+}
+.step-text code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  color: var(--text);
+}
+
+/* --- The spec sheet ------------------------------------------------
+   A datasheet, not a grid of icon cards. Denser, more honest about
+   what the thing actually is, and not the pattern every generated
+   landing page reaches for. */
+.spec-sheet {
+  margin: 2.5rem 0 0;
+  border: 1px solid var(--border);
+}
+.spec-row {
+  display: grid;
+  grid-template-columns: minmax(0, 10rem) minmax(0, 1fr);
+  gap: clamp(1rem, 3vw, 2rem);
+  padding: 1rem clamp(1rem, 2.5vw, 1.5rem);
+  border-bottom: 1px solid var(--border);
+}
+.spec-row:last-child {
+  border-bottom: 0;
+}
+.spec-row dt {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text);
+}
+.spec-row dd {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+  max-width: 68ch;
+}
+.spec-row dd code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  color: var(--text);
+}
+
+/* The closing call to action carries the page's one texture field: a plotter
+   dot grid, masked to fade out toward the edges so it reads as a printed
+   ground rather than a tiled background. This is Relay's own texture — NOT
+   the reference's dithered photography, which is that product's brand and
+   would make the borrowing obvious. */
+.close {
+  position: relative;
+  isolation: isolate;
+  padding: clamp(3.5rem, 8vw, 6rem) var(--gutter);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.75rem;
+  text-align: center;
+}
+.close::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(var(--border-lit) 1px, transparent 1px);
+  background-size: 9px 9px;
+  /* Faded at the edges so it reads as a ground, not a tiled pattern that
+     stops abruptly at a section boundary. */
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 20%, transparent 100%);
+}
+.close-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3.5vw, 2.75rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  color: var(--text);
+  margin: 0;
+}
+
+.landing-foot {
+  border-top: 1px solid var(--border);
+  padding: 1.5rem var(--gutter);
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2.5rem;
+  }
+  .lock-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .spec-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.375rem;
+  }
+  .demo-body {
+    height: 17rem;
+  }
+  /* The nav's middle links are the first thing to go — the mark and the one
+     action are what a narrow screen actually needs. */
+  .landing-nav-links {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------
+   THE ACTION LEDGER — the signature surface (RELAY_BUILD_SPEC.md §7,
+   DESIGN.md § action ledger). Everything here serves one goal: make a
+   30+ event run scannable as a machine record, not readable as a chat.
+   ------------------------------------------------------------------ */
+
+/* ONE continuous rule down the whole ledger, with rows hanging off it.
+   Not a per-row border-left — that renders as a dashed ladder of stubs
+   and breaks the flight-recorder read. */
+.ledger-rail {
+  position: relative;
+  padding-left: 0.875rem;
+}
+.ledger-rail::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  width: 1px;
+  background: var(--border);
+}
+
+.ledger-item {
+  padding-block: 0.1875rem;
+}
+
+/* No ligatures anywhere in the ledger. JetBrains Mono renders `=>` as `⇒` and
+   `!=` as `≠` by default — pretty, but this surface is a record of what the
+   agent actually did, and a diff that shows characters the file doesn't
+   contain is editorializing (PRODUCT.md principle 2). */
+.ledger-action,
+.ledger-diff,
+.ledger-output,
+.ledger-detail-path,
+.ledger-done {
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+}
+
+/* Enter animation: the ledger is the only animated surface in the app, and
+   the animation has exactly one job — convey that this is happening NOW.
+   Applied via CSS animation (not a transition gated on a class) so content
+   is visible by default and never depends on JS to appear. */
+@media (prefers-reduced-motion: no-preference) {
+  .ledger-item {
+    animation: ledger-enter 140ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+@keyframes ledger-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Action rows: fixed columns so the eye scans a column instead of parsing
+   each line. verb | target | result | time | chevron */
+.ledger-action {
+  display: grid;
+  /* The target column carries a floor so a long result never collapses it to
+     zero — knowing the agent ran `npm test` matters more than reading the
+     last few characters of why it failed. Result truncates instead. */
+  grid-template-columns: 1rem 4.25rem minmax(7rem, 1fr) minmax(0, auto) 4.5rem 0.75rem;
+  align-items: baseline;
+  gap: 0.5rem;
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+  text-align: left;
+}
+.ledger-marker {
+  text-align: center;
+}
+.ledger-verb {
+  color: var(--text-dim);
+}
+.ledger-target {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Truncatable: a long failure reason ("1 failing — App renders a counter")
+   must not push the target column to zero width and overflow the row. The
+   full text stays available via the row's title/aria-label. */
+.ledger-result {
+  color: var(--text-dim);
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ledger-pending {
+  color: var(--accent);
+}
+.ledger-time {
+  color: var(--text-dim);
+  opacity: 0.7;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ledger-chevron {
+  color: var(--text-dim);
+  opacity: 0.6;
+  text-align: center;
+}
+
+/* Expandable rows are real buttons — full interactive state vocabulary. */
+.ledger-action--expandable {
+  cursor: pointer;
+  border-radius: 0.25rem;
+  margin-inline: -0.375rem;
+  padding-inline: 0.375rem;
+  transition: background-color 150ms ease-out;
+}
+.ledger-action--expandable:hover {
+  background: var(--surface);
+}
+.ledger-action--expandable:hover .ledger-chevron {
+  opacity: 1;
+  color: var(--accent);
+}
+.ledger-action--expandable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.ledger-action--expandable[aria-expanded="true"] {
+  background: var(--surface);
+}
+.ledger-action--expandable[aria-expanded="true"] .ledger-chevron {
+  color: var(--accent);
+  opacity: 1;
+}
+
+/* Expanded detail — diffs and bulk output. */
+.ledger-detail {
+  margin: 0.25rem 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  overflow: hidden;
+}
+.ledger-detail-path {
+  padding: 0.375rem 0.625rem;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+.ledger-diff,
+.ledger-output {
+  margin: 0;
+  padding: 0.5rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  line-height: 1.6;
+  overflow-x: auto;
+  max-height: 22rem;
+  overflow-y: auto;
+  color: var(--text-dim);
+}
+.ledger-output {
+  padding: 0.625rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.diff-line {
+  display: block;
+  padding-inline: 0.625rem;
+  white-space: pre;
+  color: var(--text-dim);
+}
+.diff-op {
+  display: inline-block;
+  width: 1ch;
+  margin-right: 0.75ch;
+  opacity: 0.7;
+}
+/* Diff color carries meaning, so it's allowed here — and the +/- glyph
+   carries the same meaning for anyone who can't distinguish the hues. */
+.diff-add {
+  background: color-mix(in oklch, var(--accent) 12%, transparent);
+  color: var(--text);
+}
+.diff-del {
+  background: color-mix(in oklch, var(--state-error) 12%, transparent);
+  color: var(--text);
+}
+
+/* Non-action rows. */
+.ledger-instruction {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  padding-block: 0.5rem;
+}
+.ledger-prose {
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: var(--text);
+  max-width: 72ch;
+  padding-block: 0.375rem;
+}
+.ledger-done,
+.ledger-error {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding-block: 0.5rem;
+}
+.ledger-done {
+  color: var(--text-dim);
+}
+.ledger-error {
+  color: var(--state-error);
+}
+
+/* Narrow viewports: drop the time column rather than let rows wrap into
+   an unreadable stack. The timestamp is the least load-bearing column. */
+@media (max-width: 640px) {
+  .ledger-action {
+    /* minmax(0, auto) on the result column so it can shrink and ellipsis
+       rather than overflow the row on a long failure reason. */
+    grid-template-columns: 1rem 3.75rem minmax(4.5rem, 1fr) minmax(0, auto) 0.75rem;
+    gap: 0.375rem;
+  }
+  .ledger-time {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------
+   DIFF STATS — the +n / −n pair, shared by the workspace rail's
+   summary and its per-file rows.
+   ------------------------------------------------------------------ */
+.workspace-stat {
+  font-variant-numeric: tabular-nums;
+}
+.workspace-add {
+  color: var(--accent);
+}
+.workspace-del {
+  color: var(--state-error);
+}
+.workspace-zero {
+  color: var(--text-dim);
+}
+.diff-file {
+  color: var(--text-dim);
+  opacity: 0.7;
+}
+.diff-hunk {
+  color: var(--accent);
+  opacity: 0.85;
+}
+
+/* ==================================================================
+   SESSION CHROME — everything framing the ledger: header, presence,
+   status, control bar, composer, join gate, banners.
+
+   These were inline utility classes while the ledger, changes panel
+   and landing page all had named blocks; that split is why the chrome
+   drifted (a raw <select> reading as a light-mode macOS control in a
+   dark instrument). Same vocabulary as .ledger-* / .workspace-* now.
+
+   Rule that governs all of it: the chrome frames the ledger and never
+   competes with it (PRODUCT.md principle 1). Nothing here is accent
+   unless it carries live state.
+   ================================================================== */
+
+.chrome-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.625rem 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.chrome-mark {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.chrome-wordmark {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.chrome-session-id {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The repository under edit. Sits closer to the wordmark than the session
+   id does, because "what am I watching" outranks "which room is this". */
+.chrome-repo {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text);
+  padding: 0.0625rem 0.375rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 12rem;
+}
+.chrome-cost {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.chrome-right {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  min-width: 0;
+}
+/* Hairline between machine state and human presence — they answer two
+   different questions and ran together as one string without it. */
+.chrome-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border);
+}
+
+/* --- Status ------------------------------------------------------- */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.status-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* The one piece of chrome that moves, and only while the agent actually
+   is working. DESIGN.md's "nothing else in the app moves" exists so the
+   chrome can't compete with the ledger; a 6px dot at 2s does not
+   compete — it answers "is this live right now", which PRODUCT.md
+   principle 5 requires be answerable at a glance. Documented as a
+   deliberate exception rather than left as silent drift. */
+@media (prefers-reduced-motion: no-preference) {
+  .badge--live .badge-dot {
+    animation: status-pulse 2s ease-in-out infinite;
+  }
+}
+@keyframes status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* --- Presence ----------------------------------------------------- */
+.presence {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.presence--expanded {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.presence-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.presence-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.presence-driving {
+  color: var(--text);
+  font-weight: 500;
+}
+.presence-more {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  background: none;
+  border: 0;
+  padding: 0.125rem 0.25rem;
+  margin: -0.125rem -0.25rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+.presence-more:hover {
+  color: var(--text);
+}
+.presence-more:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- Control bar -------------------------------------------------- */
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: var(--surface-2);
+  border-top: 1px solid var(--border);
+}
+.control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.control-status {
+  font-size: 0.8125rem;
+  color: var(--text-dim);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.control-status strong {
+  color: var(--text);
+  font-weight: 500;
+}
+/* A pending request is the one thing in this bar that needs a
+   one-click answer, so it gets promoted to its own row (everyone else
+   lives behind the hand-over menu — the 8-participant case used to
+   render 7 full-width rows and eat 40% of the viewport). */
+.control-request {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.375rem 0.625rem;
+  border: 1px solid color-mix(in oklch, var(--accent) 35%, transparent);
+  background: color-mix(in oklch, var(--accent) 8%, transparent);
+  border-radius: var(--radius-md);
+}
+.control-request-who {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.control-link {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  background: none;
+  border: 0;
+  padding: 0.25rem;
+  margin: -0.25rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+.control-link:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+.control-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Native <select>, fully themed. Deliberately not a custom menu: the
+   native popup can never be clipped by the scroll container above it,
+   and it is keyboard- and screen-reader-complete for free. Product
+   register says don't reinvent standard affordances — so this restyles
+   one rather than replacing it. */
+.select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.select select {
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.3125rem 1.75rem 0.3125rem 0.625rem;
+  cursor: pointer;
+  transition: border-color 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.select select:hover {
+  border-color: color-mix(in oklch, var(--accent) 45%, var(--border));
+}
+.select select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-color: var(--accent);
+}
+.select::after {
+  content: "";
+  position: absolute;
+  right: 0.625rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-right: 1.5px solid var(--text-dim);
+  border-bottom: 1.5px solid var(--text-dim);
+  transform: translateY(-25%) rotate(45deg);
+  pointer-events: none;
+}
+
+/* --- Composer ----------------------------------------------------- */
+.composer {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface-2);
+  border-top: 1px solid var(--border);
+}
+.composer-input {
+  flex: 1;
+  min-width: 0;
+}
+/* Stop is deliberately quieter than Send. Both were filled buttons of
+   similar weight sitting side by side, which made the destructive
+   action compete with the primary one on every keystroke. */
+.composer-stop {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--state-error);
+  background: none;
+  border: 1px solid color-mix(in oklch, var(--state-error) 40%, transparent);
+  border-radius: var(--radius-md);
+  padding: 0 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.composer-stop:hover {
+  background: color-mix(in oklch, var(--state-error) 12%, transparent);
+  border-color: var(--state-error);
+}
+.composer-stop:focus-visible {
+  outline: 2px solid var(--state-error);
+  outline-offset: 2px;
+}
+
+/* --- Connection banner -------------------------------------------- */
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface-2);
+  border-top: 1px solid color-mix(in oklch, var(--state-error) 45%, var(--border));
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--state-error);
+  text-align: center;
+}
+.banner-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .banner-dot {
+    animation: status-pulse 1.4s ease-in-out infinite;
+  }
+}
+.banner--quiet {
+  color: var(--text-dim);
+  border-top-color: var(--border);
+}
+
+/* --- Plan strip --------------------------------------------------- */
+/* Sits between the header and the ledger. Deliberately one row tall when
+   closed: it frames the ledger, it does not compete with it. */
+.plan {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.plan-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+.plan-bar:hover .plan-label,
+.plan-bar:hover .plan-now {
+  color: var(--text);
+}
+.plan-bar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.plan-chevron {
+  color: var(--text-dim);
+  width: 0.5rem;
+  flex-shrink: 0;
+}
+.plan-label {
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+.plan-pips {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1875rem;
+  flex-shrink: 0;
+}
+.plan-pip {
+  width: 0.3125rem;
+  height: 0.3125rem;
+  border-radius: 50%;
+  background: var(--border);
+}
+.plan-pip--completed {
+  background: color-mix(in oklch, var(--accent) 55%, var(--border));
+}
+.plan-pip--in_progress {
+  background: var(--accent);
+}
+/* The single moving element in the chrome besides the status dot, and only
+   while a step is genuinely running. Same reasoning as .badge--live. */
+@media (prefers-reduced-motion: no-preference) {
+  .plan-pip--in_progress {
+    animation: status-pulse 2s ease-in-out infinite;
+  }
+}
+.plan-now {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-dim);
+}
+.plan-now--active {
+  color: var(--text);
+}
+.plan-count {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+.plan--complete .plan-pip--completed {
+  background: color-mix(in oklch, var(--accent) 35%, var(--border));
+}
+
+.plan-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 1rem 0.75rem 2.4375rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+}
+.plan-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-wrap: pretty;
+}
+.plan-mark {
+  width: 0.75rem;
+  flex-shrink: 0;
+  text-align: center;
+}
+.plan-item--completed .plan-mark {
+  color: var(--accent);
+}
+.plan-item--completed .plan-text {
+  /* Struck through *and* dimmed: never colour alone (PRODUCT.md). */
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in oklch, var(--text-dim) 60%, transparent);
+}
+.plan-item--in_progress {
+  color: var(--text);
+}
+.plan-item--in_progress .plan-mark {
+  color: var(--accent);
+}
+
+.plan-list--inline {
+  padding: 0.25rem 0 0.25rem 0.25rem;
+}
+
+@media (max-width: 640px) {
+  /* The step name is the first thing to go — the pips and count still say
+     how far along the run is. */
+  .plan-now {
+    display: none;
+  }
+}
+
+/* Plan-update rows: present in the record, but recessed so they don't read
+   as work done. See the `muted` note in StreamView's ActionRow. */
+/* 85%, not lower: the recession mostly comes from dropping `target` off
+   --text (15.7:1) down to this, and anything past ~85% toward the ground
+   puts the row under 4.5:1. Measured at 4.9:1 on --bg. */
+/* Recessed, but still legible. 85% measured 4.9:1 against the old graphite
+   ground and 4.38:1 once --bg became pure black — mixing toward a darker
+   background darkens the result. Re-solved for the new ground; 90% is the
+   first step that clears the floor with margin. */
+.ledger-action--muted .ledger-verb,
+.ledger-action--muted .ledger-target,
+.ledger-action--muted .ledger-result,
+.ledger-action--muted .ledger-marker {
+  color: color-mix(in oklch, var(--text-dim) 90%, var(--bg));
+}
+.ledger-action--muted:hover .ledger-target {
+  color: var(--text-dim);
+}
+
+/* Long agent replies collapse rather than pushing the ledger off screen. */
+.ledger-prose-clamped {
+  max-height: 19rem;
+  overflow: hidden;
+  /* Fades into the cut instead of slicing a line in half. */
+  mask-image: linear-gradient(to bottom, #000 74%, transparent 100%);
+}
+.ledger-prose-toggle {
+  margin-top: 0.375rem;
+  padding: 0.125rem 0.25rem;
+  margin-left: -0.25rem;
+  background: none;
+  border: 0;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+.ledger-prose-toggle:hover {
+  color: var(--accent);
+}
+.ledger-prose-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- Ledger empty state ------------------------------------------- */
+/* "Empty states are invitations, not moods" (PRODUCT.md). This was a
+   dim caption pinned to the top-left of a 600px void; worse, it told
+   every viewer to "type an instruction" including the ones with no
+   composer to type into. */
+.ledger-empty {
+  height: 100%;
+  min-height: 12rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  text-align: center;
+  padding: 2rem 1rem;
+}
+.ledger-empty-title {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--text);
+}
+.ledger-empty-hint {
+  font-size: 0.8125rem;
+  color: var(--text-dim);
+  max-width: 34ch;
+  text-wrap: pretty;
+}
+
+/* --- Join gate ---------------------------------------------------- */
+.join {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 2rem 1.25rem;
+  background: var(--bg);
+}
+.join-mark {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.join-wordmark {
+  font-family: var(--font-heading);
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+.join-tag {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+.join-panel {
+  width: 100%;
+  max-width: 22rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+}
+.join-heading {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text);
+  margin: 0 0 0.25rem;
+}
+.join-id {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin: 0 0 1.25rem;
+  overflow-wrap: anywhere;
+}
+.join-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+.join-note {
+  margin: 1.25rem 0 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+  text-wrap: pretty;
+}
+.join-message {
+  margin: 1rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+.join-message--error {
+  color: var(--state-error);
+}
+
+@media (max-width: 640px) {
+  /* At 375px the wordmark + a long session id + four names overflowed
+     the header and forced the document to scroll horizontally. Names
+     collapse to dots; the driver — the one identity that changes what
+     you can do — keeps theirs. */
+  .presence-item .presence-name {
+    display: none;
+  }
+  .presence-item--driver .presence-name {
+    display: inline;
+  }
+  /* At 375px the header can carry the repo or the session id, not both —
+     the repo wins, because it says what is being changed. */
+  .chrome-session-id {
+    display: none;
+  }
+  .chrome-repo {
+    max-width: 7rem;
+  }
+  .chrome-cost {
+    display: none;
+  }
+  .chrome-right {
+    gap: 0.625rem;
+  }
+  /* The secondary half of the control-bar sentence, dropped rather than
+     ellipsised — the header already carries the same information. */
+  .control-status-detail {
+    display: none;
+  }
+}
+
+/* agent_text rendering (StreamView) — agent output is markdown; render it as
+   such instead of a run-on paragraph of literal asterisks and backticks.
+   Scoped to .markdown-body rather than global tag selectors so it can't leak
+   into shadcn components elsewhere on the page. */
+.markdown-body p {
+  margin: 0;
+}
+.markdown-body > * + * {
+  margin-top: 0.5rem;
+}
+.markdown-body code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--surface-2);
+  border-radius: 0.25rem;
+  padding: 0.1em 0.35em;
+}
+.markdown-body pre {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  line-height: 1.5;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  overflow-x: auto;
+}
+.markdown-body pre code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 1.25rem;
+}
+.markdown-body li + li {
+  margin-top: 0.15rem;
+}
+.markdown-body a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.markdown-body strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3 {
+  font-weight: 600;
+  color: var(--text);
+}
+.markdown-body h1 {
+  font-size: 1rem;
+}
+.markdown-body h2 {
+  font-size: 0.95rem;
+}
+.markdown-body h3 {
+  font-size: 0.9rem;
+}
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85em;
+}
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid var(--border);
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+}
+.markdown-body th {
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+/* ==================================================================
+   WORKSPACE RAIL — what the session did to the repo, standing in its
+   own column rather than summoned from under the ledger.
+
+   Rules that govern it:
+
+   1. It frames, never competes. Same surface as the chrome, one
+      border away from the ledger. Accent appears only on real
+      insertions, error tone only on real deletions — a "+0" is
+      neither, and renders dim (.workspace-zero).
+   2. Status is never colour alone. Every row carries an A / M / D
+      letter as well as a tone, so the list survives any form of
+      colour blindness (PRODUCT.md: never colour-alone).
+   3. Only measured rows are expandable. A file the agent has written
+      but the server hasn't diffed yet is a plain row, not a button
+      that does nothing.
+   4. Path order, always. Sorting by recency would reshuffle the list
+      under the reader's cursor every time a row gets measured.
+   ================================================================== */
+
+.session-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.session-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 20rem;
+  min-height: 0;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+}
+@media (min-width: 1600px) {
+  .workspace {
+    width: 24rem;
+  }
+}
+
+.workspace-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+}
+.workspace-title {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text);
+}
+.workspace-collapse,
+.workspace-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  background: none;
+  border: 0;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 120ms ease-out;
+}
+.workspace-collapse:hover,
+.workspace-expand:hover {
+  color: var(--text);
+}
+.workspace-collapse:focus-visible,
+.workspace-expand:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Collapsed: a strip narrow enough to give the space back, wide enough
+   to still answer "is there anything in there?" with a count. */
+.workspace--collapsed {
+  width: 2.5rem;
+  align-items: center;
+  padding-top: 0.625rem;
+}
+.workspace-expand {
+  flex-direction: column;
+  padding: 0.375rem 0.25rem;
+}
+.workspace-expand-count {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.6875rem;
+  color: var(--text);
+}
+
+.workspace-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+}
+.workspace-count {
+  color: var(--text-dim);
+}
+
+.workspace-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.workspace-empty {
+  margin: 0;
+  padding: 1rem 0.875rem;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.workspace-files {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+}
+.workspace-file {
+  position: relative;
+}
+.workspace-file-row {
+  display: grid;
+  grid-template-columns: 0.875rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.3125rem 0.875rem;
+  background: none;
+  border: 0;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+.workspace-file-row--open {
+  cursor: pointer;
+  transition: background-color 120ms ease-out;
+}
+.workspace-file-row--open:hover {
+  background: var(--surface-2);
+}
+.workspace-file-row--open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.workspace-mark {
+  font-size: 0.6875rem;
+  text-align: center;
+}
+.workspace-mark--added {
+  color: var(--accent);
+}
+.workspace-mark--modified {
+  color: var(--presence-4);
+}
+.workspace-mark--deleted {
+  color: var(--state-error);
+}
+.workspace-mark--pending {
+  color: var(--text-dim);
+}
+
+/* Directory dim, filename bright: the eye lands on the name it's looking
+   for, and a long path truncates from the *left* so the name survives. */
+.workspace-path {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+}
+/* No `direction: rtl` here. It's the usual trick for truncating a path from
+   the left, and it silently reorders the trailing separator — "docs/" renders
+   as "/docs", so the row reads "/docssession-log.md". Truncating the
+   directory from the right instead keeps the separator where it belongs, and
+   the filename is a separate span so it never truncates at all. */
+.workspace-dir {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-dim);
+}
+.workspace-base {
+  flex: none;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.workspace-stats {
+  display: flex;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
+}
+.workspace-pending {
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+
+/* Dimmed by size, not by colour. Mixing --text-dim 85% toward --bg was the
+   obvious way to recess this and measured 4.27:1 — under the 4.5:1 floor for
+   text this small. The size difference alone carries the hierarchy. */
+.workspace-turn {
+  display: block;
+  padding: 0 0.875rem 0.25rem 2.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--text-dim);
+}
+
+.workspace-diff {
+  margin: 0 0 0.5rem;
+  padding: 0.5rem 0.875rem;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+  font-size: 0.6875rem;
+  line-height: 1.6;
+  max-height: 22rem;
+  overflow: auto;
+  color: var(--text-dim);
+}
+
+.workspace-foot {
+  padding: 0.625rem 0.875rem;
+  border-top: 1px solid var(--border);
+}
+.workspace-note {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.workspace-note code {
+  color: var(--text);
+}
+.workspace-note a {
+  color: var(--accent);
+}
+.workspace-note--error {
+  color: var(--state-error);
+}
+
+/* Below this the rail can't be a column without starving the ledger, so
+   it drops underneath as a capped, scrollable panel. */
+@media (max-width: 900px) {
+  .session-body {
+    flex-direction: column;
+  }
+  .workspace,
+  .workspace--collapsed {
+    width: auto;
+    max-height: 40vh;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+  .workspace--collapsed {
+    align-items: stretch;
+    padding-top: 0;
+  }
+  .workspace-expand {
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 0.5rem 0.875rem;
+  }
+  .workspace-expand-chevron {
+    transform: rotate(90deg);
+  }
+}
+
+/* ==================================================================
+   SESSIONS RAIL — the way back.
+
+   Relay has no accounts, so this is per-browser (localStorage). It is a
+   short reverse-chronological list, not a nav tree: the question it
+   answers is "what was I just in?", and three date buckets answer it
+   better than a calendar would.
+
+   Mirrors the workspace rail's grammar exactly — same head, same
+   collapse affordance, same surface — because they are the same kind
+   of object on opposite sides of the stream.
+   ================================================================== */
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 14rem;
+  min-height: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+.rail--collapsed {
+  width: 2.5rem;
+  align-items: center;
+  padding-top: 0.625rem;
+}
+
+.rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+}
+.rail-title {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text);
+}
+.rail-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+}
+.rail-new,
+.rail-collapse,
+.rail-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  min-width: 1.25rem;
+  padding: 0.25rem;
+  border: 0;
+  background: none;
+  border-radius: 0.25rem;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 120ms ease-out;
+}
+.rail-new:hover,
+.rail-collapse:hover,
+.rail-expand:hover {
+  color: var(--text);
+}
+.rail-new:focus-visible,
+.rail-collapse:focus-visible,
+.rail-expand:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.rail-expand {
+  flex-direction: column;
+  padding: 0.375rem 0.25rem;
+}
+.rail-expand-count {
+  font-size: 0.6875rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.rail-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 0.5rem;
+}
+.rail-empty {
+  margin: 0;
+  padding: 1rem 0.875rem;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.rail-group-label {
+  margin: 0;
+  padding: 0.75rem 0.875rem 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--text-dim);
+}
+.rail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.rail-item {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+.rail-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0.375rem 0.875rem;
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  transition: background-color 120ms ease-out;
+}
+.rail-link:hover {
+  background: var(--surface-2);
+}
+.rail-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+/* The session you're in is marked, never hidden. A list that omits where
+   you are makes you count rows to work out where you are. */
+.rail-item--current .rail-link {
+  border-left-color: var(--accent);
+  background: var(--surface-2);
+}
+.rail-name {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text);
+  min-width: 0;
+}
+/* The repo is the part that may be long, so it's the part that truncates —
+   the marker beside it stays whole. */
+.rail-repo {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rail-here {
+  flex: none;
+  font-size: 0.625rem;
+  color: var(--accent);
+}
+.rail-id {
+  flex: none;
+  font-size: 0.625rem;
+  color: var(--text-dim);
+}
+.rail-meta {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--text-dim);
+}
+/* Appears on hover/focus only: it's a tidying control, not something the
+   eye should have to skip past on every row. */
+.rail-forget {
+  flex: none;
+  width: 1.5rem;
+  border: 0;
+  background: none;
+  color: var(--text-dim);
+  font-size: 0.875rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease-out, color 120ms ease-out;
+}
+.rail-item:hover .rail-forget,
+.rail-forget:focus-visible {
+  opacity: 1;
+}
+.rail-forget:hover {
+  color: var(--text);
+}
+.rail-forget:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* ==================================================================
+   AGENT CHIP — what's running, and on whose money.
+
+   The mock agent is the default and was indistinguishable from a real
+   run. On a shared instance the opposite question matters more: if this
+   IS real, someone is paying, and the room should see who.
+   ================================================================== */
+
+.agent {
+  position: relative;
+}
+.agent-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.1875rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: none;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 120ms ease-out, border-color 120ms ease-out;
+}
+.agent-chip:hover {
+  color: var(--text);
+  border-color: var(--text-dim);
+}
+.agent-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.agent-chip--live {
+  color: var(--text);
+}
+.agent-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: var(--text-dim);
+}
+/* Accent only when it carries live state — the same rule the status dot
+   and the presence list follow. A demo run is not live state. */
+.agent-chip--live .agent-dot {
+  background: var(--accent);
+}
+.agent-hint {
+  color: var(--text-dim);
+}
+
+/* No runner attached. Since the agent moved onto the host's own machine,
+   "nothing is connected" became a state the room can actually be in — and
+   it looks identical to an idle session until someone types. It earns the
+   error tone (disconnection, per the token's role) rather than a louder
+   alarm: a host who hasn't started the CLI yet is a normal situation, not
+   a failure. */
+.agent-chip--offline {
+  color: var(--state-error);
+  border-color: color-mix(in oklab, var(--state-error) 35%, var(--border));
+}
+.agent-chip--offline:hover {
+  color: var(--state-error);
+  border-color: var(--state-error);
+}
+.agent-chip--offline .agent-dot {
+  background: var(--state-error);
+}
+
+/* The command that fixes the offline state, shown where the question is
+   asked. Same block treatment as the landing page's, scaled to the panel. */
+.agent-cmd {
+  margin: 0 0 0.625rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border-lit);
+  border-radius: 2px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  user-select: all;
+}
+
+.agent-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 40;
+  width: 20rem;
+  max-width: calc(100vw - 2rem);
+  padding: 0.75rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
+}
+.agent-title {
+  margin: 0 0 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text);
+}
+.agent-body {
+  margin: 0 0 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+.agent-body strong {
+  color: var(--text);
+  font-weight: 500;
+}
+.agent-body code {
+  font-family: var(--font-mono);
+  color: var(--text);
+}
+.agent-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.6875rem;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+.agent-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.agent-label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+.agent-input {
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+.agent-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.agent-error {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--state-error);
+}
+
+/* ==================================================================
+   SHARE — getting a second person into the room. The differentiator is
+   invisible in one tab, which is the state every first visit is in.
+   ================================================================== */
+
+.share {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.share-button {
+  padding: 0.1875rem 0.5rem;
+  border: 0;
+  border-radius: 0.25rem;
+  background: none;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 120ms ease-out;
+}
+.share-button:hover {
+  color: var(--text);
+}
+.share-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ==================================================================
+   TURN DIVIDERS — a multi-turn session read as one undifferentiated
+   stream. An instruction is the boundary, so it gets a labelled rule:
+   the ledger's own left rule stays continuous and the horizontal one
+   crosses it, the way a marker crosses a timeline.
+   ================================================================== */
+
+.ledger-instruction {
+  position: relative;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  padding-block-end: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+.ledger-instruction--first {
+  margin-top: 0;
+  padding-top: 0.5rem;
+  border-top: 0;
+}
+.ledger-turn {
+  position: absolute;
+  top: -0.4375rem;
+  left: 0;
+  padding-right: 0.5rem;
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  line-height: 1;
+  color: var(--text-dim);
+}
+.ledger-instruction--first .ledger-turn {
+  display: none;
+}
+.ledger-instruction-who {
+  color: var(--accent);
+}
+.ledger-instruction-arrow {
+  color: var(--text-dim);
+}
+.ledger-instruction-text {
+  color: var(--text);
+}
+
+/* ==================================================================
+   RECENT SESSIONS (landing) — a short "pick up where you left off"
+   strip, not a navigator. Renders nothing until there's something.
+   ================================================================== */
+
+.recents {
+  margin-top: 2rem;
+}
+.recents-label {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+.recents-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+.recents-link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.375rem 0.5rem;
+  margin-inline: -0.5rem;
+  border-radius: 0.25rem;
+  text-decoration: none;
+  transition: background-color 120ms ease-out;
+}
+.recents-link:hover {
+  background: var(--surface);
+}
+.recents-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.recents-name {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recents-meta {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+}
+
+/* Below 1100px the sessions rail is the first thing to go: the stream is
+   the product, and the rail is navigation you can reach from the mark. */
+@media (max-width: 1100px) {
+  .rail {
+    display: none;
+  }
+}
+@media (max-width: 900px) {
+  .share-button + .share-button {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .share {
+    display: none;
+  }
+  .agent-panel {
+    position: fixed;
+    top: auto;
+    right: 0.5rem;
+    left: 0.5rem;
+    width: auto;
   }
 }

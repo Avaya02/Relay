@@ -132,12 +132,15 @@ rather than streaming-input mode, because instructions arrive as discrete WS
 events at unpredictable times, which fits resumed queries far better than
 holding an async iterable open across the session; the spec sanctions both.
 
-**Billing — the spec's caveat was right, and it changed.** Since 2026-06-15
-Agent SDK usage no longer draws on Pro/Max interactive limits; it draws on a
-**separate monthly Agent SDK credit you must claim**, per-user and non-poolable
-([docs](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan)).
-Auth needs no key — the SDK picks up the existing `claude` CLI subscription
-login, and `ANTHROPIC_API_KEY` is unset on this machine.
+**Billing — reverted since it was last checked.** A separate monthly Agent SDK
+credit was briefly planned, but Anthropic paused that change as of 2026-06-15
+before it took effect. Agent SDK usage currently draws on the same
+**Pro/Max interactive session limit** as regular claude.ai chats — visible at
+claude.ai → Settings → Usage → "Current session"
+([docs](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan),
+checked 2026-08-08). Auth needs no key — the SDK picks up the existing
+`claude` CLI subscription login, and `ANTHROPIC_API_KEY` is unset on this
+machine.
 
 ## Deliberately not built yet
 
