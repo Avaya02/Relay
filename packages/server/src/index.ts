@@ -47,7 +47,10 @@ const httpServer = createServer((req, res) => {
   if (req.method === "POST" && req.url === "/sessions") {
     const session = createNewSession();
     res.writeHead(201, { "content-type": "application/json" });
-    res.end(JSON.stringify({ id: session.id }));
+    // The runner token is returned exactly once, to whoever created the
+    // session — normally the relay-agent CLI, which is the only party that
+    // needs it. It is never sent to a browser or persisted.
+    res.end(JSON.stringify({ id: session.id, runnerToken: session.runnerToken }));
     return;
   }
 

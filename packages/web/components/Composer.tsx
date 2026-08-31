@@ -43,7 +43,10 @@ export function Composer({
           Stop
         </button>
       )}
-      <Button type="submit" disabled={!text.trim()} className="h-9 px-4">
+      {/* Same shape as the landing page's primary button, deliberately: this
+          is the one control the two registers share, and it should look
+          identical in both. */}
+      <Button type="submit" disabled={!text.trim()} className="btn-solid">
         {working ? "Queue" : "Send"}
       </Button>
     </form>

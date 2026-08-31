@@ -23,7 +23,6 @@ export const LIMITS = {
   displayName: 32,
   instruction: 10_000,
   publishTitle: 120,
-  apiKey: 300,
 } as const;
 
 // Strips C0/C1 controls and the zero-width/bidi characters that let a name
@@ -73,40 +72,12 @@ export function publishTitle(raw: unknown): Checked<string> {
   return ok(cleaned.slice(0, LIMITS.publishTitle));
 }
 
-/**
- * An Anthropic API key, on its way into a subprocess environment.
- *
- * Deliberately shape-only: the authority on whether a key is *valid* is
- * Anthropic, and a strict pattern here would reject key formats that don't
- * exist yet. What this does guarantee is that the value can't carry a
- * newline or a shell metacharacter into an env var, and can't be a
- * megabyte of anything.
- */
-export function apiKey(raw: unknown): Checked<string> {
-  if (typeof raw !== "string") return bad("a key is required");
-  const cleaned = raw.trim();
-  if (!cleaned) return bad("a key is required");
-  if (cleaned.length > LIMITS.apiKey) return bad("that key is too long");
-  if (!cleaned.startsWith("sk-ant-")) {
-    return bad("Anthropic keys start with sk-ant-");
-  }
-  if (!/^[A-Za-z0-9_-]+$/.test(cleaned)) {
-    return bad("that key contains characters an API key can't have");
-  }
-  return ok(cleaned);
-}
-
-/** Last four characters — the only part of a key that may leave the server. */
-export function keyHint(key: string): string {
-  return key.slice(-4);
-}
-
-// A key can reach an error string by way of the SDK (a failed auth echoing
+// A key can reach an error string by way of the agent (a failed auth echoing
 // the value, a subprocess dumping its environment on crash). Agent errors are
 // appended to the transcript, broadcast to the whole room, and mirrored to
-// Postgres — so anything on that path gets scrubbed first. Belt and braces:
-// nothing is known to leak keys today, and this is cheap insurance if
-// something starts to.
+// Postgres — so anything arriving from a runner gets scrubbed first. The
+// runner scrubs its own output too; this is the guard on the receiving side,
+// where the text is about to be persisted and fanned out.
 const KEY_LIKE = /sk-ant-[A-Za-z0-9_-]+/g;
 
 export function redactKeys(text: string): string {

@@ -1,11 +1,16 @@
 import { randomUUID } from "node:crypto";
 import type { WebSocket, WebSocketServer } from "ws";
-import type { ClientMessage, JoinMessage, ServerMessage } from "@relay/shared";
+import type {
+  ClientMessage,
+  JoinMessage,
+  RunnerHelloMessage,
+  RunnerMessage,
+  ServerMessage,
+  ServerToRunnerMessage,
+} from "@relay/shared";
 import {
-  byoKeysAllowed,
   cancelParticipantGrace,
   cancelReap,
-  clearSessionKey,
   findParticipantByToken,
   getSession,
   liveParticipantCount,
@@ -16,12 +21,10 @@ import {
   setStatus,
 } from "./sessions.js";
 import * as validate from "./validate.js";
-import { verifyApiKey } from "./sessionKey.js";
 import type { Session, SessionParticipant } from "./sessions.js";
 import { broadcast } from "./sessions.js";
 import { appendEvent } from "./transcript.js";
-import { runAgent } from "./agent.js";
-import { disposeWorkingDir, publishSession, sessionChanges } from "./repo.js";
+import { mirrorSessionMeta } from "./persist.js";
 import { loadPersistedSession } from "./persist.js";
 
 type ConnectionState = {
@@ -31,6 +34,34 @@ type ConnectionState = {
 
 function send(socket: WebSocket, message: ServerMessage): void {
   socket.send(JSON.stringify(message));
+}
+
+// Separate from send() so a browser can never be handed a runner-bound message
+// by mistake — the two directions have different message sets.
+function sendRunner(socket: WebSocket, message: ServerToRunnerMessage): void {
+  socket.send(JSON.stringify(message));
+}
+
+/**
+ * Scrubs key-shaped text out of an event before it is stored and fanned out.
+ *
+ * Event data is a loose Record whose strings come from agent output — a failed
+ * auth message, a command that echoed its environment. Walking it is cheap
+ * next to the alternative, which is a key reaching the transcript, every
+ * browser in the room and Postgres at once.
+ */
+function redactEventData(data: Record<string, unknown>): Record<string, unknown> {
+  const scrub = (value: unknown): unknown => {
+    if (typeof value === "string") return validate.redactKeys(value);
+    if (Array.isArray(value)) return value.map(scrub);
+    if (value && typeof value === "object") {
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, scrub(v)]),
+      );
+    }
+    return value;
+  };
+  return scrub(data) as Record<string, unknown>;
 }
 
 // Standard `ws` liveness pattern: a half-open TCP connection (laptop lid,
@@ -44,6 +75,24 @@ export function attachWs(wss: WebSocketServer): void {
   // Tracks which session/participant a given socket belongs to, once joined.
   const connections = new Map<WebSocket, ConnectionState>();
   const alive = new WeakMap<WebSocket, boolean>();
+  // The same, for runner sockets. Kept separately because a runner is not a
+  // participant: it has no identity in the room, no seat, and no driver lock.
+  const runnerSockets = new Map<WebSocket, Session>();
+  // Browsers waiting on a changes request that is out at the runner.
+  const pendingChanges = new Map<string, WebSocket>();
+
+  // A runner that never answers shouldn't leak an entry per request. Generous:
+  // `git add -A` on a large tree is genuinely slow.
+  const CHANGES_TIMEOUT_MS = 30_000;
+
+  function dispatchInstruction(session: Session, text: string): void {
+    if (!session.runnerSocket) return;
+    sendRunner(session.runnerSocket, {
+      type: "run_instruction",
+      text,
+      resume: session.agentSessionId ?? undefined,
+    });
+  }
 
   const heartbeat = setInterval(() => {
     for (const socket of wss.clients) {
@@ -67,12 +116,6 @@ export function attachWs(wss: WebSocketServer): void {
   ): void {
     session.participants.delete(participant.id);
 
-    // Their key goes with them. Someone who supplied credentials and then
-    // left the room should not keep being billed for whatever the people
-    // still in it decide to run — and this is past the 30s grace window, so
-    // it isn't triggered by a wifi blip.
-    if (session.apiKeyOwner === participant.id) clearSessionKey(session);
-
     // A disconnected driver can't be handed a lock back, so free it rather
     // than leaving the session permanently stuck. No auto-reassignment to
     // another participant — same "nobody drives until someone claims it"
@@ -87,27 +130,149 @@ export function attachWs(wss: WebSocketServer): void {
       if (other.socket) send(other.socket, sessionStateMessage(session));
     }
 
-    // Nobody left watching: stop the agent rather than let an abandoned
-    // session keep spending API credit, and drop its working dir. The
-    // session row itself stays (briefly — see scheduleReap) so a quick
-    // refresh can still rejoin.
+    // Nobody left watching: tell the runner to stop rather than let an
+    // abandoned session keep spending someone's API credit. The working dir is
+    // the runner's to clean up — it owns the repo now. The session row itself
+    // stays (briefly — see scheduleReap) so a quick refresh can still rejoin.
     if (liveParticipantCount(session) === 0) {
-      session.agentAbort?.abort();
-      session.agentAbort = null;
       session.instructionQueue.length = 0;
-      if (session.workingDir) {
-        session.workingDir = null;
-        session.agentSessionId = null;
-        void disposeWorkingDir(session.id);
-      }
+      if (session.runnerSocket) sendRunner(session.runnerSocket, { type: "stop_run" });
       scheduleReap(session);
     }
+  }
+
+  // A runner attaching to its session. This is the only message that can turn
+  // an anonymous socket into the one allowed to execute instructions, so the
+  // token check is the whole security boundary for that privilege.
+  function handleRunnerHello(socket: WebSocket, msg: RunnerHelloMessage): void {
+    const session = getSession(msg.sessionId);
+    if (!session || session.runnerToken !== msg.token) {
+      send(socket, { type: "error", message: "invalid runner token" });
+      socket.close();
+      return;
+    }
+
+    // A second runner would mean two agents against one transcript. The newest
+    // wins — a restarted CLI is the common case, and its predecessor is
+    // usually a socket that hasn't noticed it's dead yet.
+    if (session.runnerSocket && session.runnerSocket !== socket) {
+      runnerSockets.delete(session.runnerSocket);
+      session.runnerSocket.terminate();
+    }
+
+    session.runnerSocket = socket;
+    session.repoName = msg.repoName;
+    session.agentMode = msg.mode;
+    session.keySource = msg.keySource;
+    session.keyHint = msg.keyHint;
+    runnerSockets.set(socket, session);
+    cancelReap(session);
+
+    broadcast(session, sessionStateMessage(session));
+  }
+
+  function handleRunnerMessage(socket: WebSocket, msg: RunnerMessage): void {
+    if (msg.type === "runner_hello") {
+      handleRunnerHello(socket, msg);
+      return;
+    }
+
+    const session = runnerSockets.get(socket);
+    if (!session) return;
+
+    switch (msg.type) {
+      case "runner_event": {
+        // Straight into the same function the in-process agent used to call:
+        // seq assignment, broadcast and the Postgres mirror are unchanged.
+        // Text is scrubbed on the way in — see validate.redactKeys.
+        appendEvent(session, { kind: msg.kind, data: redactEventData(msg.data) });
+        break;
+      }
+
+      case "runner_status": {
+        setStatus(session, msg.status);
+        // A run that just settled is what releases the queue. This is the old
+        // onRunSettled, now driven by the runner reporting in rather than by a
+        // promise resolving in this process.
+        if (msg.status !== "working") {
+          if (liveParticipantCount(session) === 0) {
+            session.instructionQueue.length = 0;
+            break;
+          }
+          const next = session.instructionQueue.shift();
+          if (next !== undefined) {
+            setStatus(session, "working");
+            dispatchInstruction(session, next);
+          }
+        }
+        break;
+      }
+
+      case "runner_agent_session": {
+        session.agentSessionId = msg.agentSessionId;
+        mirrorSessionMeta(session);
+        break;
+      }
+
+      case "runner_changes": {
+        const waiting = pendingChanges.get(msg.requestId);
+        pendingChanges.delete(msg.requestId);
+        // The requester may have closed the tab while this was in flight.
+        if (!waiting || waiting.readyState !== waiting.OPEN) break;
+        send(waiting, {
+          type: "session_changes",
+          files: msg.files,
+          insertions: msg.insertions,
+          deletions: msg.deletions,
+          patch: msg.patch,
+        });
+        break;
+      }
+
+      case "runner_publish_result": {
+        // Broadcast: everyone watched the work, everyone should see where it
+        // landed.
+        broadcast(
+          session,
+          msg.ok
+            ? {
+                type: "publish_result",
+                ok: true,
+                branch: msg.branch,
+                pushed: msg.pushed,
+                prUrl: msg.prUrl,
+                note: msg.note,
+              }
+            : { type: "publish_result", ok: false, error: msg.error },
+        );
+        break;
+      }
+    }
+  }
+
+  // The host's machine went away. Unlike a participant there's no grace window:
+  // an in-flight run on a disconnected machine will never report a result, so
+  // leaving the room on "working" would hang it forever.
+  function handleRunnerDisconnect(socket: WebSocket): void {
+    const session = runnerSockets.get(socket);
+    if (!session) return;
+    runnerSockets.delete(socket);
+    if (session.runnerSocket !== socket) return;
+
+    session.runnerSocket = null;
+    session.instructionQueue.length = 0;
+    // The conversation can't be resumed against a working dir that is gone.
+    session.agentSessionId = null;
+    if (session.status === "working") setStatus(session, "idle");
+    broadcast(session, sessionStateMessage(session));
   }
 
   // Whichever way a socket disconnects (clean close, terminate() from the
   // heartbeat, or the error handler below), the accounting is identical —
   // everything funnels through here rather than duplicating cleanup per path.
   function handleDisconnect(socket: WebSocket): void {
+    handleRunnerDisconnect(socket);
+
     const state = connections.get(socket);
     if (!state) return;
     connections.delete(socket);
@@ -232,12 +397,23 @@ export function attachWs(wss: WebSocketServer): void {
     });
 
     socket.on("message", (raw) => {
-      let msg: ClientMessage;
+      let parsed: unknown;
       try {
-        msg = JSON.parse(raw.toString());
+        parsed = JSON.parse(raw.toString());
       } catch {
         return;
       }
+
+      // Runners share this server with browsers but speak a different message
+      // set, so they branch off before the client switch below. A socket is a
+      // runner from its hello onward.
+      const kind = (parsed as { type?: unknown }).type;
+      if (kind === "runner_hello" || runnerSockets.has(socket)) {
+        handleRunnerMessage(socket, parsed as RunnerMessage);
+        return;
+      }
+
+      const msg = parsed as ClientMessage;
 
       switch (msg.type) {
         case "ping": {
@@ -272,6 +448,18 @@ export function attachWs(wss: WebSocketServer): void {
             return;
           }
 
+          // Nothing can execute this without a runner. Say so plainly rather
+          // than queueing it into a void — the agent lives on someone's
+          // machine now, and that machine may simply not be there.
+          if (!session.runnerSocket) {
+            send(socket, {
+              type: "error",
+              message:
+                "no agent is connected — run `relay-agent` in the repository to start one",
+            });
+            return;
+          }
+
           appendEvent(session, {
             kind: "user_instruction",
             by: participant.id,
@@ -281,12 +469,12 @@ export function attachWs(wss: WebSocketServer): void {
           // Never run two agents concurrently against the same working dir /
           // resumed conversation — the instruction still lands in the
           // transcript immediately (above), but the run itself waits until
-          // the in-flight one settles. onRunSettled() drains this queue.
+          // the in-flight one settles. The runner_status handler drains this.
           if (session.status === "working") {
             session.instructionQueue.push(text.value);
           } else {
             setStatus(session, "working");
-            runAgent(session, text.value);
+            dispatchInstruction(session, text.value);
           }
           break;
         }
@@ -371,7 +559,9 @@ export function attachWs(wss: WebSocketServer): void {
           // Stop means stop — anything queued behind the current run was
           // only ever going to run because this one finished normally.
           session.instructionQueue.length = 0;
-          session.agentAbort?.abort();
+          if (session.runnerSocket) {
+            sendRunner(session.runnerSocket, { type: "stop_run" });
+          }
           break;
         }
 
@@ -379,7 +569,7 @@ export function attachWs(wss: WebSocketServer): void {
           const state = connections.get(socket);
           if (!state) return;
           const { session } = state;
-          if (!session.workingDir) {
+          if (!session.runnerSocket) {
             send(socket, {
               type: "session_changes",
               files: [],
@@ -391,94 +581,17 @@ export function attachWs(wss: WebSocketServer): void {
           }
           // Read-only, so any participant may ask — a viewer wanting to see
           // what the agent did is the normal case, not a privileged one.
-          void sessionChanges(session.workingDir)
-            .then((c) => send(socket, { type: "session_changes", ...c }))
-            .catch((err) => {
-              console.error("session_changes failed:", err);
-              send(socket, { type: "error", message: "could not read session changes" });
-            });
-          break;
-        }
-
-        // Bring-your-own-key. The value never leaves this handler except as
-        // its last four characters (agentInfo -> session_state), and it is
-        // deliberately absent from every log line here — an "invalid key"
-        // message that prints the key is the classic way these leak.
-        case "set_key": {
-          const state = connections.get(socket);
-          if (!state) return;
-          const { session, participant } = state;
-
-          if (!byoKeysAllowed()) {
-            send(socket, {
-              type: "error",
-              message:
-                "this deployment doesn't accept user-supplied keys — run Relay yourself to use your own",
-            });
-            return;
-          }
-          if (participant.id !== session.driverId) {
-            send(socket, {
-              type: "error",
-              message: "only the driver can set the session key",
-            });
-            return;
-          }
-
-          const key = validate.apiKey(msg.key);
-          if (!key.ok) {
-            send(socket, { type: "error", message: key.error });
-            return;
-          }
-
-          // Checked against Anthropic before it's accepted. A bad key that
-          // gets stored surfaces three minutes later as the agent's answer
-          // (measured) instead of as an answer to the question just asked.
-          const epoch = ++session.apiKeyEpoch;
-          void verifyApiKey(key.value).then((check) => {
-            if (!check.ok) {
-              send(socket, { type: "error", message: check.error });
-              return;
-            }
-            // Re-read state: the round trip above means the socket may have
-            // gone, the wheel may have moved, or the key may have been
-            // cleared or replaced since the request was made.
-            if (session.apiKeyEpoch !== epoch) return;
-            const now = connections.get(socket);
-            if (!now || now.session !== session) return;
-            if (participant.id !== session.driverId) return;
-
-            session.apiKey = key.value;
-            session.apiKeyHint = validate.keyHint(key.value);
-            session.apiKeyOwner = participant.id;
-
-            // Everyone, not just the setter: "whose money is this run
-            // spending" is the room's business, and the header says so on
-            // every screen.
-            broadcast(session, sessionStateMessage(session));
+          //
+          // The answer now arrives on the runner's socket rather than from a
+          // promise, so remember who asked. Without the id the reply has no
+          // way back to this particular browser.
+          const requestId = randomUUID();
+          pendingChanges.set(requestId, socket);
+          setTimeout(() => pendingChanges.delete(requestId), CHANGES_TIMEOUT_MS);
+          sendRunner(session.runnerSocket, {
+            type: "request_runner_changes",
+            requestId,
           });
-          break;
-        }
-
-        case "clear_key": {
-          const state = connections.get(socket);
-          if (!state) return;
-          const { session, participant } = state;
-
-          // The owner can always take their own key back, even if the wheel
-          // has since moved on to someone else.
-          const owner = session.apiKeyOwner === participant.id;
-          if (!owner && participant.id !== session.driverId) {
-            send(socket, {
-              type: "error",
-              message: "only the driver or the key's owner can clear it",
-            });
-            return;
-          }
-
-          if (clearSessionKey(session)) {
-            broadcast(session, sessionStateMessage(session));
-          }
           break;
         }
 
@@ -496,11 +609,11 @@ export function attachWs(wss: WebSocketServer): void {
             });
             return;
           }
-          if (!session.workingDir) {
+          if (!session.runnerSocket) {
             send(socket, {
               type: "publish_result",
               ok: false,
-              error: "this session hasn't run anything yet",
+              error: "no agent is connected, so there's nothing to publish",
             });
             return;
           }
@@ -513,32 +626,9 @@ export function attachWs(wss: WebSocketServer): void {
             ? checked.value
             : `Relay session ${session.id}`;
 
-          void publishSession(session.workingDir, session.id, title)
-            .then((r) => {
-              // Broadcast: everyone watched the work, everyone should see
-              // where it landed.
-              broadcast(
-                session,
-                r.ok
-                  ? {
-                      type: "publish_result",
-                      ok: true,
-                      branch: r.branch,
-                      pushed: r.pushed,
-                      prUrl: r.prUrl,
-                      note: r.note,
-                    }
-                  : { type: "publish_result", ok: false, error: r.error },
-              );
-            })
-            .catch((err) => {
-              console.error("publish failed:", err);
-              send(socket, {
-                type: "publish_result",
-                ok: false,
-                error: "publish failed",
-              });
-            });
+          // No request id needed, unlike changes: the result is broadcast to
+          // the whole room, so there's no single requester to route back to.
+          sendRunner(session.runnerSocket, { type: "run_publish", title });
           break;
         }
 

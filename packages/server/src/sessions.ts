@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { customAlphabet } from "nanoid";
 import type { WebSocket } from "ws";
 import type {
@@ -8,7 +9,6 @@ import type {
   SessionStatus,
 } from "@relay/shared";
 import { mirrorSessionMeta } from "./persist.js";
-import { repoName } from "./repo.js";
 
 export type SessionParticipant = Participant & {
   // Null while disconnected but inside the reconnect grace window (see
@@ -30,14 +30,9 @@ export type Session = {
   participants: Map<string, SessionParticipant>;
   events: Event[];
   seq: number;
-  // The demo-repo checkout this session's agent works in (spec §6.2/§6.6).
-  // Prepared lazily on first instruct — creating a session shouldn't pay for
-  // a clone nobody uses.
-  workingDir: string | null;
-  // Lets us stop an in-flight agent run (disconnect, teardown).
-  agentAbort: AbortController | null;
   // The SDK's own session id, so follow-up instructions resume the same agent
-  // conversation instead of starting a fresh one each turn.
+  // conversation instead of starting a fresh one each turn. Reported by the
+  // runner; passed back to it on the next instruction.
   agentSessionId: string | null;
   // Instructions sent while a run is already in flight. Never run two agents
   // concurrently against the same working dir/resumed conversation — queue
@@ -47,23 +42,20 @@ export type Session = {
   // the in-memory record is dropped — otherwise a long-lived process
   // accumulates every session ever created, forever (see scheduleReap).
   reapTimer: NodeJS.Timeout | null;
-  // An Anthropic API key supplied by someone in this room, so a shared
-  // deployment can run the real agent on their credentials rather than the
-  // host's. In memory only, for this session's lifetime: never written to
-  // Postgres (mirrorSessionMeta lists its columns explicitly), never logged,
-  // and never sent to a client — only `apiKeyHint` leaves the server.
-  apiKey: string | null;
-  apiKeyHint: string | null;
-  // Bumped on every set or clear. Verifying a key is a network round trip, so
-  // a `clear_key` (or a second `set_key`) can land while one is in flight —
-  // without this, the slower request wins and a key the driver just removed
-  // comes back. The verification callback applies its result only if the
-  // epoch it started with is still current.
-  apiKeyEpoch: number;
-  // Whose key it is. The key leaves when they do (see finalizeDisconnect):
-  // someone who walks away from a session shouldn't keep paying for whatever
-  // the people still in it decide to run.
-  apiKeyOwner: string | null;
+  // The relay-agent CLI for this session, if one is attached. It holds the
+  // repo and runs the agent; without it nothing can execute an instruction.
+  runnerSocket: WebSocket | null;
+  // Proves a socket is allowed to be this session's runner. Minted here,
+  // returned once by POST /sessions, and never written to Postgres — the same
+  // treatment the API key used to get. Durable for the session's lifetime, so
+  // a restarted CLI can reattach rather than being locked out.
+  runnerToken: string;
+  // Reported by the runner at hello. All four are display-only: the room needs
+  // to know which codebase it's watching and whose credentials are paying.
+  repoName: string | null;
+  agentMode: "mock" | "real" | null;
+  keySource: "oauth" | "api-key" | "mock" | null;
+  keyHint: string | null;
 };
 
 const sessions = new Map<string, Session>();
@@ -93,15 +85,15 @@ function createSession(id: string): Session {
     participants: new Map(),
     events: [],
     seq: 0,
-    workingDir: null,
-    agentAbort: null,
     agentSessionId: null,
     instructionQueue: [],
     reapTimer: null,
-    apiKey: null,
-    apiKeyHint: null,
-    apiKeyEpoch: 0,
-    apiKeyOwner: null,
+    runnerSocket: null,
+    runnerToken: randomUUID(),
+    repoName: null,
+    agentMode: null,
+    keySource: null,
+    keyHint: null,
   };
   sessions.set(id, session);
   // Upserted (not just created) on every later status/driver change too —
@@ -166,63 +158,16 @@ export function broadcast(session: Session, message: ServerMessage): void {
   }
 }
 
-// Whether this deployment lets a viewer supply their own key. Off unless
-// explicitly turned on, and that default is the security posture rather than
-// caution for its own sake: the agent runs with unrestricted shell access
-// inside its clone (agent.ts: `bypassPermissions`), so on a public instance
-// "bring your own key" would mean "run whatever you like on my server". A
-// self-hosted Relay among people who already have shell access to the box is
-// a different situation, and this is the switch for it.
-//
-// Read per call rather than frozen at module load — same reason as
-// RELAY_AGENT in agent.ts: index.ts's process.loadEnvFile() runs after this
-// module is evaluated.
-export function byoKeysAllowed(): boolean {
-  const raw = process.env.RELAY_ALLOW_USER_KEYS;
-  return raw === "1" || raw === "true";
-}
-
-// What will actually run on the next instruction, and on whose credentials.
-// A session key wins over server config: someone went to the trouble of
-// supplying it, and the alternative (silently running the mock while they
-// think they're paying for a real run) is the worse failure.
+// What will run on the next instruction, and on whose credentials. Everything
+// here is reported by the runner — the server has no agent, no repo and no
+// credentials of its own to describe.
 export function agentInfo(session: Session): AgentInfo {
-  const owner = session.apiKeyOwner
-    ? (session.participants.get(session.apiKeyOwner)?.displayName ?? null)
-    : null;
-
-  if (session.apiKey) {
-    return {
-      mode: "real",
-      source: "session",
-      keyHint: session.apiKeyHint,
-      keyOwner: owner,
-      byoAllowed: byoKeysAllowed(),
-    };
-  }
-  const serverReal = process.env.RELAY_AGENT === "real";
   return {
-    mode: serverReal ? "real" : "mock",
-    source: serverReal ? "server" : "mock",
-    keyHint: null,
-    keyOwner: null,
-    byoAllowed: byoKeysAllowed(),
+    mode: session.agentMode ?? "mock",
+    keySource: session.keySource ?? "mock",
+    keyHint: session.keyHint,
+    runnerConnected: session.runnerSocket !== null,
   };
-}
-
-// Drops the session key. Called when the owner leaves for good, and when they
-// clear it by hand. Returns whether anything actually changed, so callers can
-// skip a pointless broadcast.
-export function clearSessionKey(session: Session): boolean {
-  // Bumped even when there's nothing stored: the point is to invalidate any
-  // verification still in flight, which is exactly the case where the key
-  // hasn't landed yet.
-  session.apiKeyEpoch++;
-  if (!session.apiKey) return false;
-  session.apiKey = null;
-  session.apiKeyHint = null;
-  session.apiKeyOwner = null;
-  return true;
 }
 
 export function sessionStateMessage(session: Session): ServerMessage {
@@ -234,7 +179,7 @@ export function sessionStateMessage(session: Session): ServerMessage {
     })),
     driverId: session.driverId,
     status: session.status,
-    repo: repoName(),
+    repo: session.repoName,
     agent: agentInfo(session),
   };
 }
