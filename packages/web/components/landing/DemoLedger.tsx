@@ -43,6 +43,17 @@ const SCRIPT: Step[] = [
 const STEP_MS = 760;
 const HOLD_MS = 4200;
 
+/**
+ * Rows the replay never drops below, including when it loops.
+ *
+ * Rewinding to zero blanked the frame outright: measured, the pane went from
+ * fully rendered to 0% filled about a second after load, which reads as the
+ * demo breaking rather than as a replay starting. Keeping the driver's
+ * instruction and the first call on screen means the frame is never empty and
+ * the loop still reads as a restart.
+ */
+const REPLAY_FLOOR = 2;
+
 export function DemoLedger() {
   // Starts fully rendered, which is also what the server emits — the replay is
   // an enhancement on top of a complete default. Reduced motion, a hidden tab,
@@ -63,10 +74,10 @@ export function DemoLedger() {
     const t = setTimeout(() => {
       if (!started) {
         setStarted(true);
-        setShown(0);
+        setShown(REPLAY_FLOOR);
         return;
       }
-      setShown((n) => (n >= SCRIPT.length ? 0 : n + 1));
+      setShown((n) => (n >= SCRIPT.length ? REPLAY_FLOOR : n + 1));
     }, delay);
     return () => clearTimeout(t);
   }, [started, shown]);

@@ -311,6 +311,52 @@ body {
   font-size: 0.8125rem;
 }
 
+/* The secondary shape. Outlined rather than filled, so it can sit beside a
+   solid button without the two competing — same rule that made Stop quieter
+   than Send in the composer. */
+.btn-quiet {
+  height: 2.25rem;
+  padding-inline: 1rem;
+  border: 1px solid var(--border-lit);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition:
+    border-color 140ms ease-out,
+    color 140ms ease-out;
+}
+.btn-quiet:hover:not(:disabled) {
+  border-color: var(--text-dim);
+}
+.btn-quiet:disabled {
+  color: var(--text-faint);
+  border-color: var(--border);
+  cursor: not-allowed;
+}
+
+/* An <a> carrying a button shape needs the centring a <button> gets free. */
+.landing-nav-cta {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Visually hidden, still announced. For live-region text that would be
+   redundant on screen. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* --- Hero: asymmetric. Copy holds the left rail, the running session
    takes the larger share, because the session IS the argument. --- */
 .hero {
@@ -370,6 +416,120 @@ body {
   font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--text-dim);
+}
+
+/* --- The command block ---------------------------------------------
+   The page's primary action. Sessions are created by the CLI, so the
+   honest call to action is the command itself rather than a button that
+   would have to invent a repository.
+
+   The whole block is the button: a command line with a small separate
+   copy target makes people aim for it. Depth is the lit border edge on
+   hover — no shadow, no glow, same rule as everything else. */
+.cmd {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  height: 2.75rem;
+  padding-inline: 0.875rem 0.75rem;
+  border: 1px solid var(--border-lit);
+  border-radius: 2px;
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  text-align: left;
+  transition: border-color 140ms ease-out;
+}
+.cmd:hover {
+  border-color: var(--text-faint);
+}
+.cmd:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+/* Not selectable, so dragging across the line yields the command and never a
+   shell prompt someone then pastes into their terminal. */
+.cmd-prompt {
+  color: var(--text-faint);
+  user-select: none;
+}
+.cmd-text {
+  color: var(--text);
+  white-space: nowrap;
+}
+/* Reserves its own width so the label swapping to "Copied" can't reflow the
+   block under the cursor mid-click. */
+.cmd-state {
+  min-width: 3.5rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--border);
+  color: var(--text-faint);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  transition: color 140ms ease-out;
+}
+/* An outcome, not liveness — so state-ok, not accent. Accent stays reserved
+   for things happening right now. */
+.cmd-state--on {
+  color: var(--state-ok);
+}
+
+/* --- Join by link --------------------------------------------------
+   The counterpart to the command: the host runs one, everyone else
+   arrives with a link. Quiet by comparison — most people reach a session
+   by clicking, and this is the fallback for a link that was pasted into
+   a chat window as plain text.
+
+   Namespaced `hero-join`, NOT `join`: the session view already owns
+   `.join-*` for its full-screen join gate, and the bare name inherited
+   that gate's `min-height: 900px` — which opened a screen of dead space
+   in the middle of the hero. */
+.hero-join {
+  margin-top: 2rem;
+  max-width: 27rem;
+}
+.hero-join-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+.hero-join-row {
+  display: flex;
+  gap: 0.5rem;
+}
+.hero-join-input {
+  flex: 1;
+  min-width: 0;
+  height: 2.25rem;
+  padding-inline: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  transition: border-color 140ms ease-out;
+}
+.hero-join-input::placeholder {
+  color: var(--text-faint);
+}
+.hero-join-input:hover {
+  border-color: var(--border-lit);
+}
+.hero-join-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-color: transparent;
+}
+.close-cta {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
 }
 .hero-error {
   margin-top: 1rem;
@@ -2274,6 +2434,38 @@ body {
 }
 .agent-hint {
   color: var(--text-dim);
+}
+
+/* No runner attached. Since the agent moved onto the host's own machine,
+   "nothing is connected" became a state the room can actually be in — and
+   it looks identical to an idle session until someone types. It earns the
+   error tone (disconnection, per the token's role) rather than a louder
+   alarm: a host who hasn't started the CLI yet is a normal situation, not
+   a failure. */
+.agent-chip--offline {
+  color: var(--state-error);
+  border-color: color-mix(in oklab, var(--state-error) 35%, var(--border));
+}
+.agent-chip--offline:hover {
+  color: var(--state-error);
+  border-color: var(--state-error);
+}
+.agent-chip--offline .agent-dot {
+  background: var(--state-error);
+}
+
+/* The command that fixes the offline state, shown where the question is
+   asked. Same block treatment as the landing page's, scaled to the panel. */
+.agent-cmd {
+  margin: 0 0 0.625rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border-lit);
+  border-radius: 2px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  user-select: all;
 }
 
 .agent-panel {

@@ -70,9 +70,6 @@ export type UseSessionResult = {
   releaseControl: () => void;
   requestChanges: () => void;
   publish: (title: string) => void;
-  /** Driver only. The key goes to the server and never comes back. */
-  setKey: (key: string) => void;
-  clearKey: () => void;
 };
 
 // The agent's newest plan wins — a TodoWrite supersedes every earlier one,
@@ -356,23 +353,6 @@ export function useSession(sessionId: string): UseSessionResult {
     }
   }
 
-  // The key is written to the socket and never held in React state — there is
-  // no component that needs it back, and the less of it that exists on the
-  // client the better. The server answers with a hint, not the key.
-  function setKey(key: string) {
-    const socket = socketRef.current;
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ type: "set_key", key }));
-    }
-  }
-
-  function clearKey() {
-    const socket = socketRef.current;
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ type: "clear_key" }));
-    }
-  }
-
   function publish(title: string) {
     const socket = socketRef.current;
     if (socket && socket.readyState === WebSocket.OPEN) {
@@ -409,7 +389,5 @@ export function useSession(sessionId: string): UseSessionResult {
     releaseControl,
     requestChanges,
     publish,
-    setKey,
-    clearKey,
   };
 }
