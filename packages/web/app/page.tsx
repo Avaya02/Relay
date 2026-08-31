@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { DemoLedger } from "@/components/landing/DemoLedger";
-import { createSession } from "@/lib/api";
 import { RecentSessions } from "@/components/RecentSessions";
+import { CommandBlock } from "@/components/landing/CommandBlock";
 
 // The landing page, in the brand register: instrument faceplate. Structure is
 // carried by hairline rules and a visible frame rather than cards and shadows,
@@ -20,22 +20,23 @@ import { RecentSessions } from "@/components/RecentSessions";
 //     follow-up question.
 //   - No pricing / testimonials / waitlist nav. Borrowing a SaaS information
 //     architecture would promise a product that isn't behind it.
+//
+// The primary action is a command, not a button. Sessions are created by the
+// CLI on the host's own machine — there is no "start" this page could honestly
+// offer, because the page has no repository.
 
 export default function Home() {
   const router = useRouter();
-  const [creating, setCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [joinId, setJoinId] = useState("");
 
-  async function handleStart() {
-    setCreating(true);
-    setError(null);
-    try {
-      const { id } = await createSession();
-      router.push(`/session/${id}`);
-    } catch {
-      setError("Could not start a session — is the server running?");
-      setCreating(false);
-    }
+  // Accepts a bare id or a pasted session URL — people will paste the whole
+  // link, and rejecting that would be pedantry dressed as validation.
+  function handleJoin(e: React.FormEvent) {
+    e.preventDefault();
+    const raw = joinId.trim();
+    if (!raw) return;
+    const id = raw.includes("/") ? (raw.split("/").filter(Boolean).pop() ?? raw) : raw;
+    router.push(`/session/${id}`);
   }
 
   return (
@@ -59,13 +60,9 @@ export default function Home() {
               Agent SDK ↗
             </a>
           </nav>
-          <Button
-            onClick={handleStart}
-            disabled={creating}
-            className="btn-solid"
-          >
-            {creating ? "Starting…" : "Start a session"}
-          </Button>
+          <a href="#start" className="btn-solid landing-nav-cta">
+            Get started
+          </a>
         </header>
 
         {/* Fold 1 — the claim, and the thing itself. */}
@@ -87,19 +84,34 @@ export default function Home() {
               the same moment. One person drives — and can hand over the wheel
               mid-task.
             </p>
-            <div className="hero-cta">
-              <Button
-                onClick={handleStart}
-                disabled={creating}
-                className="btn-solid btn-lg"
-              >
-                {creating ? "Starting…" : "Start a session"}
-              </Button>
+
+            <div className="hero-cta" id="start">
+              <CommandBlock command="npx relay-agent" />
               <span className="hero-cta-note">
-                No sign-up — a name and a link.
+                Runs in your repo, on your machine. Prints a link to share.
               </span>
             </div>
-            {error && <p className="hero-error">{error}</p>}
+
+            <form className="hero-join" onSubmit={handleJoin}>
+              <label className="hero-join-label" htmlFor="join-id">
+                Have a link?
+              </label>
+              <div className="hero-join-row">
+                <input
+                  id="join-id"
+                  className="hero-join-input"
+                  value={joinId}
+                  onChange={(e) => setJoinId(e.target.value)}
+                  placeholder="Paste a session link or id"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                <Button type="submit" className="btn-quiet" disabled={!joinId.trim()}>
+                  Join
+                </Button>
+              </div>
+            </form>
+
             {/* Renders nothing until this browser has actually been in one. */}
             <RecentSessions />
           </div>
@@ -154,7 +166,50 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Fold 3 — the sequence. Numbered because this genuinely IS an
+        <div className="hatch" aria-hidden />
+
+        {/* Fold 3 — the trust argument. This is the whole reason the
+            architecture is shaped the way it is, so it says so plainly rather
+            than hiding in a spec row. */}
+        <section className="lock" id="trust">
+          <div className="lock-inner lock-grid">
+            <div className="lock-head">
+              <h2 className="section-title">Your code stays on your machine.</h2>
+              <p className="lock-lede">
+                The agent runs where the repository already is — your laptop,
+                your checkout, your credentials. What crosses the network is a
+                description of what happened, not the code it happened to.
+              </p>
+            </div>
+            <dl className="lock-facts">
+              <div>
+                <dt>No upload, no clone on a server</dt>
+                <dd>
+                  Nothing to hand over before you can start, and nothing of
+                  yours sitting on someone else&apos;s disk afterwards.
+                </dd>
+              </div>
+              <div>
+                <dt>The server is a relay, not a runtime</dt>
+                <dd>
+                  It orders events, enforces the lock, and fans out the
+                  transcript. No repository, no shell, no API keys — ever.
+                </dd>
+              </div>
+              <div>
+                <dt>Any repository, no setup</dt>
+                <dd>
+                  Whichever directory you run the command in. No connected
+                  accounts, no repo picker, no OAuth scope to grant.
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </section>
+
+        <div className="hatch" aria-hidden />
+
+        {/* Fold 4 — the sequence. Numbered because this genuinely IS an
             ordered process and the order carries information; numbering
             sections that aren't sequences is the reflex this avoids. */}
         <section className="how" id="how">
@@ -164,11 +219,11 @@ export default function Home() {
               <li className="step">
                 <span className="step-n">01</span>
                 <div className="step-body">
-                  <h3 className="step-title">The repo is cloned</h3>
+                  <h3 className="step-title">You start the agent</h3>
                   <p className="step-text">
-                    Each session gets a disposable <code>git clone</code>. The
-                    agent&apos;s working directory is never your source
-                    checkout, and it&apos;s deleted when the last person leaves.
+                    <code>npx relay-agent</code> in your repository. It works in
+                    a disposable clone, connects out to the relay, and prints a
+                    link. Nothing inbound, so no ports to open.
                   </p>
                 </div>
               </li>
@@ -199,9 +254,9 @@ export default function Home() {
                 <div className="step-body">
                   <h3 className="step-title">The work becomes a branch</h3>
                   <p className="step-text">
-                    When a run finishes, the session&apos;s diff is real. The
-                    driver can commit it to a branch instead of watching it
-                    evaporate with the tab.
+                    When a run finishes, the session&apos;s diff is real.
+                    Publish commits it to a branch in your own repository —
+                    ready to check out, already local.
                   </p>
                 </div>
               </li>
@@ -209,7 +264,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Fold 4 — the spec sheet. A datasheet rather than a grid of icon
+        {/* Fold 5 — the spec sheet. A datasheet rather than a grid of icon
             cards: denser, more honest, and not the pattern every generated
             landing page reaches for. */}
         <section className="spec">
@@ -224,6 +279,14 @@ export default function Home() {
                 </dd>
               </div>
               <div className="spec-row">
+                <dt>Topology</dt>
+                <dd>
+                  The agent runs on the host&apos;s machine and streams events
+                  up over one WebSocket. The server coordinates; it never holds
+                  code.
+                </dd>
+              </div>
+              <div className="spec-row">
                 <dt>Ordering</dt>
                 <dd>
                   A server-assigned <code>seq</code> on every event, from a
@@ -234,7 +297,8 @@ export default function Home() {
                 <dt>Isolation</dt>
                 <dd>
                   A disposable clone per session, discarded when the room
-                  empties.
+                  empties. The agent has full shell access inside it, with the
+                  host&apos;s own permissions — the same trust as pairing.
                 </dd>
               </div>
               <div className="spec-row">
@@ -263,14 +327,10 @@ export default function Home() {
         </section>
 
         <section className="close">
-          <h2 className="close-title">Start one and send the link.</h2>
-          <Button
-            onClick={handleStart}
-            disabled={creating}
-            className="btn-solid btn-lg"
-          >
-            {creating ? "Starting…" : "Start a session"}
-          </Button>
+          <h2 className="close-title">Run it. Send the link.</h2>
+          <div className="close-cta">
+            <CommandBlock command="npx relay-agent" />
+          </div>
         </section>
 
         <footer className="landing-foot">

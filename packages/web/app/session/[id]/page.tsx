@@ -105,16 +105,9 @@ export default function SessionPage({
         </div>
         <div className="chrome-right">
           <ShareControls sessionId={sessionId} />
-          {/* What's actually running, and on whose credentials. The mock is
-              the default and was previously indistinguishable from a real
-              run. */}
-          <AgentChip
-            agent={session.agent}
-            isDriver={isDriver}
-            selfName={selfName}
-            onSetKey={session.setKey}
-            onClearKey={session.clearKey}
-          />
+          {/* What's running, on whose machine, and on whose credentials —
+              including the case where nothing is attached at all. */}
+          <AgentChip agent={session.agent} />
           <span className="chrome-divider" aria-hidden />
           {/* Per-run cost already rode on each agent_done; nothing summed
               them, so a six-turn session showed six prices and no total. */}

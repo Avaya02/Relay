@@ -82,37 +82,50 @@ pnpm install
 pnpm dev
 ```
 
-Then open <http://localhost:3000>. Click **Start a session**, share the URL, and open it in a
-second window to watch both sides.
+`pnpm dev` starts three processes: the coordination server, the web app, and a
+`relay-agent` in mock mode. The agent prints a session link — open it, then open it again
+in a second window to watch both sides.
 
-**This works with no API key.** `RELAY_AGENT` defaults to a scripted mock agent that streams
-a realistic run — plan updates, a failing test, a fix, a real file write — against a
-disposable clone. It costs nothing and is how most of the UI was developed and tested.
+To point an agent at a real repository, run the CLI yourself:
 
-To run the real agent, create `packages/server/.env`:
-
-```sh
-RELAY_AGENT=real
-RELAY_MODEL=claude-sonnet-5           # optional; defaults to claude-haiku-4-5
-RELAY_SOURCE_REPO=/path/to/your/repo  # what the agent works on
+```bash
+cd /path/to/your/repo
+pnpm --filter @relay/agent start          # mock: free, offline, no model
+pnpm --filter @relay/agent start -- --real  # the actual Agent SDK
 ```
 
-On your own machine with Claude Code already installed, the SDK uses the credentials that
-are there — no API key needed. A **shared** instance is a different case and needs a Console
-API key (`ANTHROPIC_API_KEY`); see [Deploying it for a team](#deploying-it-for-a-team).
+**The mock is the default and works with no API key.** It streams a realistic run — plan
+updates, a failing test, a fix, real file writes — against a disposable clone. It costs
+nothing and is how most of the UI was developed and tested.
 
-### Configuration
+With `--real` on a machine that already has Claude Code installed, the SDK uses the
+credentials that are there; no API key needed. Pass `--api-key sk-ant-…` to bill a
+specific key instead — it's verified before the session starts, and it never leaves your
+machine.
+
+### The agent CLI
+
+| Flag | Default | What it does |
+|---|---|---|
+| `--repo <path>` | current directory | The repository to work in |
+| `--real` | off | Run the Agent SDK. Omitted, you get the scripted mock |
+| `--api-key <key>` | — | Bill this key rather than your Claude Code login |
+| `--server <url>` | `http://localhost:4000` | The coordination server to attach to |
+| `--web <url>` | `http://localhost:3000` | Web app, for the link it prints |
+| `--session <id>` + `--token` | — | Reattach to a session after restarting |
+| `--github-repo` / `--github-token` | — | Open a PR on publish |
+
+`RELAY_MODEL` (default `claude-haiku-4-5`) selects the model.
+
+### The server
 
 | Variable | Default | What it does |
 |---|---|---|
-| `RELAY_AGENT` | `mock` | `real` runs the Agent SDK; anything else runs the scripted mock |
-| `RELAY_MODEL` | `claude-haiku-4-5` | Which model drives the agent |
-| `RELAY_SOURCE_REPO` | — | Repo to clone per session. **Never edited directly** |
-| `RELAY_ALLOW_USER_KEYS` | off | `1` lets a driver supply their own API key for a session |
 | `DATABASE_URL` | — | Postgres, for the transcript mirror. Omitted = feature off |
-| `RELAY_GITHUB_REPO` | — | `owner/name`, to push published branches |
-| `RELAY_GITHUB_TOKEN` | — | Fine-grained PAT scoped to that repo |
 | `PORT` | `4000` | Server port |
+
+That is the entire server configuration, and the shortness is the point: it holds no
+repository, runs no shell, and stores no credentials.
 
 With Postgres:
 
@@ -125,17 +138,32 @@ pnpm --filter @relay/server exec prisma migrate deploy
 ## How it's put together
 
 ```
-packages/shared   WebSocket protocol types — the contract both sides compile against
-packages/server   Node http + ws. Sessions, the lock, the Agent SDK wrapper, git, Postgres
+packages/shared   WebSocket protocol types — the contract every side compiles against
+packages/agent    The relay-agent CLI. Holds the repo, runs the Agent SDK, streams events up
+packages/server   Node http + ws. Sessions, ordering, the lock, presence, Postgres
 packages/web      Next.js App Router, Tailwind v4, shadcn/ui
 ```
 
-The agent's `cwd` is never your original checkout. Each session gets a `git clone` of a
-pristine mirror, which is itself cloned once from `RELAY_SOURCE_REPO`, and the disposable
-copy is deleted when the last participant leaves. That's a starting condition, not a
-sandbox boundary: the agent runs with unrestricted shell access
+The split is the whole design. The agent runs on the machine where the repository already
+is; the server only coordinates.
+
+```
+  relay-agent (your machine)  ──events up / instructions down──▶  server  ──▶  browsers
+  the repo, the shell, the keys                          no repo, no shell, no keys
+```
+
+**What that means in practice.** Your code is never uploaded, and there is no per-server
+repo to configure — it's whichever directory you run the CLI in. Both browsers only ever
+receive a JSON event stream, so nobody is "given access to the repo"; they watch a
+description of what happened to it.
+
+The agent's `cwd` is never your original checkout: each session gets a `git clone` of a
+pristine mirror, and the disposable copy is deleted when the run is over. That's a starting
+condition, not a sandbox boundary — the agent runs with unrestricted shell access
 (`permissionMode: "bypassPermissions"`) and there's no OS-level isolation, so `~` still
-resolves to the real filesystem. Don't point it at a host where that distinction matters.
+resolves to your real filesystem. This is the same trust you extend to Claude Code, and the
+same trust as pairing: it's your machine, your permissions. The difference from before is
+that it's now *your* machine rather than a stranger's server, which is the point.
 
 A few things that are less obvious:
 
@@ -147,38 +175,33 @@ A few things that are less obvious:
   directory.
 - **Postgres is an audit mirror, not session survival** — see below.
 
-## Deploying it for a team
+## Deploying it
 
-Relay is built to run for a small team on a trusted network, and the setup is deliberately
-plain: one server process, one Postgres, the web app in front.
+The server is a pure WebSocket relay, which makes it the easy half: it holds no repository,
+runs no shell, and stores no credentials, so a public deployment is not the trust problem
+it would have been. It needs a host that supports long-lived WebSocket connections —
+Railway, Render or Fly rather than Vercel — plus Postgres if you want transcripts to
+outlive a restart.
 
-One constraint worth knowing before you try. Anthropic's
-[legal and compliance page](https://code.claude.com/docs/en/legal-and-compliance) states
-that OAuth authentication is for subscription holders' own use of Claude Code, and that:
+Nobody needs to deploy an agent. Each person runs `relay-agent` against their own
+repository when they want to host a session, and the CLI dials out, so there are no inbound
+ports and nothing to open up.
+
+### Whose credentials pay
+
+Anthropic's [legal and compliance page](https://code.claude.com/docs/en/legal-and-compliance)
+states that OAuth authentication is for subscription holders' own use of Claude Code:
 
 > Developers building products or services that interact with Claude's capabilities,
 > including those using the Agent SDK, should use API key authentication through Claude
 > Console […] Anthropic does not permit third-party developers to offer Claude.ai login or
 > to route requests through Free, Pro, or Max plan credentials on behalf of their users.
 
-So a shared Relay instance needs `ANTHROPIC_API_KEY` from the Console, billed to whoever runs
-it — not a teammate's Claude subscription, and not the OAuth credentials that work fine for
-running it locally on your own machine. The session header shows the running cost for
-exactly this reason.
-
-### Letting people bring their own key
-
-Set `RELAY_ALLOW_USER_KEYS=1` and the driver can supply a key for their session; runs bill
-that account instead of the host's. It is **off by default, and that default is the point**.
-The agent runs with unrestricted shell access inside its clone
-([`agent.ts`](packages/server/src/agent.ts) sets `bypassPermissions`), so on a public
-instance "bring your own key" would mean "run whatever you like on my server" — a
-sandboxing problem, not a billing one. Turn it on where the people using it could already
-get a shell on the box.
-
-The key is held in memory for the session, never written to disk, never logged, and never
-sent back to any browser — clients see the last four characters. It's verified against
-Anthropic when it's supplied, and it's dropped when its owner leaves.
+Running the agent locally is exactly the case that page permits: it's your own use of your
+own credentials, on your own machine, the same as running Claude Code. Nothing is routed on
+anyone else's behalf, because the server never sees a credential at all — which is why
+there is no longer a "bring your own key" feature to configure. Whoever starts the agent
+pays, and the session header shows the running cost so the room can see it.
 
 One implementation note worth reading if you build something similar. The obvious approach —
 passing `ANTHROPIC_API_KEY` in the SDK's `env` — **silently does not work** on a machine
@@ -186,21 +209,22 @@ where the operator has logged into Claude Code. The variable is ignored and the 
 authenticates with the operator's stored OAuth token instead. Verified by pointing
 `ANTHROPIC_BASE_URL` at a local server and reading the headers: every request carried the
 host's `Authorization: Bearer sk-ant-oat...`, with the supplied key nowhere. The run
-succeeds, so nothing looks wrong — the host is just quietly paying, which is both the
-failure the feature exists to prevent and a breach of the terms quoted above. The mechanism
-that does work is `apiKeyHelper`; see
-[`sessionKey.ts`](packages/server/src/sessionKey.ts).
+succeeds, so nothing looks wrong — the operator is just quietly paying instead of the key
+they named. The mechanism that does work is `apiKeyHelper`; see
+[`sessionKey.ts`](packages/agent/src/sessionKey.ts).
 
 ## What it doesn't do
 
 Stated plainly, because the boundaries were chosen rather than missed:
 
 - **No authentication.** Anyone with a session link can join and request control — the link
-  is the capability, the way a video-call link is. Fine for a trusted network; not something
-  to expose publicly as-is. What that does *not* mean is unvalidated input: join payloads,
-  instructions, publish titles and keys are all checked and bounded server-side
+  is the capability, the way a video-call link is. Fine among people you're already talking
+  to; think before posting one publicly. What that does *not* mean is unvalidated input:
+  join payloads, instructions and publish titles are all checked and bounded server-side
   ([`validate.ts`](packages/server/src/validate.ts)). "No accounts by design" and "no
   validation" are different decisions, and only the first one was made on purpose.
+  Attaching an *agent* is a separate matter and does require a secret — the runner token,
+  minted per session and held only by the CLI that created it.
 - **No account, so no sync.** The sessions list is per-browser `localStorage`. Open Relay
   somewhere else and the list is empty; the links still work.
 - **Sessions don't survive a restart.** Live state — sockets, the lock, the agent's

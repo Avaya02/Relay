@@ -191,6 +191,11 @@ function FileRow({
   const { dir, base } = splitPath(file.path);
   const measured = file.status !== "pending";
 
+  // The unmeasured label is past tense deliberately. These rows outlive the run
+  // that made them — a reload after the agent disconnects rebuilds them from
+  // the transcript with no numstat to supersede them — and "writing" then
+  // claims work is in flight when nothing is even connected.
+
   const label = (
     <>
       <span
@@ -211,7 +216,7 @@ function FileRow({
         </span>
       ) : (
         <span className="workspace-pending" title={STATUS_LABEL.pending}>
-          writing
+          written
         </span>
       )}
     </>

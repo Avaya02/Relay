@@ -58,11 +58,21 @@ throw takes down more than just the one bad message.
 
 **A:** Anyone with it can join and request control. If granted, they can send instructions
 to an agent that has *unrestricted shell access* inside its cloned working directory
-(`permissionMode: "bypassPermissions"` in `agent.ts` — there's no human approving each tool
-call, since it's headless). That's a real, honestly-stated boundary: this is safe on a
-trusted network among people who already trust each other, and not something to expose
-publicly as-is. I'd rather say that plainly than have an interviewer find the gap
-themselves.
+(`permissionMode: "bypassPermissions"` — there's no human approving each tool call, since
+it's headless).
+
+The important detail is *whose* machine that is. The agent runs on the host's own computer,
+not on a server, so granting control is exactly as consequential as pair programming with
+someone: they can run things as you, in a disposable clone of your repo. That's why the
+driver lock is a security control here and not just a coordination one — handing over the
+wheel is handing over your shell, and the UI should never make that feel casual.
+
+What this architecture buys is that the blast radius belongs to the person who chose to
+accept it. Under the old design the same shell ran on a shared server, which meant one
+leaked link exposed a machine nobody in the room owned. Now the worst case is scoped to the
+host, who is present, who started the CLI deliberately, and who can close it. I'd rather
+state that plainly than have an interviewer find the gap themselves — and the honest
+summary is that the link is still a capability, so don't post one publicly.
 
 ### Q: If you had to add real authentication, what would you build first?
 
@@ -77,25 +87,32 @@ a reflex.
 
 ## Handling a real credential: the API key
 
-The most substantial security work in the project is the bring-your-own-key feature,
-because it involves a real secret moving through the system, and I found and fixed a
-genuinely dangerous bug in it before shipping.
+The most substantial security work in the project was the bring-your-own-key feature,
+because it involved a real secret moving through the system, and I found and fixed a
+genuinely dangerous bug in it. The feature itself is **gone** — the architecture change
+deleted the problem (see the last question in this section) — but the bug is the part worth
+keeping, because it is the kind that ships happily and silently does the wrong thing.
 
-### Q: How does a user-supplied API key get from the browser to the agent?
+The credential path today is deliberately boring: the operator names a key when they start
+the CLI on their own machine, it is verified before the session exists, and it never
+touches the network, the server, or a browser.
 
-**A:** Over the WebSocket, as a plain `set_key` message — driver-only, gated behind
-`RELAY_ALLOW_USER_KEYS` (off by default; see the deployment question below). The server:
+### Q: How does the key get to the agent now?
 
-1. Validates its shape (`validate.ts`).
-2. **Verifies it against Anthropic** before accepting it (`sessionKey.ts`,
-   `verifyApiKey()`) — a cheap authenticated `GET /v1/models` call. If it's invalid, the
-   error comes back immediately.
-3. Stores it in memory only, on the `Session` object — never in Postgres (the persistence
-   layer explicitly lists which fields it mirrors, and the key isn't one of them), never
-   logged, never sent back to *any* client, including the one that set it. Every client
-   only ever sees the key's last four characters and the name of who supplied it.
-4. Clears it automatically when its owner disconnects for good, or when the driver clears
-   it explicitly.
+**A:** It doesn't travel. The CLI reads it from a `--api-key` flag or the environment on
+the machine it's already running on, and:
+
+1. Checks its shape locally, so an obvious typo fails before any network call.
+2. **Verifies it against Anthropic** before connecting (`sessionKey.ts`, `verifyApiKey()`)
+   — a cheap authenticated `GET /v1/models`. An invalid key fails at startup rather than
+   three minutes into someone else's session.
+3. Passes it to the SDK through an `apiKeyHelper` script, never `env` (that's the bug,
+   below).
+4. Reports *four characters* upward, so the room can see which account is paying without
+   the key existing anywhere outside that machine.
+
+The server has no field to store a key in, which is the strongest version of "we don't log
+your credentials": there is nothing there to log.
 
 ### Q: Why verify the key immediately instead of just trying it on the next run?
 
@@ -145,24 +162,42 @@ a two-line shell script that echoes an environment variable (`RELAY_SESSION_API_
 the key still only ever exists in the subprocess's environment, never written to disk, so
 "held in memory only" stays true, which matters because the UI explicitly promises that.
 
-### Q: There's also a race condition in the key-verification flow — what was it?
+### Q: There was also a race condition in the key-verification flow — what was it?
 
-**A:** Making verification an async network call (step 2 above) introduced a real race:
-if a driver sets a key, then immediately clears it before the verification request
-finishes, the slower `set_key` handler could complete *after* the clear and silently
-restore a key the driver just removed. Fixed with an epoch counter —
-`session.apiKeyEpoch`, incremented on every set *and* clear. The verification callback
-captures the epoch when it starts, and only applies its result if the epoch is still
-current when it finishes. I proved this works with a stub Anthropic server that
-deliberately delays its response by 2 seconds, sent a clear while a set was still
-in-flight, and confirmed the key did *not* come back.
+**A:** Worth knowing even though the code is gone, because it's a shape that recurs
+wherever an async check writes back into shared state.
 
-### Q: Why is `RELAY_ALLOW_USER_KEYS` off by default?
+Making verification a network call introduced a real race: if a driver set a key, then
+cleared it before the verification returned, the slower `set_key` handler could complete
+*after* the clear and silently restore a key the driver had just removed. Fixed with an
+epoch counter — `apiKeyEpoch`, incremented on every set *and* clear. The verification
+callback captured the epoch when it started and only applied its result if that epoch was
+still current. I proved it with a stub Anthropic server that delayed its response by two
+seconds, sent a clear while a set was in flight, and confirmed the key did not come back.
 
-**A:** Because letting a stranger supply their own key doesn't fix the underlying risk —
-it just changes who pays for the shell access. The agent runs with unrestricted shell
-access inside its clone regardless of whose credentials it's using. On a public instance,
-"bring your own key" would really mean "run whatever you like on my server, on your own
-dime" — a sandboxing problem, not a billing one. It's meant to be turned on for a
-self-hosted instance among people who could already get a shell on that box anyway, where
-the credential-routing is the only real gap being closed.
+It disappeared along with the feature, and that's the right outcome: the race only existed
+because a remote party could mutate session credentials asynchronously. Removing that
+capability removed the bug class, not just the bug — which is a better fix than the epoch
+counter was.
+
+### Q: You used to let a viewer supply their own API key. Why did that feature disappear?
+
+**A:** Because the architecture removed the problem it existed to solve, and keeping it
+would have been cargo-culting my own earlier decision.
+
+It was there because the *server* ran the agent and therefore paid for every run. Letting a
+viewer supply a key changed who got billed. But it never fixed the underlying risk — the
+agent had unrestricted shell access on that server no matter whose credentials it used. On
+a public instance "bring your own key" really meant "run whatever you like on my machine,
+on your own dime", which is a sandboxing problem wearing a billing problem's clothes. That
+is why it shipped off by default.
+
+Once the agent moved onto the host's own machine, the person running it is necessarily the
+person paying, and the two problems collapse into one another. There is no remote party to
+bill, no key crossing the network, and nothing for the server to store — so `set_key`,
+`clear_key` and the whole key-custody path came out of the protocol entirely. The
+`apiKeyHelper` mechanism survived, because the operator can still name a specific key when
+starting the CLI; it just resolved from a distributed-systems problem into a local flag.
+
+The general lesson I'd draw: a feature that exists to mitigate a design flaw should be
+deleted when the flaw is, not carried forward because it was work.
