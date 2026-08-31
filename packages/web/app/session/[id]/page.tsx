@@ -214,18 +214,22 @@ export default function SessionPage({
   );
 }
 
+// Four states, four badge variants. `working` is the only one that gets the
+// accent, because it's the only one that means "right now" — done and error
+// are outcomes, not liveness.
+const STATUS_VARIANT: Record<SessionStatus, string> = {
+  idle: "",
+  working: "badge--live",
+  done: "badge--ok",
+  error: "badge--error",
+};
+
 function StatusBadge({ status }: { status: SessionStatus }) {
   // The dot carries the state as well as the word, so this stays readable
   // with any form of color blindness (PRODUCT.md: never color-alone).
-  const modifier =
-    status === "working"
-      ? "status status--working"
-      : status === "error"
-        ? "status status--error"
-        : "status";
   return (
-    <span className={modifier}>
-      <span className="status-dot" aria-hidden />
+    <span className={`badge ${STATUS_VARIANT[status]}`}>
+      <span className="badge-dot status-dot" aria-hidden />
       {status}
     </span>
   );

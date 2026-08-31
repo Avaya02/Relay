@@ -60,6 +60,12 @@ export type PlanItem = {
   activeForm?: string;
 };
 
+export type ChangedFile = {
+  path: string;
+  insertions: number;
+  deletions: number;
+};
+
 // tool_call — rendered immediately, in a pending state, before its result
 // exists. `id` pairs it with the matching tool_result so the client can
 // render ONE row per action instead of two (DESIGN.md, ledger rule 1).
@@ -137,17 +143,6 @@ export type RequestChangesMessage = { type: "request_changes" };
 // the server is configured for it.
 export type PublishMessage = { type: "publish"; title: string };
 
-// Driver only. Supplies an Anthropic API key for THIS session, so a shared
-// deployment can run the real agent on the viewer's own credentials instead
-// of the host's. The key is held in memory for the session's lifetime and is
-// never persisted, logged, or sent back to any client — only `keyHint` (its
-// last four characters) ever leaves the server.
-export type SetKeyMessage = { type: "set_key"; key: string };
-
-// Driver only. Drops the session key; the session falls back to whatever the
-// server itself is configured with (usually the mock agent).
-export type ClearKeyMessage = { type: "clear_key" };
-
 export type ClientMessage =
   | JoinMessage
   | InstructMessage
@@ -158,9 +153,92 @@ export type ClientMessage =
   | HandOverMessage
   | ReleaseControlMessage
   | RequestChangesMessage
-  | PublishMessage
-  | SetKeyMessage
-  | ClearKeyMessage;
+  | PublishMessage;
+
+// --- Runner (the relay-agent CLI) -> Server ---
+//
+// A runner is not a participant: it's the process on the host's machine that
+// holds the repo and runs the Agent SDK. It shares the browsers' WebSocket
+// server but speaks this message set instead of ClientMessage/ServerMessage.
+
+// `token` is minted by POST /sessions. It's the only thing that lets a socket
+// claim to be the runner, so holding it means acting as that room's repo owner.
+export type RunnerHelloMessage = {
+  type: "runner_hello";
+  sessionId: string;
+  token: string;
+  repoName: string | null;
+  mode: "mock" | "real";
+  keySource: "oauth" | "api-key" | "mock";
+  keyHint: string | null;
+};
+
+export type RunnerEventMessage = {
+  type: "runner_event";
+  kind: EventKind;
+  data: Record<string, unknown>;
+};
+
+export type RunnerStatusMessage = { type: "runner_status"; status: SessionStatus };
+
+export type RunnerAgentSessionMessage = {
+  type: "runner_agent_session";
+  agentSessionId: string;
+};
+
+// `requestId` pairs this with the request that asked for it: changes now
+// round-trip over the network, so the server can no longer reply from a
+// closure over the requesting socket.
+export type RunnerChangesMessage = {
+  type: "runner_changes";
+  requestId: string;
+  files: ChangedFile[];
+  insertions: number;
+  deletions: number;
+  patch: string;
+};
+
+export type RunnerPublishResultMessage = {
+  type: "runner_publish_result";
+  ok: boolean;
+  branch?: string;
+  pushed?: boolean;
+  prUrl?: string | null;
+  note?: string;
+  error?: string;
+};
+
+export type RunnerMessage =
+  | RunnerHelloMessage
+  | RunnerEventMessage
+  | RunnerStatusMessage
+  | RunnerAgentSessionMessage
+  | RunnerChangesMessage
+  | RunnerPublishResultMessage;
+
+// --- Server -> Runner ---
+
+export type RunInstructionMessage = {
+  type: "run_instruction";
+  text: string;
+  /** The agent's own session id, to continue a conversation across instructions. */
+  resume?: string;
+};
+
+export type StopRunMessage = { type: "stop_run" };
+
+export type RequestRunnerChangesMessage = {
+  type: "request_runner_changes";
+  requestId: string;
+};
+
+export type RunPublishMessage = { type: "run_publish"; title: string };
+
+export type ServerToRunnerMessage =
+  | RunInstructionMessage
+  | StopRunMessage
+  | RequestRunnerChangesMessage
+  | RunPublishMessage;
 
 // --- Server -> Client ---
 
@@ -189,30 +267,19 @@ export type ReplayMessage = {
 };
 
 /**
- * What will actually run when the driver sends the next instruction, and why.
- *
- * The room deserves to know this without asking. "The agent is scripted" and
- * "the agent is real, on Sam's key, and Sam is being billed" are very
- * different situations to be watching, and neither was visible before.
+ * What will run on the next instruction, and on whose credentials — reported
+ * by the runner at `runner_hello` and fixed for its process lifetime. A
+ * browser can't change any of it: the host's machine holds the credentials,
+ * so it's the one that always pays.
  */
 export type AgentInfo = {
   /** `mock` is the scripted offline agent; `real` runs the Agent SDK. */
   mode: "mock" | "real";
-  /**
-   * Where the credentials come from. `server` means the host configured its
-   * own; `session` means someone in this room supplied a key for it.
-   */
-  source: "mock" | "server" | "session";
-  /** Last four characters of the session key, if one is set. Never the key. */
+  keySource: "oauth" | "api-key" | "mock";
+  /** Last four characters of the key, when the runner was launched with one. */
   keyHint: string | null;
-  /** Display name of whoever supplied it, so the room knows who's paying. */
-  keyOwner: string | null;
-  /**
-   * Whether this deployment accepts a user-supplied key at all. False on a
-   * public demo: the agent has unrestricted shell access inside its clone, so
-   * letting strangers run it is a sandboxing problem, not a billing one.
-   */
-  byoAllowed: boolean;
+  /** Without an attached runner, nothing can execute an instruction. */
+  runnerConnected: boolean;
 };
 
 export type SessionStateMessage = {
@@ -285,7 +352,7 @@ export type ControlRequestCancelledMessage = {
 // the point is that the room sees the result, not just the driver.
 export type SessionChangesMessage = {
   type: "session_changes";
-  files: { path: string; insertions: number; deletions: number }[];
+  files: ChangedFile[];
   insertions: number;
   deletions: number;
   patch: string;

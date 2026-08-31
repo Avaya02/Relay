@@ -13,18 +13,41 @@
  * apply deterministically, not based on OS preference.
  */
 :root {
-  --bg: #0e1116;
-  --surface: #151a21;
-  --surface-2: #1c232c;
-  --border: #232b35;
+  /* Ground. Pure black is the commitment the graphite was hedging on: this is
+     an instrument watched in a dark room, and a near-black that isn't quite
+     black reads as a web app that chose a dark theme. */
+  --bg: #000000;
+  --surface: #0a0b0d; /* header, rails, panels */
+  --surface-2: #131519; /* raised: composer, expanded detail, popovers */
 
-  --text: #e6eaf0;
-  --text-dim: #8a94a6;
+  /* Structure carries the design now, so it gets two weights: hairlines that
+     separate, and a lit edge for frames and focus. */
+  --border: #1e2024;
+  --border-lit: #2c2f35;
+
+  /* Near-white, deliberately not #FFF — pure white on pure black halates on
+     OLED and makes long transcripts tiring to read. */
+  --text: #f4f5f7;
+  --text-dim: #8c9098;
+  /* Timestamps and tertiary labels. #70747C was the intuitive choice and
+     measured 3.90:1 on --surface-2 — under the 4.5:1 floor for normal text.
+     Lightened until the *worst* of the three grounds clears it. */
+  --text-faint: #7b8088;
 
   /* Reserved for "live / active / you-are-driving" only — nothing
-     decorative. See RELAY_BUILD_SPEC.md §7. */
+     decorative. See RELAY_BUILD_SPEC.md §7.
+
+     The reference this palette borrows from has no brand colour at all. Relay
+     keeps one because its entire subject is liveness: an accent that means
+     "this is happening now" is load-bearing, not decoration. Black and mono do
+     the styling; cyan only ever marks what's live. */
   --accent: #4dd0c7;
-  --state-error: #d98a6a;
+
+  /* Status. Rectangular tinted badges need a full set, not just an error
+     colour — idle/working/done/error were previously plain text. */
+  --state-ok: #5fd68a;
+  --state-warn: #e0b155;
+  --state-error: #e0715a;
 
   /* Small fixed palette assigned per participant (name dot, driving
      cursor) — muted, not neon. Cycled by join order in Presence.tsx. */
@@ -50,10 +73,12 @@
   --accent-foreground: var(--bg);
   --destructive: var(--state-error);
   --destructive-foreground: var(--bg);
-  --border: #232b35;
   --input: var(--border);
   --ring: var(--accent);
-  --radius: 0.625rem;
+  /* Sharp. The 10px radius was the single strongest "generic web app" signal
+     in the old system, and this one line flows through every shadcn primitive
+     via the --radius-sm/md/lg chain below. */
+  --radius: 0.125rem;
 }
 
 @theme inline {
@@ -61,9 +86,13 @@
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-border: var(--border);
+  --color-border-lit: var(--border-lit);
   --color-text: var(--text);
   --color-text-dim: var(--text-dim);
+  --color-text-faint: var(--text-faint);
   --color-accent: var(--accent);
+  --color-state-ok: var(--state-ok);
+  --color-state-warn: var(--state-warn);
   --color-state-error: var(--state-error);
 
   --font-sans: var(--font-geist-sans);
@@ -112,6 +141,98 @@ body {
 }
 
 /* ==================================================================
+   PRIMITIVES — the four pieces the whole visual language rests on.
+   Everything in the landing page and the session chrome composes
+   these rather than restating them.
+
+   The look is an instrument faceplate: pure black ground, structure
+   carried by hairlines rather than fills or shadows, chrome set in
+   mono, corners effectively square. Depth comes from a lit border
+   edge, never from a drop shadow.
+   ================================================================== */
+
+/* --- The frame -----------------------------------------------------
+   Content sits inside visible vertical rails, with every section
+   separated by a full-width hairline. This is what reads as technical
+   drawing rather than web page. */
+.frame {
+  max-width: var(--measure, 84rem);
+  margin-inline: auto;
+  width: 100%;
+  border-inline: 1px solid var(--border);
+}
+.frame > section {
+  border-bottom: 1px solid var(--border);
+}
+.frame > section:last-child {
+  border-bottom: 0;
+}
+
+/* --- The hatch band ------------------------------------------------
+   Diagonal-striped divider. Pure CSS: no asset to load, no image to
+   go stale, and it scales to any width for free. */
+.hatch {
+  height: 3.5rem;
+  border-bottom: 1px solid var(--border);
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--border) 0 1px,
+    transparent 1px 9px
+  );
+}
+
+/* --- Texture -------------------------------------------------------
+   Relay's own, deliberately NOT the reference's dithered photography:
+   that is someone else's brand texture, and lifting it is what makes
+   a copy obvious. A plotter-style dot grid says the same thing —
+   measured, technical, printed — and costs one gradient.
+
+   Applied as a large low-contrast field behind sections. Never behind
+   running text. */
+.texture-dots {
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 8px 8px;
+}
+
+/* --- Badge ---------------------------------------------------------
+   Rectangular, mono, hairline-bordered. Colour is carried by the text
+   and border together — never a fill, which would compete with the
+   ledger for attention.
+
+   Every variant is measured against --surface: ok 10.76:1, warn
+   9.93:1, error 6.26:1, live 10.47:1, neutral 6.15:1. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.1875rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: none;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--text-dim);
+}
+.badge--ok {
+  color: var(--state-ok);
+  border-color: color-mix(in oklch, var(--state-ok) 35%, transparent);
+}
+.badge--warn {
+  color: var(--state-warn);
+  border-color: color-mix(in oklch, var(--state-warn) 35%, transparent);
+}
+.badge--error {
+  color: var(--state-error);
+  border-color: color-mix(in oklch, var(--state-error) 35%, transparent);
+}
+.badge--live {
+  color: var(--accent);
+  border-color: color-mix(in oklch, var(--accent) 35%, transparent);
+}
+
+/* ==================================================================
    LANDING PAGE (brand register)
    Aesthetic lane, named deliberately: INSTRUMENTATION — cockpit
    placards, oscilloscope faceplates, a recorder running. Not
@@ -123,25 +244,24 @@ body {
 
 .landing {
   /* One shared measure. Every section's content sits on the same left edge —
-     the nav mark, the hero headline, and each section title line up. */
+     the nav mark, the hero headline, and each section title line up. The
+     .frame wrapper reads --measure to draw the vertical rails. */
   --measure: 84rem;
   --gutter: clamp(1.25rem, 5vw, 4rem);
 
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
   background: var(--bg);
 }
 
+/* Nav is a section of the frame, so the frame owns the width and the rails —
+   it only owns its own padding. */
 .landing-nav {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  max-width: var(--measure);
-  margin-inline: auto;
-  width: 100%;
-  padding: 1.5rem var(--gutter);
+  gap: 1.5rem;
+  padding: 1rem var(--gutter);
+  border-bottom: 1px solid var(--border);
 }
 .landing-mark {
   font-family: var(--font-display);
@@ -149,6 +269,12 @@ body {
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--text);
+}
+.landing-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-left: auto;
 }
 .landing-nav-link {
   font-family: var(--font-mono);
@@ -158,7 +284,31 @@ body {
   transition: color 150ms ease-out;
 }
 .landing-nav-link:hover {
-  color: var(--accent);
+  color: var(--text);
+}
+
+/* --- Buttons -------------------------------------------------------
+   One primary button shape, shared by the landing page and the app's
+   composer. Square, mono, white-filled: the reference's most literal
+   move, and the one place the two registers should look identical. */
+.btn-solid {
+  height: 2.25rem;
+  padding-inline: 1rem;
+  border-radius: 2px;
+  background: var(--text);
+  color: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: background-color 140ms ease-out;
+}
+.btn-solid:hover:not(:disabled) {
+  background: #ffffff;
+}
+.btn-lg {
+  height: 2.75rem;
+  padding-inline: 1.5rem;
+  font-size: 0.8125rem;
 }
 
 /* --- Hero: asymmetric. Copy holds the left rail, the running session
@@ -168,11 +318,23 @@ body {
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   gap: clamp(2rem, 5vw, 4.5rem);
   align-items: center;
-  padding: clamp(2rem, 5vw, 4rem) var(--gutter) clamp(3.5rem, 9vw, 7rem);
-  max-width: var(--measure);
-  margin-inline: auto;
-  width: 100%;
+  padding: clamp(2.5rem, 6vw, 5rem) var(--gutter) clamp(3rem, 7vw, 5.5rem);
 }
+.hero-eyebrow {
+  margin-bottom: 1.5rem;
+}
+/* The dot is the live signal itself, so it keeps the status dot's pulse and
+   the same reduced-motion gate. */
+.badge-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+/* The pulse itself lives with the session chrome, next to the note explaining
+   why it's the one deliberate exception to "nothing else in the app moves".
+   Keeping one definition means the hero badge and the session status badge
+   can't drift apart. */
 .hero-title {
   font-family: var(--font-display);
   /* Ceiling well under the 6rem cap; this is a tool, not a billboard. */
@@ -226,13 +388,12 @@ body {
 
 /* --- The demo frame: the app's own surface, framed as an instrument. --- */
 .demo-frame {
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  /* Square, and lit at the edge rather than floated on a shadow — the whole
+     system gets its depth from border weight, not from blur. */
+  border: 1px solid var(--border-lit);
+  border-radius: 2px;
   background: var(--surface);
   overflow: hidden;
-  box-shadow:
-    0 1px 0 0 rgb(255 255 255 / 0.03) inset,
-    0 24px 60px -30px rgb(0 0 0 / 0.7);
 }
 .demo-chrome {
   display: flex;
@@ -355,8 +516,8 @@ body {
 .demo-bar-send {
   font-size: 0.75rem;
   color: var(--bg);
-  background: var(--accent);
-  border-radius: 0.375rem;
+  background: var(--text);
+  border-radius: 2px;
   padding: 0.375rem 0.75rem;
 }
 
@@ -365,22 +526,24 @@ body {
   font-family: var(--font-display);
   font-size: clamp(1.75rem, 3vw, 2.5rem);
   font-weight: 600;
-  letter-spacing: -0.03em;
+  /* Matched to the hero's tracking — the reference's headings are noticeably
+     tighter than a default, and the two sizes have to agree. */
+  letter-spacing: -0.035em;
   line-height: 1.1;
   color: var(--text);
   margin: 0;
   text-wrap: balance;
 }
 
+/* Section rules come from .frame > section now, so these only own padding. */
 .lock,
-.how {
-  border-top: 1px solid var(--border);
+.how,
+.spec {
   padding-block: clamp(3rem, 7vw, 5.5rem);
 }
 .lock-inner,
-.how-inner {
-  max-width: var(--measure);
-  margin-inline: auto;
+.how-inner,
+.spec-inner {
   padding-inline: var(--gutter);
 }
 .lock-grid {
@@ -407,7 +570,7 @@ body {
 .lock-facts dt {
   font-family: var(--font-mono);
   font-size: 0.8125rem;
-  color: var(--accent);
+  color: var(--text);
   margin-bottom: 0.375rem;
 }
 .lock-facts dd {
@@ -418,37 +581,94 @@ body {
   max-width: 52ch;
 }
 
-.how-list {
+/* --- The sequence --------------------------------------------------
+   Numbered because this genuinely is an ordered process and the order
+   carries the information. Numbering sections that AREN'T sequences is
+   the reflex this deliberately avoids doing everywhere else. */
+.steps {
   list-style: none;
-  margin: 2rem 0 0;
+  margin: 2.5rem 0 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
 }
-.how-list li {
+.step {
   display: grid;
-  grid-template-columns: minmax(0, 11rem) minmax(0, 1fr);
-  gap: clamp(1rem, 3vw, 2.5rem);
-  padding: 1.25rem 0;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  gap: clamp(1rem, 3vw, 2rem);
+  padding: 1.5rem 0;
   border-top: 1px solid var(--border);
 }
-.how-list li:last-child {
+.step:last-child {
   border-bottom: 1px solid var(--border);
 }
-.how-k {
+.step-n {
   font-family: var(--font-mono);
   font-size: 0.8125rem;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.step-title {
+  margin: 0 0 0.375rem;
+  font-size: 1rem;
+  font-weight: 500;
   color: var(--text);
 }
-.how-v {
+.step-text {
+  margin: 0;
   font-size: 0.9375rem;
   line-height: 1.65;
   color: var(--text-dim);
-  max-width: 62ch;
+  max-width: 64ch;
+}
+.step-text code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  color: var(--text);
 }
 
+/* --- The spec sheet ------------------------------------------------
+   A datasheet, not a grid of icon cards. Denser, more honest about
+   what the thing actually is, and not the pattern every generated
+   landing page reaches for. */
+.spec-sheet {
+  margin: 2.5rem 0 0;
+  border: 1px solid var(--border);
+}
+.spec-row {
+  display: grid;
+  grid-template-columns: minmax(0, 10rem) minmax(0, 1fr);
+  gap: clamp(1rem, 3vw, 2rem);
+  padding: 1rem clamp(1rem, 2.5vw, 1.5rem);
+  border-bottom: 1px solid var(--border);
+}
+.spec-row:last-child {
+  border-bottom: 0;
+}
+.spec-row dt {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text);
+}
+.spec-row dd {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+  max-width: 68ch;
+}
+.spec-row dd code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  color: var(--text);
+}
+
+/* The closing call to action carries the page's one texture field: a plotter
+   dot grid, masked to fade out toward the edges so it reads as a printed
+   ground rather than a tiled background. This is Relay's own texture — NOT
+   the reference's dithered photography, which is that product's brand and
+   would make the borrowing obvious. */
 .close {
-  border-top: 1px solid var(--border);
+  position: relative;
+  isolation: isolate;
   padding: clamp(3.5rem, 8vw, 6rem) var(--gutter);
   display: flex;
   flex-direction: column;
@@ -456,22 +676,29 @@ body {
   gap: 1.75rem;
   text-align: center;
 }
+.close::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(var(--border-lit) 1px, transparent 1px);
+  background-size: 9px 9px;
+  /* Faded at the edges so it reads as a ground, not a tiled pattern that
+     stops abruptly at a section boundary. */
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 20%, transparent 100%);
+}
 .close-title {
   font-family: var(--font-display);
   font-size: clamp(1.75rem, 3.5vw, 2.75rem);
   font-weight: 600;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.035em;
   color: var(--text);
   margin: 0;
 }
 
 .landing-foot {
-  margin-top: auto;
   border-top: 1px solid var(--border);
   padding: 1.5rem var(--gutter);
-  max-width: var(--measure);
-  margin-inline: auto;
-  width: 100%;
   display: flex;
   justify-content: space-between;
   gap: 1rem;
@@ -488,12 +715,17 @@ body {
   .lock-grid {
     grid-template-columns: minmax(0, 1fr);
   }
-  .how-list li {
+  .spec-row {
     grid-template-columns: minmax(0, 1fr);
-    gap: 0.5rem;
+    gap: 0.375rem;
   }
   .demo-body {
     height: 17rem;
+  }
+  /* The nav's middle links are the first thing to go — the mark and the one
+     action are what a narrow screen actually needs. */
+  .landing-nav-links {
+    display: none;
   }
 }
 
@@ -854,12 +1086,7 @@ body {
   background: currentColor;
   flex-shrink: 0;
 }
-.status--working {
-  color: var(--accent);
-}
-.status--error {
-  color: var(--state-error);
-}
+
 /* The one piece of chrome that moves, and only while the agent actually
    is working. DESIGN.md's "nothing else in the app moves" exists so the
    chrome can't compete with the ledger; a 6px dot at 2s does not
@@ -867,7 +1094,7 @@ body {
    principle 5 requires be answerable at a glance. Documented as a
    deliberate exception rather than left as silent drift. */
 @media (prefers-reduced-motion: no-preference) {
-  .status--working .status-dot {
+  .badge--live .badge-dot {
     animation: status-pulse 2s ease-in-out infinite;
   }
 }
@@ -1171,7 +1398,7 @@ body {
   background: var(--accent);
 }
 /* The single moving element in the chrome besides the status dot, and only
-   while a step is genuinely running. Same reasoning as .status--working. */
+   while a step is genuinely running. Same reasoning as .badge--live. */
 @media (prefers-reduced-motion: no-preference) {
   .plan-pip--in_progress {
     animation: status-pulse 2s ease-in-out infinite;
@@ -1251,11 +1478,15 @@ body {
 /* 85%, not lower: the recession mostly comes from dropping `target` off
    --text (15.7:1) down to this, and anything past ~85% toward the ground
    puts the row under 4.5:1. Measured at 4.9:1 on --bg. */
+/* Recessed, but still legible. 85% measured 4.9:1 against the old graphite
+   ground and 4.38:1 once --bg became pure black — mixing toward a darker
+   background darkens the result. Re-solved for the new ground; 90% is the
+   first step that clears the floor with margin. */
 .ledger-action--muted .ledger-verb,
 .ledger-action--muted .ledger-target,
 .ledger-action--muted .ledger-result,
 .ledger-action--muted .ledger-marker {
-  color: color-mix(in oklch, var(--text-dim) 85%, var(--bg));
+  color: color-mix(in oklch, var(--text-dim) 90%, var(--bg));
 }
 .ledger-action--muted:hover .ledger-target {
   color: var(--text-dim);

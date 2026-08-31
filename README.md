@@ -130,9 +130,12 @@ packages/server   Node http + ws. Sessions, the lock, the Agent SDK wrapper, git
 packages/web      Next.js App Router, Tailwind v4, shadcn/ui
 ```
 
-The agent never touches your repository. Each session gets a `git clone` of a pristine
-mirror, which is itself cloned once from `RELAY_SOURCE_REPO`; the agent's `cwd` is the
-disposable copy, and it's deleted when the last participant leaves.
+The agent's `cwd` is never your original checkout. Each session gets a `git clone` of a
+pristine mirror, which is itself cloned once from `RELAY_SOURCE_REPO`, and the disposable
+copy is deleted when the last participant leaves. That's a starting condition, not a
+sandbox boundary: the agent runs with unrestricted shell access
+(`permissionMode: "bypassPermissions"`) and there's no OS-level isolation, so `~` still
+resolves to the real filesystem. Don't point it at a host where that distinction matters.
 
 A few things that are less obvious:
 

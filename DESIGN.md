@@ -12,9 +12,14 @@ migration — the same lighting condition as the terminal and editor already ope
 their screens. A light theme would be the odd window out. `dark` sits permanently on
 `<html>`; there is exactly one theme, which is honest rather than a workaround.
 
-The palette deliberately avoids the near-black + acid-accent AI default. The base is a
-**cool graphite**, not black, with two raised steps for layering — depth comes from
-surface elevation and hairline rules, not from shadows or glow.
+The ground is **pure black**, with two barely-raised steps for layering. Depth comes
+from hairline rules and a lit border edge — never from shadows or glow. The earlier
+palette used a cool graphite base to avoid the near-black + acid-accent AI default; the
+answer to that risk turned out to be *restraint with the accent*, not a compromised
+black. Structure carries the design now, so the ground can commit.
+
+Text is near-white (`#F4F5F7`) rather than `#FFF`: pure white on pure black halates on
+OLED and makes a long transcript tiring to read.
 
 ## Color
 
@@ -24,27 +29,47 @@ Tokens as implemented, with measured contrast against their usual backgrounds.
 
 | Token | Value | Role |
 |---|---|---|
-| `--bg` | `#0E1116` | Page base |
-| `--surface` | `#151A21` | Stream pane, cards, header |
-| `--surface-2` | `#1C232C` | Raised: composer, control bar, code blocks |
-| `--border` | `#232B35` | Hairline separators — 1px, low contrast, never decorative |
+| `--bg` | `#000000` | Page base |
+| `--surface` | `#0A0B0D` | Stream pane, header, rails |
+| `--surface-2` | `#131519` | Raised: composer, control bar, code blocks |
+| `--border` | `#1E2024` | Hairline separators — 1px, low contrast, never decorative |
+| `--border-lit` | `#2C2F35` | Frame edges and focus. The only "elevation" in the system |
 
 ### Text
 
 | Token | Value | On `--surface` | On `--surface-2` |
 |---|---|---|---|
-| `--text` | `#E6EAF0` | 14.47:1 | 13.0:1 |
-| `--text-dim` | `#8A94A6` | 5.72:1 | 5.18:1 |
+| `--text` | `#F4F5F7` | 18.05:1 | 16.75:1 |
+| `--text-dim` | `#8C9098` | 6.15:1 | 5.71:1 |
+| `--text-faint` | `#7B8088` | 4.96:1 | 4.60:1 |
 
-Both clear WCAG AA for normal text (4.5:1) at every pairing used in the app, including
-the ledger's 12px mono rows.
+All three clear WCAG AA for normal text (4.5:1) at every pairing used in the app,
+including the ledger's 12px mono rows.
+
+`--text-faint` is the one that had to be solved for rather than chosen. The intuitive
+value (`#70747C`) measured **3.90:1 on `--surface-2`** — under the floor. It was
+lightened until the *worst* of the three grounds cleared it, not the best.
+
+The same trap caught the recessed plan rows: `color-mix(… --text-dim 85%, --bg)`
+measured 4.9:1 against the old graphite and **4.38:1** once `--bg` became pure black,
+because mixing toward a darker ground darkens the result. Re-solved to 90%. Any token
+change to a background needs every `color-mix` that references it re-measured.
 
 ### Signal
 
 | Token | Value | Role |
 |---|---|---|
-| `--accent` | `#4DD0C7` | **Reserved for live / active / you-are-driving.** Signal cyan, 9.29:1 on `--surface`. Never decorative. |
-| `--state-error` | `#D98A6A` | Restrained amber-red. Failure states, disconnection. Deliberately *not* alarm-red — a failed tool call is a normal part of agent work, not an emergency. |
+| `--accent` | `#4DD0C7` | **Reserved for live / active / you-are-driving.** Signal cyan, 10.47:1 on `--surface`. Never decorative. |
+| `--state-ok` | `#5FD68A` | Completed. Outcome, not liveness — a finished run is green, a running one is cyan. |
+| `--state-warn` | `#E0B155` | Pending / queued. |
+| `--state-error` | `#E0715A` | Restrained amber-red. Failure states, disconnection. Deliberately *not* alarm-red — a failed tool call is a normal part of agent work, not an emergency. |
+
+**On accent discipline.** Moving to a black ground made the accent roughly twice as loud
+for the same value, and three places that had quietly become decorative had to give it
+up: the demo's Send button (a control, always present), the lock section's definition
+terms (headings), and any filled-cyan button. Cyan now appears only on: the live badge
+dot, the driving indicator, a hand-over, and the hero's one emphasized word. If it's on
+screen and it isn't happening *now*, it shouldn't be cyan.
 
 ### Presence
 
