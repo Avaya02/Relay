@@ -36,7 +36,10 @@ A `PostToolUse` hook (`.claude/hooks/check-file-size.sh`) flags any source file 
 
 ## Project conventions
 
-- The mock agent is the default and stays that way — free, offline, and how the UI is developed.
+- The real agent is the CLI default. The mock is opt-in via `--mock` — it ignores
+  instructions and replays a fixed script, so receiving it unasked means watching a
+  convincing answer to a question nobody asked. Keep it working, though: it's free,
+  offline, and how the UI is developed (`pnpm dev` passes `--mock` deliberately).
 - Verify against isolated scratch servers on non-default ports. Never the live `:3000`/`:4000`.
 - Contrast is measured (canvas pixel readback), never estimated.
 - Nothing is committed unless the user asks.
