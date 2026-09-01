@@ -531,6 +531,25 @@ body {
   justify-content: center;
   margin-top: 2rem;
 }
+
+/* Feedback for "Get started": on most screens its target (the command
+   block) is already on screen, so a scroll alone can move the page by
+   nothing a person can perceive and the click reads as dead. This is
+   directly caused by that click, not ambient motion, so it's exempt from
+   "nothing else in the app moves" — same footing as a hover transition. */
+@media (prefers-reduced-motion: no-preference) {
+  .cta-flash {
+    animation: cta-flash 700ms ease-out;
+  }
+}
+@keyframes cta-flash {
+  0% {
+    border-color: var(--accent);
+  }
+  100% {
+    border-color: var(--border-lit);
+  }
+}
 .hero-error {
   margin-top: 1rem;
   font-family: var(--font-mono);

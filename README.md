@@ -90,25 +90,27 @@ To point an agent at a real repository, run the CLI yourself:
 
 ```bash
 cd /path/to/your/repo
-pnpm --filter @relay/agent start          # mock: free, offline, no model
-pnpm --filter @relay/agent start -- --real  # the actual Agent SDK
+pnpm --filter @relay/agent start                  # the real Agent SDK
+pnpm --filter @relay/agent start -- --mock        # scripted, free, answers are fake
 ```
 
-**The mock is the default and works with no API key.** It streams a realistic run — plan
-updates, a failing test, a fix, real file writes — against a disposable clone. It costs
-nothing and is how most of the UI was developed and tested.
+**The real agent is the default.** On a machine that already has Claude Code installed,
+the SDK uses the credentials that are there; no API key needed. Pass `--api-key sk-ant-…`
+to bill a specific key instead — it's verified before the session starts, and it never
+leaves your machine.
 
-With `--real` on a machine that already has Claude Code installed, the SDK uses the
-credentials that are there; no API key needed. Pass `--api-key sk-ant-…` to bill a
-specific key instead — it's verified before the session starts, and it never leaves your
-machine.
+`--mock` runs a scripted agent that streams a realistic-looking run — plan updates, a
+failing test, a fix, real file writes — against a disposable clone, for free. It is how
+most of the UI was developed. **It ignores your instructions and replays a fixed script**,
+so it is opt-in rather than the default: receiving it unasked means watching a convincing
+answer to a question you never asked.
 
 ### The agent CLI
 
 | Flag | Default | What it does |
 |---|---|---|
 | `--repo <path>` | current directory | The repository to work in |
-| `--real` | off | Run the Agent SDK. Omitted, you get the scripted mock |
+| `--mock` | off | Scripted offline agent. Free, but ignores what you type |
 | `--api-key <key>` | — | Bill this key rather than your Claude Code login |
 | `--server <url>` | `http://localhost:4000` | The coordination server to attach to |
 | `--web <url>` | `http://localhost:3000` | Web app, for the link it prints |
