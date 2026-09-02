@@ -146,8 +146,23 @@ export function attachWs(wss: WebSocketServer): void {
   // token check is the whole security boundary for that privilege.
   function handleRunnerHello(socket: WebSocket, msg: RunnerHelloMessage): void {
     const session = getSession(msg.sessionId);
-    if (!session || session.runnerToken !== msg.token) {
-      send(socket, { type: "error", message: "invalid runner token" });
+    if (!session) {
+      // Distinguished from a bad token because the remedy differs: this one is
+      // "start a new session", not "check what you pasted".
+      sendRunner(socket, {
+        type: "runner_rejected",
+        reason: `session "${msg.sessionId}" no longer exists — start a new one`,
+        fatal: true,
+      });
+      socket.close();
+      return;
+    }
+    if (session.runnerToken !== msg.token) {
+      sendRunner(socket, {
+        type: "runner_rejected",
+        reason: "invalid runner token for this session",
+        fatal: true,
+      });
       socket.close();
       return;
     }
@@ -168,6 +183,7 @@ export function attachWs(wss: WebSocketServer): void {
     runnerSockets.set(socket, session);
     cancelReap(session);
 
+    sendRunner(socket, { type: "runner_ready" });
     broadcast(session, sessionStateMessage(session));
   }
 
@@ -455,7 +471,7 @@ export function attachWs(wss: WebSocketServer): void {
             send(socket, {
               type: "error",
               message:
-                "no agent is connected — run `relay-agent` in the repository to start one",
+                "no agent is connected — run `npx relayd` in the repository to start one",
             });
             return;
           }

@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -13,14 +14,27 @@ import {
 
 const run = promisify(execFile);
 
-const USAGE = `relay-agent — run a Relay session against a repository on this machine
+/**
+ * Where a published build points when given no `--server`/`--web`.
+ *
+ * These are the two values to change after deploying, and the only ones — the
+ * CLI is installed on other people's machines, so "it works if you also run the
+ * server locally" is not a default anyone else can use. Env vars override them
+ * so a contributor can point at a scratch deployment without editing source.
+ */
+const DEFAULT_SERVER = process.env.RELAY_SERVER ?? "http://localhost:4000";
+const DEFAULT_WEB = process.env.RELAY_WEB ?? "http://localhost:3000";
 
-  relay-agent [options]
+const USAGE = `relayd — run a Relay session against a repository on this machine
+
+  relayd [options]
 
   --repo <path>          Repository to work in (default: current directory)
-  --server <url>         Relay coordination server (default: http://localhost:4000)
-  --web <url>            Web app, for the printed link (default: http://localhost:3000)
-  --real                 Run the real Agent SDK (default: the offline mock)
+  --server <url>         Relay coordination server (default: ${DEFAULT_SERVER})
+  --web <url>            Web app, for the printed link (default: ${DEFAULT_WEB})
+  --mock                 Run the scripted offline agent instead of a real one.
+                         Costs nothing, but ignores what you type and replays
+                         a fixed script. For UI work, not for real answers.
   --api-key <key>        Bill runs to this key instead of your Claude Code login
   --session <id>         Reattach to an existing session (requires --token)
   --token <token>        Runner token for --session
@@ -64,9 +78,20 @@ function wsUrlFor(serverUrl: string, sessionId: string): string {
   return url.toString();
 }
 
-async function assertGitRepo(dir: string): Promise<void> {
+/**
+ * The root of the repository containing `dir`.
+ *
+ * Resolved rather than used as given: `git rev-parse` succeeds from anywhere
+ * inside a repo, but `git clone` needs the root. Running the CLI from a
+ * subdirectory therefore passed the check and then failed at clone time — and
+ * a subdirectory is the normal case, since people run this from wherever they
+ * happen to be. Taking the root also means the session gets the whole
+ * repository, which is what someone naming their project means.
+ */
+async function repoRoot(dir: string): Promise<string> {
   try {
-    await run("git", ["rev-parse", "--git-dir"], { cwd: dir });
+    const { stdout } = await run("git", ["rev-parse", "--show-toplevel"], { cwd: dir });
+    return stdout.trim();
   } catch {
     throw new Error(`not a git repository: ${dir}`);
   }
@@ -113,7 +138,11 @@ type Credentials = {
  * out to be bad should fail here, not three minutes into someone's session.
  */
 async function resolveCredentials(args: Args): Promise<Credentials> {
-  if (!args.real) return { mode: "mock", keySource: "mock", keyHint: null };
+  // Real is the default. The scripted agent ignores whatever you type and
+  // replays a fixed script, so getting it by accident means watching a
+  // convincing answer to a question you never asked. That failure is worse
+  // than the pennies an unwanted real run costs — ask for the mock by name.
+  if (args.mock) return { mode: "mock", keySource: "mock", keyHint: null };
 
   const key = str(args, "api-key") ?? process.env.RELAY_API_KEY;
   if (!key) {
@@ -145,11 +174,10 @@ async function main(): Promise<void> {
     return;
   }
 
-  const sourcePath = path.resolve(str(args, "repo") ?? process.cwd());
-  const serverUrl = str(args, "server") ?? "http://localhost:4000";
-  const webUrl = str(args, "web") ?? "http://localhost:3000";
+  const serverUrl = str(args, "server") ?? DEFAULT_SERVER;
+  const webUrl = str(args, "web") ?? DEFAULT_WEB;
 
-  await assertGitRepo(sourcePath);
+  const sourcePath = await repoRoot(path.resolve(str(args, "repo") ?? process.cwd()));
   const credentials = await resolveCredentials(args);
 
   const existing = str(args, "session");
@@ -171,7 +199,7 @@ async function main(): Promise<void> {
 
   const billing =
     credentials.mode === "mock"
-      ? "mock agent — no API calls, no cost"
+      ? "SCRIPTED MOCK — ignores your instructions, answers are fake"
       : credentials.keySource === "api-key"
         ? `real agent — billed to the key ending ${credentials.keyHint}`
         : "real agent — billed to this machine's Claude Code login";
@@ -181,7 +209,7 @@ async function main(): Promise<void> {
   console.log(`  session  ${id}`);
   console.log(`\n  Share this link:\n    ${new URL(`/session/${id}`, webUrl)}\n`);
   if (!existing) {
-    console.log(`  To reattach after a restart:\n    relay-agent --session ${id} --token ${runnerToken}\n`);
+    console.log(`  To reattach after a restart:\n    relayd --session ${id} --token ${runnerToken}\n`);
   }
 
   startRunner({

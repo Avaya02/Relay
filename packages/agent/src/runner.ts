@@ -31,6 +31,9 @@ export function startRunner(opts: RunnerOptions): void {
   let attempts = 0;
   let workingDir: string | null = null;
   let currentRun: AbortController | null = null;
+  // Set when the server says the problem is permanent, so `close` stops
+  // rescheduling and the process can exit instead of spinning.
+  let giveUp = false;
 
   function send(msg: RunnerMessage): void {
     if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(msg));
@@ -146,6 +149,25 @@ export function startRunner(opts: RunnerOptions): void {
     }
 
     switch (msg.type) {
+      case "runner_ready":
+        // Only now is the socket genuinely attached. Resetting backoff on
+        // "open" instead would make a server that accepts and immediately
+        // rejects look like a healthy connection, and retry it every second
+        // forever.
+        attempts = 0;
+        console.log("connected — waiting for instructions");
+        break;
+      case "runner_rejected":
+        console.error(`\n  ${msg.reason}\n`);
+        if (msg.fatal) {
+          // Retrying cannot change the answer, and a silent reconnect loop
+          // against a dead session is worse than stopping: the terminal keeps
+          // claiming to be connected while nothing works.
+          giveUp = true;
+          socket?.close();
+          process.exitCode = 1;
+        }
+        break;
       case "run_instruction":
         void handleInstruction(msg.text, msg.resume);
         break;
@@ -166,7 +188,6 @@ export function startRunner(opts: RunnerOptions): void {
     socket = ws;
 
     ws.on("open", () => {
-      attempts = 0;
       send({
         type: "runner_hello",
         sessionId,
@@ -176,7 +197,6 @@ export function startRunner(opts: RunnerOptions): void {
         keySource: opts.keySource,
         keyHint: opts.keyHint,
       });
-      console.log("connected — waiting for instructions");
     });
 
     ws.on("message", (data) => handleMessage(data.toString()));
@@ -190,6 +210,11 @@ export function startRunner(opts: RunnerOptions): void {
       // An in-flight run can no longer report anything, so stop it rather than
       // letting it spend time (or credit) with nowhere to send the result.
       currentRun?.abort();
+
+      if (giveUp) {
+        void repo.disposeWorkingDir(sessionId).finally(() => process.exit(1));
+        return;
+      }
 
       const delay = Math.min(RECONNECT_BASE_MS * 2 ** attempts, RECONNECT_MAX_MS);
       attempts++;

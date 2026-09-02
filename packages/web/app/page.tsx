@@ -39,6 +39,25 @@ export default function Home() {
     router.push(`/session/${id}`);
   }
 
+  // "Get started" scrolls to the command block — which, on most screens, is
+  // already fully visible without scrolling. A plain anchor jump then moves
+  // the page by a few imperceptible pixels and looks like a dead button.
+  // Centering the target and flashing its border makes the click register
+  // regardless of how far (or whether) the page actually moves.
+  function handleGetStarted(e: React.MouseEvent) {
+    e.preventDefault();
+    const wrap = document.getElementById("start");
+    if (!wrap) return;
+    wrap.scrollIntoView({ behavior: "smooth", block: "center" });
+    // The wrapper is the scroll target; the border being flashed belongs to
+    // the .cmd box inside it, which is the thing that actually has one.
+    const cmd = wrap.querySelector(".cmd");
+    if (!cmd) return;
+    cmd.classList.remove("cta-flash");
+    void (cmd as HTMLElement).offsetWidth; // reflow, so the animation restarts on repeat clicks
+    cmd.classList.add("cta-flash");
+  }
+
   return (
     <div className="landing">
       <div className="frame">
@@ -60,7 +79,7 @@ export default function Home() {
               Agent SDK ↗
             </a>
           </nav>
-          <a href="#start" className="btn-solid landing-nav-cta">
+          <a href="#start" onClick={handleGetStarted} className="btn-solid landing-nav-cta">
             Get started
           </a>
         </header>
@@ -86,7 +105,7 @@ export default function Home() {
             </p>
 
             <div className="hero-cta" id="start">
-              <CommandBlock command="npx relay-agent" />
+              <CommandBlock command="npx relayd" />
               <span className="hero-cta-note">
                 Runs in your repo, on your machine. Prints a link to share.
               </span>
@@ -221,7 +240,7 @@ export default function Home() {
                 <div className="step-body">
                   <h3 className="step-title">You start the agent</h3>
                   <p className="step-text">
-                    <code>npx relay-agent</code> in your repository. It works in
+                    <code>npx relayd</code> in your repository. It works in
                     a disposable clone, connects out to the relay, and prints a
                     link. Nothing inbound, so no ports to open.
                   </p>
@@ -329,7 +348,7 @@ export default function Home() {
         <section className="close">
           <h2 className="close-title">Run it. Send the link.</h2>
           <div className="close-cta">
-            <CommandBlock command="npx relay-agent" />
+            <CommandBlock command="npx relayd" />
           </div>
         </section>
 
