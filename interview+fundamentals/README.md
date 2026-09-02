@@ -32,6 +32,7 @@ you can go verify anything and internalize it, rather than memorizing lines.
 | `04-react-state-management.md` | The `useSession` hook, derive-don't-duplicate, localStorage, a React purity bug |
 | `05-database-and-persistence.md` | Postgres as an audit mirror (not source of truth), Prisma 7's new config model, read-only replay |
 | `06-system-design-tradeoffs.md` | Scaling limits, rate limiting, production-readiness gaps — said plainly, with what you'd do about each |
+| `07-deployment-and-hosting.md` | Why a WebSocket server can't be serverless, HTTP/WS on one port, Railway vs Render, what a redeploy costs |
 
 ## The three stories worth having ready cold
 

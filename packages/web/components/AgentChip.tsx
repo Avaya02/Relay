@@ -94,7 +94,7 @@ function AgentPanel({ agent }: { agent: AgentInfo }) {
           so a session needs one attached before it can do anything. Whoever
           owns the repository starts it:
         </p>
-        <pre className="agent-cmd">relay-agent</pre>
+        <pre className="agent-cmd">npx relayd</pre>
         <p className="agent-note">
           The transcript above is still complete, and control still works. Only
           new instructions need a runner.
@@ -142,7 +142,7 @@ function AgentPanel({ agent }: { agent: AgentInfo }) {
         diff.
       </p>
       <p className="agent-note">
-        The host can run the real thing with <code>relay-agent --real</code>,
+        The host gets the real thing by dropping <code>--mock</code> — it runs
         against their own repository and their own credentials.
       </p>
     </>

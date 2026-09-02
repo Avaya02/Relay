@@ -1,19 +1,26 @@
 #!/bin/sh
-# Flags source files over the CLAUDE.md line cap after a Write/Edit.
-# Reads the PostToolUse hook payload on stdin; silent unless the cap is passed.
+# Enforces CLAUDE.md's 1000-line hard cap, mechanically.
+#
+# A convention that lives only in a document is a convention that erodes: this
+# file was missing from disk for a while and app/globals.css reached 2713 lines
+# without anything objecting.
+#
+# Advisory by design — it reports, it does not block. The right fix for an
+# oversized file is a considered split by concern, never a hurried one made to
+# get past a failing hook.
 
-LIMIT=1000
+CAP=1000
 
-f=$(jq -r '.tool_response.filePath // .tool_input.file_path' 2>/dev/null)
-[ -n "$f" ] && [ -f "$f" ] || exit 0
+file=$(jq -r '.tool_response.filePath // .tool_input.file_path // empty' 2>/dev/null)
+[ -n "$file" ] || exit 0
+[ -f "$file" ] || exit 0
 
-case "$f" in
-  *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs) ;;
-  *) exit 0 ;;
+case "$file" in
+  */node_modules/*|*/dist/*|*/.next/*|*/generated/*|*.lock|*lock.yaml|*.json) exit 0 ;;
 esac
 
-n=$(wc -l < "$f" | tr -d ' ')
-[ "$n" -gt "$LIMIT" ] || exit 0
+lines=$(wc -l < "$file" | tr -d ' ')
+[ "$lines" -gt "$CAP" ] || exit 0
 
-printf '{"systemMessage":"%s is %s lines — over the %s-line cap. Split it into a folder divided by concern.","hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"%s is now %s lines, over the %s-line cap in CLAUDE.md. Split it into a named folder divided by concern before moving on."}}' \
-  "$f" "$n" "$LIMIT" "$f" "$n" "$LIMIT"
+jq -n --arg f "$file" --arg n "$lines" --arg cap "$CAP" \
+  '{systemMessage: ("\($f) is \($n) lines, past the \($cap)-line cap in CLAUDE.md — find the seam and split it by concern into a named folder.")}'

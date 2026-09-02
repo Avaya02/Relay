@@ -29,9 +29,39 @@ const archivo = Archivo({
   weight: ["500", "600", "700"],
 });
 
+const DESCRIPTION =
+  "Everyone with the link watches the same AI coding session, live. One person drives — and can hand over the wheel mid-task.";
+
+// Absolute URLs are required for og:image, and Next can only build them from a
+// base it is told. Vercel injects VERCEL_URL; NEXT_PUBLIC_SITE_URL wins so a
+// custom domain doesn't advertise the deployment hostname instead.
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+
 export const metadata: Metadata = {
-  title: "Relay",
-  description: "Watch a live AI coding session, together.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Relay — watch an AI agent work, together",
+    // Session pages set only their own name; this keeps the product on the tab
+    // without every page having to remember to append it.
+    template: "%s · Relay",
+  },
+  description: DESCRIPTION,
+  applicationName: "Relay",
+  openGraph: {
+    type: "website",
+    siteName: "Relay",
+    title: "Watch an AI agent work. Together.",
+    description: DESCRIPTION,
+    url: siteUrl,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Watch an AI agent work. Together.",
+    description: DESCRIPTION,
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({

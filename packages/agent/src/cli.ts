@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -13,13 +14,24 @@ import {
 
 const run = promisify(execFile);
 
-const USAGE = `relay-agent — run a Relay session against a repository on this machine
+/**
+ * Where a published build points when given no `--server`/`--web`.
+ *
+ * These are the two values to change after deploying, and the only ones — the
+ * CLI is installed on other people's machines, so "it works if you also run the
+ * server locally" is not a default anyone else can use. Env vars override them
+ * so a contributor can point at a scratch deployment without editing source.
+ */
+const DEFAULT_SERVER = process.env.RELAY_SERVER ?? "http://localhost:4000";
+const DEFAULT_WEB = process.env.RELAY_WEB ?? "http://localhost:3000";
 
-  relay-agent [options]
+const USAGE = `relayd — run a Relay session against a repository on this machine
+
+  relayd [options]
 
   --repo <path>          Repository to work in (default: current directory)
-  --server <url>         Relay coordination server (default: http://localhost:4000)
-  --web <url>            Web app, for the printed link (default: http://localhost:3000)
+  --server <url>         Relay coordination server (default: ${DEFAULT_SERVER})
+  --web <url>            Web app, for the printed link (default: ${DEFAULT_WEB})
   --mock                 Run the scripted offline agent instead of a real one.
                          Costs nothing, but ignores what you type and replays
                          a fixed script. For UI work, not for real answers.
@@ -162,8 +174,8 @@ async function main(): Promise<void> {
     return;
   }
 
-  const serverUrl = str(args, "server") ?? "http://localhost:4000";
-  const webUrl = str(args, "web") ?? "http://localhost:3000";
+  const serverUrl = str(args, "server") ?? DEFAULT_SERVER;
+  const webUrl = str(args, "web") ?? DEFAULT_WEB;
 
   const sourcePath = await repoRoot(path.resolve(str(args, "repo") ?? process.cwd()));
   const credentials = await resolveCredentials(args);
@@ -197,7 +209,7 @@ async function main(): Promise<void> {
   console.log(`  session  ${id}`);
   console.log(`\n  Share this link:\n    ${new URL(`/session/${id}`, webUrl)}\n`);
   if (!existing) {
-    console.log(`  To reattach after a restart:\n    relay-agent --session ${id} --token ${runnerToken}\n`);
+    console.log(`  To reattach after a restart:\n    relayd --session ${id} --token ${runnerToken}\n`);
   }
 
   startRunner({
