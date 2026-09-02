@@ -234,11 +234,26 @@ export type RequestRunnerChangesMessage = {
 
 export type RunPublishMessage = { type: "run_publish"; title: string };
 
+// The reply to runner_hello. Without an explicit one, a runner cannot tell
+// "attached" from "rejected and about to be closed" — both look like an open
+// socket — so a bad token produces a reconnect loop that never backs off and
+// never says why.
+export type RunnerReadyMessage = { type: "runner_ready" };
+
+/** `fatal` means the token will never work; retrying is pointless. */
+export type RunnerRejectedMessage = {
+  type: "runner_rejected";
+  reason: string;
+  fatal: boolean;
+};
+
 export type ServerToRunnerMessage =
   | RunInstructionMessage
   | StopRunMessage
   | RequestRunnerChangesMessage
-  | RunPublishMessage;
+  | RunPublishMessage
+  | RunnerReadyMessage
+  | RunnerRejectedMessage;
 
 // --- Server -> Client ---
 

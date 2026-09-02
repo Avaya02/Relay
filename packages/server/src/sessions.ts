@@ -9,6 +9,7 @@ import type {
   SessionStatus,
 } from "@relay/shared";
 import { mirrorSessionMeta } from "./persist.js";
+import { REAP_MS } from "./config.js";
 
 export type SessionParticipant = Participant & {
   // Null while disconnected but inside the reconnect grace window (see
@@ -65,10 +66,6 @@ const sessions = new Map<string, Session>();
 // enough that a real departure still reads as prompt.
 const GRACE_MS = 30_000;
 
-// How long an empty session stays resident in memory before its record is
-// dropped. Generous — someone might refresh a tab — but bounded, because
-// nothing else here ever removes a Session.
-const REAP_MS = 10 * 60_000;
 
 // Unambiguous alphabet (no 0/O/1/I/l) — these ids get read aloud and typed
 // when sharing a session link.
@@ -100,6 +97,11 @@ function createSession(id: string): Session {
   // this first call is what guarantees the row exists before any Event can
   // reference it as a foreign key.
   mirrorSessionMeta(session);
+  // A session starts out unused, and until now nothing ever retired one that
+  // stayed that way: the reap was only ever scheduled when a participant left,
+  // so a POST /sessions that nobody joined lived for the life of the process.
+  // Cancelled the moment anyone joins or a runner attaches.
+  scheduleReap(session);
   return session;
 }
 
@@ -209,13 +211,31 @@ export function cancelParticipantGrace(participant: SessionParticipant): void {
   }
 }
 
+export function liveSessionCount(): number {
+  return sessions.size;
+}
+
 // Nobody's connected. Give it REAP_MS in case someone's mid-reload, then drop
 // the in-memory record — otherwise a long-running process holds every
 // session (and its full event array) ever created for as long as it's up.
+//
+// An attached runner blocks the reap. Without that check, a host who starts
+// `relay-agent` and shares the link before anyone opens it loses the session
+// ten minutes later: the CLI stays connected and still prints "waiting for
+// instructions", but the id is gone from the map, so the link 404s and the
+// runner's own reconnect is rejected as an invalid token. The terminal says
+// one thing and the server means another.
 export function scheduleReap(session: Session): void {
   cancelReap(session);
   session.reapTimer = setTimeout(() => {
-    if (liveParticipantCount(session) === 0) sessions.delete(session.id);
+    if (liveParticipantCount(session) > 0) return;
+    if (session.runnerSocket) {
+      // Still hosted, just unwatched. Check again later rather than pinning it
+      // in memory forever — the runner may go away without a clean close.
+      scheduleReap(session);
+      return;
+    }
+    sessions.delete(session.id);
   }, REAP_MS);
 }
 
