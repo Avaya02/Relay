@@ -8,6 +8,7 @@ import type {
   PlanItem,
   ServerMessage,
   SessionStatus,
+  Suggestion,
   ToolDetail,
 } from "@relay/shared";
 
@@ -58,6 +59,8 @@ export type UseSessionResult = {
   agent: AgentInfo | null;
   /** Newest plan in the transcript, or null if the agent never made one. */
   plan: PlanItem[] | null;
+  /** Proposals from the room, waiting for the driver to send or drop one. */
+  suggestions: Suggestion[];
   /** Every run this session has paid for, summed. */
   totalCostUsd: number;
   runCount: number;
@@ -70,6 +73,9 @@ export type UseSessionResult = {
   releaseControl: () => void;
   requestChanges: () => void;
   publish: (title: string) => void;
+  suggest: (text: string) => void;
+  promoteSuggestion: (id: string) => void;
+  dismissSuggestion: (id: string) => void;
 };
 
 // The agent's newest plan wins — a TodoWrite supersedes every earlier one,
@@ -134,6 +140,7 @@ export function useSession(sessionId: string): UseSessionResult {
   const [replayed, setReplayed] = useState<ReplayedSession | null>(null);
   const [repo, setRepo] = useState<string | null>(null);
   const [agent, setAgent] = useState<AgentInfo | null>(null);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
 
   // Both derived from the transcript rather than tracked as their own state:
   // the events are already the source of truth, already ordered by the
@@ -233,6 +240,9 @@ export function useSession(sessionId: string): UseSessionResult {
             if (msg.status === "done") {
               socket.send(JSON.stringify({ type: "request_changes" }));
             }
+            break;
+          case "suggestions":
+            setSuggestions(msg.items);
             break;
           case "session_changes":
             setChanges({
@@ -353,6 +363,27 @@ export function useSession(sessionId: string): UseSessionResult {
     }
   }
 
+  function suggest(text: string) {
+    const socket = socketRef.current;
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: "suggest", text }));
+    }
+  }
+
+  function promoteSuggestion(id: string) {
+    const socket = socketRef.current;
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: "promote_suggestion", id }));
+    }
+  }
+
+  function dismissSuggestion(id: string) {
+    const socket = socketRef.current;
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: "dismiss_suggestion", id }));
+    }
+  }
+
   function publish(title: string) {
     const socket = socketRef.current;
     if (socket && socket.readyState === WebSocket.OPEN) {
@@ -378,6 +409,7 @@ export function useSession(sessionId: string): UseSessionResult {
     repo,
     agent,
     plan,
+    suggestions,
     totalCostUsd,
     runCount,
     join,
@@ -389,5 +421,8 @@ export function useSession(sessionId: string): UseSessionResult {
     releaseControl,
     requestChanges,
     publish,
+    suggest,
+    promoteSuggestion,
+    dismissSuggestion,
   };
 }

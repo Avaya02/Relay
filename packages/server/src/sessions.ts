@@ -7,6 +7,7 @@ import type {
   Participant,
   ServerMessage,
   SessionStatus,
+  Suggestion,
 } from "@relay/shared";
 import { mirrorSessionMeta } from "./persist.js";
 import { REAP_MS } from "./config.js";
@@ -57,7 +58,15 @@ export type Session = {
   agentMode: "mock" | "real" | null;
   keySource: "oauth" | "api-key" | "mock" | null;
   keyHint: string | null;
+  // Proposed instructions from anyone in the room. Inert until the driver
+  // promotes one, which is what keeps "one writer" true while still giving
+  // watchers something to do.
+  suggestions: Suggestion[];
 };
+
+// Bounded so a room full of people cannot grow this without limit. Small on
+// purpose: a backlog longer than this is a conversation, not a queue.
+export const MAX_SUGGESTIONS = 20;
 
 const sessions = new Map<string, Session>();
 
@@ -91,6 +100,7 @@ function createSession(id: string): Session {
     agentMode: null,
     keySource: null,
     keyHint: null,
+    suggestions: [],
   };
   sessions.set(id, session);
   // Upserted (not just created) on every later status/driver change too —
