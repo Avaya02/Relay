@@ -3,6 +3,7 @@ import type { RunEmitter } from "../emit.js";
 import { redactKeys } from "../redact.js";
 import { detailForCall } from "./diff.js";
 import { resultText, summarizeToolCall, summarizeToolResult } from "./summarize.js";
+import { orientation } from "./orient.js";
 
 /**
  * Agent SDK wrapper, verified against the shipped types of
@@ -48,11 +49,18 @@ export async function runRealAgent(opts: RunOptions): Promise<void> {
     : {};
 
   try {
+    // Resolved before the run so the agent opens by acting rather than by
+    // working out where it is — see orient.ts.
+    const where = await orientation(workingDir);
+
     const q = query({
       prompt: instruction,
       options: {
         cwd: workingDir,
         model,
+        ...(where
+          ? { systemPrompt: { type: "preset" as const, preset: "claude_code" as const, append: where } }
+          : {}),
         abortController: abort,
         // Headless: there is no human here to approve each tool call. The agent
         // runs with the operator's own permissions on their own machine, which

@@ -143,6 +143,34 @@ export type RequestChangesMessage = { type: "request_changes" };
 // the server is configured for it.
 export type PublishMessage = { type: "publish"; title: string };
 
+// --- Suggestions ---
+//
+// The one thing a non-driver could do before this was watch. Suggestions give
+// watchers a verb without weakening the invariant the whole design rests on:
+// proposing and committing are separate acts, and only the driver commits. No
+// two instructions can ever race, because a suggestion is inert until someone
+// with the wheel promotes it.
+
+export type Suggestion = {
+  id: string;
+  text: string;
+  /** Participant who proposed it — may have since left the room. */
+  by: string;
+  displayName: string;
+  ts: string;
+};
+
+export type SuggestMessage = { type: "suggest"; text: string };
+
+/** Driver-only: send a suggestion as the next instruction. */
+export type PromoteSuggestionMessage = { type: "promote_suggestion"; id: string };
+
+/** The driver may drop any suggestion; an author may withdraw their own. */
+export type DismissSuggestionMessage = { type: "dismiss_suggestion"; id: string };
+
+/** The whole list, re-broadcast on every change — it is short by construction. */
+export type SuggestionsMessage = { type: "suggestions"; items: Suggestion[] };
+
 export type ClientMessage =
   | JoinMessage
   | InstructMessage
@@ -153,7 +181,10 @@ export type ClientMessage =
   | HandOverMessage
   | ReleaseControlMessage
   | RequestChangesMessage
-  | PublishMessage;
+  | PublishMessage
+  | SuggestMessage
+  | PromoteSuggestionMessage
+  | DismissSuggestionMessage;
 
 // --- Runner (the relay-agent CLI) -> Server ---
 //
@@ -401,4 +432,5 @@ export type ServerMessage =
   | PongMessage
   | ControlChangedMessage
   | ControlRequestedMessage
-  | ControlRequestCancelledMessage;
+  | ControlRequestCancelledMessage
+  | SuggestionsMessage;

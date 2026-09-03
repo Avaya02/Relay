@@ -19,6 +19,7 @@ import {
   sessionStateMessage,
   setDriver,
   setStatus,
+  MAX_SUGGESTIONS,
 } from "./sessions.js";
 import * as validate from "./validate.js";
 import type { Session, SessionParticipant } from "./sessions.js";
@@ -92,6 +93,33 @@ export function attachWs(wss: WebSocketServer): void {
       text,
       resume: session.agentSessionId ?? undefined,
     });
+  }
+
+  // The single path by which text becomes a run. `instruct` and
+  // `promote_suggestion` are two doors into the same room — keeping the
+  // transcript append and the queue-vs-run-now branch here is what stops the
+  // two from drifting into subtly different behaviour.
+  function commitInstruction(
+    session: Session,
+    text: string,
+    byParticipantId: string,
+  ): void {
+    appendEvent(session, {
+      kind: "user_instruction",
+      by: byParticipantId,
+      data: { text },
+    });
+
+    if (session.status === "working") {
+      session.instructionQueue.push(text);
+    } else {
+      setStatus(session, "working");
+      dispatchInstruction(session, text);
+    }
+  }
+
+  function broadcastSuggestions(session: Session): void {
+    broadcast(session, { type: "suggestions", items: session.suggestions });
   }
 
   const heartbeat = setInterval(() => {
@@ -364,6 +392,9 @@ export function attachWs(wss: WebSocketServer): void {
       send(socket, { type: "joined", participantId: resumed.id, token: resumed.token });
       send(socket, { type: "history", events: session.events });
       send(socket, sessionStateMessage(session));
+      if (session.suggestions.length) {
+        send(socket, { type: "suggestions", items: session.suggestions });
+      }
       // Nobody saw them leave (presence never changed during grace), so
       // there's nothing to broadcast to everyone else.
       return;
@@ -389,6 +420,11 @@ export function attachWs(wss: WebSocketServer): void {
     send(socket, { type: "joined", participantId: participant.id, token: participant.token });
     send(socket, { type: "history", events: session.events });
     send(socket, sessionStateMessage(session));
+    // Pending proposals are session state a late joiner needs too — without
+    // this they see an empty queue until the next one happens to arrive.
+    if (session.suggestions.length) {
+      send(socket, { type: "suggestions", items: session.suggestions });
+    }
 
     broadcast(session, { type: "participant_joined", participant });
     for (const other of session.participants.values()) {
@@ -476,22 +512,10 @@ export function attachWs(wss: WebSocketServer): void {
             return;
           }
 
-          appendEvent(session, {
-            kind: "user_instruction",
-            by: participant.id,
-            data: { text: text.value },
-          });
-
-          // Never run two agents concurrently against the same working dir /
-          // resumed conversation — the instruction still lands in the
-          // transcript immediately (above), but the run itself waits until
-          // the in-flight one settles. The runner_status handler drains this.
-          if (session.status === "working") {
-            session.instructionQueue.push(text.value);
-          } else {
-            setStatus(session, "working");
-            dispatchInstruction(session, text.value);
-          }
+          // Never runs two agents concurrently against the same working dir:
+          // the instruction lands in the transcript immediately, but the run
+          // waits for any in-flight one to settle (see commitInstruction).
+          commitInstruction(session, text.value, participant.id);
           break;
         }
 
@@ -645,6 +669,95 @@ export function attachWs(wss: WebSocketServer): void {
           // No request id needed, unlike changes: the result is broadcast to
           // the whole room, so there's no single requester to route back to.
           sendRunner(session.runnerSocket, { type: "run_publish", title });
+          break;
+        }
+
+        // Anyone may propose. Deliberately not driver-gated: the whole point
+        // is to give people who do not hold the wheel a way to contribute.
+        case "suggest": {
+          const state = connections.get(socket);
+          if (!state) return;
+          const { session, participant } = state;
+
+          const text = validate.instruction(msg.text);
+          if (!text.ok) {
+            send(socket, { type: "error", message: text.error });
+            return;
+          }
+          if (session.suggestions.length >= MAX_SUGGESTIONS) {
+            send(socket, {
+              type: "error",
+              message: "too many pending suggestions — wait for the driver to clear some",
+            });
+            return;
+          }
+
+          session.suggestions.push({
+            id: randomUUID(),
+            text: text.value,
+            by: participant.id,
+            displayName: participant.displayName,
+            ts: new Date().toISOString(),
+          });
+          broadcastSuggestions(session);
+          break;
+        }
+
+        // Driver only, and the reason is the invariant: promoting is what turns
+        // a proposal into a run, so it has to be the same privilege as typing
+        // an instruction directly.
+        case "promote_suggestion": {
+          const state = connections.get(socket);
+          if (!state) return;
+          const { session, participant } = state;
+
+          if (participant.id !== session.driverId) {
+            send(socket, {
+              type: "error",
+              message: "only the driver can send a suggestion to the agent",
+            });
+            return;
+          }
+          if (!session.runnerSocket) {
+            send(socket, {
+              type: "error",
+              message: "no agent is connected — run `npx relayd` in the repository to start one",
+            });
+            return;
+          }
+
+          const index = session.suggestions.findIndex((s) => s.id === msg.id);
+          // Already promoted or dismissed by someone else — not an error worth
+          // reporting, just nothing left to do.
+          if (index === -1) return;
+          const [promoted] = session.suggestions.splice(index, 1);
+          broadcastSuggestions(session);
+
+          // Attributed to the driver, not the author: the driver is who chose
+          // to run it, and the transcript records who committed an action.
+          commitInstruction(session, promoted.text, participant.id);
+          break;
+        }
+
+        // The driver can clear anything; an author can withdraw their own.
+        // Nobody else, or one watcher could silence another.
+        case "dismiss_suggestion": {
+          const state = connections.get(socket);
+          if (!state) return;
+          const { session, participant } = state;
+
+          const suggestion = session.suggestions.find((s) => s.id === msg.id);
+          if (!suggestion) return;
+          if (participant.id !== session.driverId && participant.id !== suggestion.by) {
+            send(socket, {
+              type: "error",
+              message: "only the driver or the author can remove a suggestion",
+            });
+            return;
+          }
+
+          session.suggestions = session.suggestions.filter((s) => s.id !== msg.id);
+          broadcastSuggestions(session);
           break;
         }
 

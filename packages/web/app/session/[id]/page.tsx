@@ -13,6 +13,7 @@ import { WorkspaceRail } from "@/components/WorkspaceRail";
 import { SessionsRail } from "@/components/SessionsRail";
 import { AgentChip } from "@/components/AgentChip";
 import { ShareControls } from "@/components/ShareControls";
+import { SuggestBox, SuggestionQueue } from "@/components/Suggestions";
 import { rememberSession } from "@/lib/recentSessions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -160,6 +161,15 @@ export default function SessionPage({
 
           {session.connection === "open" ? (
             <>
+              {/* Above the control bar, because it's about what runs next —
+                  the same question the composer answers. */}
+              <SuggestionQueue
+                suggestions={session.suggestions}
+                isDriver={isDriver}
+                selfId={session.selfId}
+                onPromote={session.promoteSuggestion}
+                onDismiss={session.dismissSuggestion}
+              />
               <ControlBar
                 participants={session.participants}
                 driverId={session.driverId}
@@ -170,12 +180,16 @@ export default function SessionPage({
                 onHandOver={session.handOver}
                 onRelease={session.releaseControl}
               />
-              {isDriver && (
+              {isDriver ? (
                 <Composer
                   onSend={(text) => session.instruct(text)}
                   status={session.status}
                   onStop={session.stop}
                 />
+              ) : (
+                // A watcher's version of the composer: same position, same
+                // shape, but it proposes rather than commits.
+                <SuggestBox onSuggest={session.suggest} disabled={false} />
               )}
             </>
           ) : (
