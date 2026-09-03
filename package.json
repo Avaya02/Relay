@@ -1,12 +1,15 @@
 {
   "name": "relay",
   "private": true,
+  "packageManager": "pnpm@11.18.0",
   "engines": {
     "node": ">=20.9.0"
   },
   "scripts": {
     "dev": "pnpm --parallel --filter \"./packages/**\" dev",
     "build": "pnpm --recursive --filter \"./packages/**\" build",
-    "typecheck": "pnpm --recursive --filter \"./packages/**\" typecheck"
+    "typecheck": "pnpm --recursive --filter \"./packages/**\" typecheck",
+    "start": "pnpm --filter @relay/server exec prisma migrate deploy && node packages/server/dist/index.js",
+    "build:server": "pnpm --filter @relay/server build"
   }
 }
