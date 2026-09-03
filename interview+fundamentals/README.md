@@ -33,6 +33,8 @@ you can go verify anything and internalize it, rather than memorizing lines.
 | `05-database-and-persistence.md` | Postgres as an audit mirror (not source of truth), Prisma 7's new config model, read-only replay |
 | `06-system-design-tradeoffs.md` | Scaling limits, rate limiting, production-readiness gaps — said plainly, with what you'd do about each |
 | `07-deployment-and-hosting.md` | Why a WebSocket server can't be serverless, HTTP/WS on one port, Railway vs Render, what a redeploy costs |
+| `08-origins-and-cors.md` | What CORS is actually for, why it does NOT protect WebSockets, cross-site WebSocket hijacking, fail-closed defaults |
+| `09-typescript-types.md` | Types are erased at compile time, why `as` verifies nothing, where runtime validation belongs, discriminated unions |
 
 ## The three stories worth having ready cold
 
