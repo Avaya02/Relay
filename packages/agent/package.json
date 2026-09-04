@@ -14,7 +14,7 @@
     "node": ">=20.9.0"
   },
   "scripts": {
-    "dev": "tsx src/cli.ts --mock",
+    "dev": "tsx src/cli.ts --mock --server http://localhost:4000 --web http://localhost:3000",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/cli.js",
     "typecheck": "tsc --noEmit",
