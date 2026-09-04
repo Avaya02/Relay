@@ -35,6 +35,7 @@ you can go verify anything and internalize it, rather than memorizing lines.
 | `07-deployment-and-hosting.md` | Why a WebSocket server can't be serverless, HTTP/WS on one port, Railway vs Render, what a redeploy costs |
 | `08-origins-and-cors.md` | What CORS is actually for, why it does NOT protect WebSockets, cross-site WebSocket hijacking, fail-closed defaults |
 | `09-typescript-types.md` | Types are erased at compile time, why `as` verifies nothing, where runtime validation belongs, discriminated unions |
+| `10-agent-cli-architecture.md` | Why publishing to npm doesn't run anything, what `cli.ts` does, a file-by-file tour of `packages/agent`, and how the CLI ends up executing on someone else's machine |
 
 ## The three stories worth having ready cold
 
