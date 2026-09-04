@@ -22,8 +22,8 @@ const run = promisify(execFile);
  * server locally" is not a default anyone else can use. Env vars override them
  * so a contributor can point at a scratch deployment without editing source.
  */
-const DEFAULT_SERVER = process.env.RELAY_SERVER ?? "http://localhost:4000";
-const DEFAULT_WEB = process.env.RELAY_WEB ?? "http://localhost:3000";
+const DEFAULT_SERVER = process.env.RELAY_SERVER ?? "https://relay-production-c9bd.up.railway.app";
+const DEFAULT_WEB = process.env.RELAY_WEB ?? "https://relay-web-green.vercel.app";
 
 const USAGE = `relayd — run a Relay session against a repository on this machine
 
