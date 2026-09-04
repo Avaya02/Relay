@@ -78,7 +78,7 @@ Today the server does everything: holds the repo, runs the agent, broadcasts eve
 Instead, **split it in two**:
 
 ```
-  ┌─ relay-agent (a CLI the host runs locally) ────────────┐
+  ┌─ relayrun (a CLI the host runs locally) ────────────┐
   │  has the repo (it's just their working directory)      │
   │  runs the Claude Agent SDK on their own credentials    │
   │  streams events UP over one WebSocket                  │

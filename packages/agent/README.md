@@ -1,9 +1,9 @@
-# relayd
+# relayrun
 
 Watch a Claude agent work on a real codebase — together, live, with exactly one
 person holding the wheel.
 
-`relayd` runs the agent **on your own machine**, against your own repository, on
+`relayrun` runs the agent **on your own machine**, against your own repository, on
 your own credentials. It connects out to a coordination server and prints a link.
 Anyone who opens that link watches the same session stream in the same moment.
 
@@ -15,7 +15,7 @@ one Claude Code runs.
 
 ```bash
 cd your-project
-npx relayd
+npx relayrun
 ```
 
 That's it. You'll get:
@@ -85,7 +85,7 @@ The connection is outbound only. Nothing listens, so there are no ports to open.
 If the CLI stops, the session survives. Restart with the token it printed:
 
 ```bash
-relayd --session 8M2zrrx9Ng --token <runner-token>
+relayrun --session 8M2zrrx9Ng --token <runner-token>
 ```
 
 ## Requirements

@@ -24,7 +24,7 @@ export const ALLOWED_ORIGINS: string[] = (process.env.RELAY_ALLOWED_ORIGINS ?? "
 /**
  * Whether `origin` may talk to this server.
  *
- * A missing Origin header passes: that is the relay-agent CLI, curl, and every
+ * A missing Origin header passes: that is the relayrun CLI, curl, and every
  * other non-browser client. Origin is a browser-enforced header, so treating
  * its absence as a rejection would lock out the one client that matters most
  * while stopping no attacker — anything scripted can send whatever it likes.

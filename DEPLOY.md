@@ -172,14 +172,14 @@ If the second one returns 201, `NODE_ENV` isn't set to `production`.
 From any repository on your machine:
 
 ```bash
-pnpm --filter relayd exec tsx src/cli.ts \
-  --repo /Applications/Projects/PromptGuard \
-  --server https://YOUR-SERVER.up.railway.app \
-  --web    https://YOUR-APP.vercel.app
+pnpm --filter relayrun exec tsx src/cli.ts --repo /path/to/some/repo
 ```
 
+The deployed URLs are already the defaults (see §5) — add `--server`/`--web`
+only to point at a scratch deployment.
+
 It prints a link. **Send it to someone who is not you** — that is the first
-genuine test this project has ever had. Every session so far has been you in two
+genuine test this project has ever had. Every session before that was you in two
 windows on one machine.
 
 Ask them to click **Request control**, approve it, and watch the composer move
@@ -187,40 +187,54 @@ to their screen.
 
 ---
 
-## 5. Publishing the CLI (optional, do it after)
+## 5. Publishing the CLI
 
-Nothing above needs this. It only removes the `--server`/`--web` flags for other
-people.
-
-First, bake the deployed URLs in as defaults —
+Bake the deployed URLs in as defaults —
 [`packages/agent/src/cli.ts`](packages/agent/src/cli.ts), the two constants near
 the top:
 
 ```ts
-const DEFAULT_SERVER = process.env.RELAY_SERVER ?? "https://YOUR-SERVER.up.railway.app";
-const DEFAULT_WEB    = process.env.RELAY_WEB    ?? "https://YOUR-APP.vercel.app";
+const DEFAULT_SERVER = process.env.RELAY_SERVER ?? "https://relay-production-c9bd.up.railway.app";
+const DEFAULT_WEB    = process.env.RELAY_WEB    ?? "https://relay-web-green.vercel.app";
 ```
+
+Pin the agent's `dev` script to localhost in the same commit, or `pnpm dev`
+silently points your local mock agent at the production server.
 
 Then:
 
 ```bash
-npm login
+git checkout main          # pnpm refuses to publish from other branches
 cd packages/agent
-npm publish --access public
+pnpm publish --access public --otp=<6-digit-code>
 ```
 
-The package is `relayd`. It installs two commands, `relayd` and `relay-agent`.
+Four things that will stop you, each learned by being stopped:
 
-> **`relay-agent` on npm is not yours.** It belongs to another publisher
-> (`agustin.build`, v0.1.0). `npx relay-agent` downloads *their* package. This is
-> why the landing page now says `npx relayd`. Don't change it back.
+**Use `pnpm publish`, not `npm publish`.** The manifest carries
+`"@relay/shared": "workspace:*"`. That protocol is pnpm-only — `npm publish`
+uploads the literal string, `pnpm publish` rewrites it to a real version.
+
+**npm requires 2FA to publish.** Tokens that bypass it are being restricted
+(direct publishing ends Jan 2027). Enable 2FA on the account and pass `--otp`
+with a fresh code; they rotate every 30 seconds.
+
+**`npm view <name>` cannot tell you whether a name is publishable.** It only
+proves nobody owns it. npm runs a typosquat filter server-side at PUT time that
+refuses names too close to popular ones — `relayd` was rejected for sitting near
+`delay`. There is no way to test it except to try.
+
+**Hyphens are normalized away.** `relay-live` existing is enough to block
+`relaylive`. Check both forms before committing to a name.
+
+The `bin` key must also match the package name, or `npx <name>` cannot work out
+which command to run.
 
 Verify before trusting it:
 
 ```bash
-cd $(mktemp -d) && npm i relayd && ./node_modules/.bin/relayd --help
+cd $(mktemp -d) && npm i relayrun && ./node_modules/.bin/relayrun --help
 ```
-
 ---
 
 ## What will bite you

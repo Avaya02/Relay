@@ -1,13 +1,12 @@
 {
-  "name": "relayd",
+  "name": "relayrun",
   "version": "0.1.0",
   "description": "Run a Relay session against a repository on your own machine — everyone with the link watches the agent work, one person drives.",
   "keywords": ["claude", "agent", "collaboration", "pair-programming", "cli"],
   "license": "MIT",
   "type": "module",
   "bin": {
-    "relayd": "dist/cli.js",
-    "relay-agent": "dist/cli.js"
+    "relayrun": "dist/cli.js"
   },
   "files": ["dist", "README.md"],
   "engines": {

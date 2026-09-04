@@ -46,7 +46,7 @@ export function originAllowed(origin: string | undefined): boolean {
 }
 ```
 
-The `relayd` CLI attaches to a session over the same WebSocket server the browsers use, and
+The `relayrun` CLI attaches to a session over the same WebSocket server the browsers use, and
 it sends no `Origin`. Rejecting a missing origin would lock out the one client the whole
 architecture depends on while stopping no attacker — anything scripted sends whatever headers
 it likes, so a rule against absent origins is trivially bypassed by *adding* one.

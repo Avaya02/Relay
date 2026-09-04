@@ -83,7 +83,7 @@ pnpm dev
 ```
 
 `pnpm dev` starts three processes: the coordination server, the web app, and a
-`relay-agent` in mock mode. The agent prints a session link — open it, then open it again
+`relayrun` in mock mode. The agent prints a session link — open it, then open it again
 in a second window to watch both sides.
 
 To point an agent at a real repository, run the CLI yourself:
@@ -141,7 +141,7 @@ pnpm --filter @relay/server exec prisma migrate deploy
 
 ```
 packages/shared   WebSocket protocol types — the contract every side compiles against
-packages/agent    The relay-agent CLI. Holds the repo, runs the Agent SDK, streams events up
+packages/agent    The relayrun CLI. Holds the repo, runs the Agent SDK, streams events up
 packages/server   Node http + ws. Sessions, ordering, the lock, presence, Postgres
 packages/web      Next.js App Router, Tailwind v4, shadcn/ui
 ```
@@ -150,7 +150,7 @@ The split is the whole design. The agent runs on the machine where the repositor
 is; the server only coordinates.
 
 ```
-  relay-agent (your machine)  ──events up / instructions down──▶  server  ──▶  browsers
+  relayrun (your machine)  ──events up / instructions down──▶  server  ──▶  browsers
   the repo, the shell, the keys                          no repo, no shell, no keys
 ```
 
@@ -185,7 +185,7 @@ it would have been. It needs a host that supports long-lived WebSocket connectio
 Railway, Render or Fly rather than Vercel — plus Postgres if you want transcripts to
 outlive a restart.
 
-Nobody needs to deploy an agent. Each person runs `relay-agent` against their own
+Nobody needs to deploy an agent. Each person runs `relayrun` against their own
 repository when they want to host a session, and the CLI dials out, so there are no inbound
 ports and nothing to open up.
 

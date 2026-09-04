@@ -186,7 +186,7 @@ export type ClientMessage =
   | PromoteSuggestionMessage
   | DismissSuggestionMessage;
 
-// --- Runner (the relay-agent CLI) -> Server ---
+// --- Runner (the relayrun CLI) -> Server ---
 //
 // A runner is not a participant: it's the process on the host's machine that
 // holds the repo and runs the Agent SDK. It shares the browsers' WebSocket

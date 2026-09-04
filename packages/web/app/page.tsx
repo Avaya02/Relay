@@ -105,7 +105,7 @@ export default function Home() {
             </p>
 
             <div className="hero-cta" id="start">
-              <CommandBlock command="npx relayd" />
+              <CommandBlock command="npx relayrun" />
               <span className="hero-cta-note">
                 Runs in your repo, on your machine. Prints a link to share.
               </span>
@@ -240,7 +240,7 @@ export default function Home() {
                 <div className="step-body">
                   <h3 className="step-title">You start the agent</h3>
                   <p className="step-text">
-                    <code>npx relayd</code> in your repository. It works in
+                    <code>npx relayrun</code> in your repository. It works in
                     a disposable clone, connects out to the relay, and prints a
                     link. Nothing inbound, so no ports to open.
                   </p>
@@ -348,7 +348,7 @@ export default function Home() {
         <section className="close">
           <h2 className="close-title">Run it. Send the link.</h2>
           <div className="close-cta">
-            <CommandBlock command="npx relayd" />
+            <CommandBlock command="npx relayrun" />
           </div>
         </section>
 
