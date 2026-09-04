@@ -67,7 +67,7 @@ function handleCreateSession(req: IncomingMessage, res: ServerResponse): void {
 
   const session = createNewSession();
   // The runner token is returned exactly once, to whoever created the session —
-  // normally the relay-agent CLI, which is the only party that needs it. It is
+  // normally the relayrun CLI, which is the only party that needs it. It is
   // never sent to a browser or persisted.
   json(res, 201, { id: session.id, runnerToken: session.runnerToken });
 }

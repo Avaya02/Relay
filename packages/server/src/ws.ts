@@ -507,7 +507,7 @@ export function attachWs(wss: WebSocketServer): void {
             send(socket, {
               type: "error",
               message:
-                "no agent is connected — run `npx relayd` in the repository to start one",
+                "no agent is connected — run `npx relayrun` in the repository to start one",
             });
             return;
           }
@@ -721,7 +721,7 @@ export function attachWs(wss: WebSocketServer): void {
           if (!session.runnerSocket) {
             send(socket, {
               type: "error",
-              message: "no agent is connected — run `npx relayd` in the repository to start one",
+              message: "no agent is connected — run `npx relayrun` in the repository to start one",
             });
             return;
           }

@@ -44,7 +44,7 @@ function redactToken(s: string): string {
 export function createRepo(config: RepoConfig) {
   // Scratch space under the OS temp dir, not inside the operator's repo — the
   // clones are disposable and must never show up in their working tree.
-  const root = path.join(tmpdir(), "relay-agent");
+  const root = path.join(tmpdir(), "relayrun");
   const pristineDir = path.join(root, "pristine");
   const sessionsDir = path.join(root, "sessions");
 

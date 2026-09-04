@@ -15,7 +15,7 @@ import type { AgentInfo } from "@relay/shared";
 // with no runner looks identical to a room with an idle one, right up until
 // someone types an instruction and it's refused.
 //
-//   Offline      — no relay-agent is connected. Nothing can run.
+//   Offline      — no relayrun is connected. Nothing can run.
 //   Demo         — the scripted agent. Costs nothing, decides nothing.
 //   Live         — the real Agent SDK on the host's own Claude Code login.
 //   Live ··wxyz  — the real Agent SDK on a key the host passed to the CLI.
@@ -94,7 +94,7 @@ function AgentPanel({ agent }: { agent: AgentInfo }) {
           so a session needs one attached before it can do anything. Whoever
           owns the repository starts it:
         </p>
-        <pre className="agent-cmd">npx relayd</pre>
+        <pre className="agent-cmd">npx relayrun</pre>
         <p className="agent-note">
           The transcript above is still complete, and control still works. Only
           new instructions need a runner.

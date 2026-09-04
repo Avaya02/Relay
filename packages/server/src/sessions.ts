@@ -44,7 +44,7 @@ export type Session = {
   // the in-memory record is dropped — otherwise a long-lived process
   // accumulates every session ever created, forever (see scheduleReap).
   reapTimer: NodeJS.Timeout | null;
-  // The relay-agent CLI for this session, if one is attached. It holds the
+  // The relayrun CLI for this session, if one is attached. It holds the
   // repo and runs the agent; without it nothing can execute an instruction.
   runnerSocket: WebSocket | null;
   // Proves a socket is allowed to be this session's runner. Minted here,
@@ -230,7 +230,7 @@ export function liveSessionCount(): number {
 // session (and its full event array) ever created for as long as it's up.
 //
 // An attached runner blocks the reap. Without that check, a host who starts
-// `relay-agent` and shares the link before anyone opens it loses the session
+// `relayrun` and shares the link before anyone opens it loses the session
 // ten minutes later: the CLI stays connected and still prints "waiting for
 // instructions", but the id is gone from the map, so the link 404s and the
 // runner's own reconnect is rejected as an invalid token. The terminal says

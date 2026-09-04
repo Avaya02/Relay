@@ -25,9 +25,9 @@ const run = promisify(execFile);
 const DEFAULT_SERVER = process.env.RELAY_SERVER ?? "https://relay-production-c9bd.up.railway.app";
 const DEFAULT_WEB = process.env.RELAY_WEB ?? "https://relay-web-green.vercel.app";
 
-const USAGE = `relayd — run a Relay session against a repository on this machine
+const USAGE = `relayrun — run a Relay session against a repository on this machine
 
-  relayd [options]
+  relayrun [options]
 
   --repo <path>          Repository to work in (default: current directory)
   --server <url>         Relay coordination server (default: ${DEFAULT_SERVER})
@@ -209,7 +209,7 @@ async function main(): Promise<void> {
   console.log(`  session  ${id}`);
   console.log(`\n  Share this link:\n    ${new URL(`/session/${id}`, webUrl)}\n`);
   if (!existing) {
-    console.log(`  To reattach after a restart:\n    relayd --session ${id} --token ${runnerToken}\n`);
+    console.log(`  To reattach after a restart:\n    relayrun --session ${id} --token ${runnerToken}\n`);
   }
 
   startRunner({

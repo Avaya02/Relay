@@ -7,7 +7,7 @@ one person drives, and control hands over mid-task.
 |---|---|
 | `packages/shared` | The WS protocol contract both sides compile against |
 | `packages/server` | Coordination only: sessions, `seq` ordering, driver lock, presence, Postgres mirror |
-| `packages/agent` | The `relay-agent` CLI — holds the repo, runs the SDK on the host's own machine |
+| `packages/agent` | The `relayrun` CLI — holds the repo, runs the SDK on the host's own machine |
 | `packages/web` | Next.js client (read `packages/web/AGENTS.md` first — that Next.js has breaking changes) |
 
 ## Architecture in flight
