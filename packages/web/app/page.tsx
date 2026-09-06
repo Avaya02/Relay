@@ -6,11 +6,17 @@ import { Button } from "@/components/ui/button";
 import { DemoLedger } from "@/components/landing/DemoLedger";
 import { RecentSessions } from "@/components/RecentSessions";
 import { CommandBlock } from "@/components/landing/CommandBlock";
+import { HandoverPanel } from "@/components/landing/HandoverPanel";
+import { TopologyDiagram } from "@/components/landing/TopologyDiagram";
 
 // The landing page, in the brand register: instrument faceplate. Structure is
 // carried by hairline rules and a visible frame rather than cards and shadows,
-// chrome is set in mono, and the only saturated colour on the page is the
-// accent marking something live.
+// and chrome is set in mono.
+//
+// Chrome here is achromatic — every heading, control and label is a neutral.
+// The only colour on the page lives inside the session panels, marking live
+// state, which is the same split the reference makes between its monochrome
+// chrome and the status badges inside its product screenshots.
 //
 // Two things this page deliberately does NOT do, both of which the reference
 // aesthetic would have suggested:
@@ -88,8 +94,13 @@ export default function Home() {
         <section className="hero">
           <div className="hero-copy">
             {/* The one eyebrow on the whole page. One as a deliberate system
-                is voice; one above every section is scaffolding. */}
-            <span className="badge badge--live hero-eyebrow">
+                is voice; one above every section is scaffolding.
+
+                Deliberately not badge--live: chrome is achromatic here, so the
+                dot carries liveness by pulsing rather than by hue. The colour
+                answer to "is this live" sits in the session panel beside it,
+                which is where status belongs. */}
+            <span className="badge hero-eyebrow">
               <span className="badge-dot" aria-hidden />
               Live multiplayer
             </span>
@@ -183,6 +194,7 @@ export default function Home() {
                 </dd>
               </div>
             </dl>
+            <HandoverPanel />
           </div>
         </section>
 
@@ -224,6 +236,7 @@ export default function Home() {
                 </dd>
               </div>
             </dl>
+            <TopologyDiagram />
           </div>
         </section>
 

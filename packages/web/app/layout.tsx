@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Archivo, Geist, JetBrains_Mono } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -10,23 +10,19 @@ const geistSans = Geist({
 // Load-bearing, not stylistic: the ledger, timestamps, and diffs all live in
 // this face, and it's what makes the agent's actions read as a machine record
 // rather than as prose (RELAY_BUILD_SPEC.md §7 names it explicitly).
-const jetbrainsMono = JetBrains_Mono({
+const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
-// Display face for "big and rare" moments only (landing hero, session title)
-// — RELAY_BUILD_SPEC.md §7 asks for "a characterful grotesque with
-// personality" and names Space Grotesk as an *example*. Archivo satisfies the
-// direction from a different starting point: it descends from grotesques cut
-// for print signage and wayfinding, which is the right physical reference for
-// an instrument (a cockpit placard, not a startup wordmark). Space Grotesk is
-// also, by now, one of the most over-reached-for display faces in generated
-// design work — avoiding it is the point, not a deviation from the spec.
-const archivo = Archivo({
+// Display resolves to the same family as body, which is the reference's own
+// system: the contrast axis is sans-against-mono, not sans-against-sans. Kept
+// as a distinct token so the display face can change later without touching
+// every call site — and because Geist is already loaded for body, this costs
+// no extra download. It replaced Archivo, so the redesign is one font lighter.
+const geistDisplay = Geist({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
 });
 
 const DESCRIPTION =
@@ -72,7 +68,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`dark ${geistSans.variable} ${jetbrainsMono.variable} ${archivo.variable} h-full antialiased`}
+      className={`dark ${geistSans.variable} ${geistMono.variable} ${geistDisplay.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

@@ -2,19 +2,22 @@ import { ImageResponse } from "next/og";
 
 // The link preview IS the product surface for something whose entire premise is
 // "send someone the link" — a shared session that unfurls as a bare URL looks
-// broken before anyone has clicked it. Generated rather than a static asset so
-// it stays in the design tokens' actual colours instead of drifting from them.
+// broken before anyone has clicked it.
+//
+// Satori resolves no CSS custom properties, so these values are copied from
+// app/styles/tokens.css by hand and WILL drift unless a token change updates
+// them here too. --border is an alpha token there; this is its composited
+// value over --bg.
 
 export const alt = "Relay — watch an AI coding agent work, together, live";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const BG = "#000000";
-const SURFACE = "#0a0b0d";
-const BORDER = "#1e2024";
-const TEXT = "#f4f5f7";
-const DIM = "#8c9098";
-const ACCENT = "#4dd0c7";
+const BG = "#0a0a0a";
+const SURFACE = "#121212";
+const BORDER = "#262626";
+const TEXT = "#fafafa";
+const DIM = "#a3a3a3";
 
 // A miniature of the action ledger, which is the interface's signature surface.
 // Showing it beats showing a logo: it says what the thing is at a glance.
@@ -48,7 +51,7 @@ export default function Image() {
                 width: 12,
                 height: 12,
                 borderRadius: 999,
-                background: ACCENT,
+                background: TEXT,
                 display: "flex",
               }}
             />
@@ -67,7 +70,7 @@ export default function Image() {
             }}
           >
             <span>Watch an agent work.</span>
-            <span style={{ color: ACCENT }}>Together.</span>
+            <span>Together.</span>
           </div>
 
           <div style={{ fontSize: 27, color: DIM, marginTop: 26, display: "flex" }}>
@@ -96,7 +99,7 @@ export default function Image() {
                 borderTop: i === 0 ? "none" : `1px solid ${BORDER}`,
               }}
             >
-              <span style={{ color: ACCENT, width: 74 }}>{verb}</span>
+              <span style={{ color: DIM, width: 74 }}>{verb}</span>
               <span style={{ color: TEXT, flex: 1 }}>{target}</span>
               <span style={{ color: DIM }}>{detail}</span>
             </div>
