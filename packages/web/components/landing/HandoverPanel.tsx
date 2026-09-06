@@ -30,22 +30,24 @@ const noop = () => {};
 
 export function HandoverPanel() {
   return (
-    <div className="handover" aria-hidden>
-      <div className="handover-chrome">
-        <span className="handover-mark">relay</span>
-        <Presence participants={PARTICIPANTS} driverId={DRIVER} selfId={SELF} />
-      </div>
-      <div className="handover-body">
-        <ControlBar
-          participants={PARTICIPANTS}
-          driverId={DRIVER}
-          selfId={SELF}
-          pendingRequests={PENDING}
-          onRequestControl={noop}
-          onCancelRequest={noop}
-          onHandOver={noop}
-          onRelease={noop}
-        />
+    <div className="on-photo" aria-hidden>
+      <div className="handover">
+        <div className="handover-chrome">
+          <span className="handover-mark">relay</span>
+          <Presence participants={PARTICIPANTS} driverId={DRIVER} selfId={SELF} />
+        </div>
+        <div className="handover-body">
+          <ControlBar
+            participants={PARTICIPANTS}
+            driverId={DRIVER}
+            selfId={SELF}
+            pendingRequests={PENDING}
+            onRequestControl={noop}
+            onCancelRequest={noop}
+            onHandOver={noop}
+            onRelease={noop}
+          />
+        </div>
       </div>
     </div>
   );
