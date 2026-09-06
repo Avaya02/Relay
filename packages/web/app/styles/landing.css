@@ -29,13 +29,20 @@
   padding: 1rem var(--gutter);
   border-bottom: 1px solid var(--border);
 }
+/* The wordmark carries the brand alone — no symbol beside it. A tile with an R
+   in it duplicated the first letter of a word already sitting next to it, and
+   added a second thing to look at where one confident one reads better.
+   The favicon keeps the tile, because a browser tab has no room for a word. */
 .landing-mark {
-  font-family: var(--font-display);
+  font-family: var(--font-wordmark);
   font-size: 1.0625rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  /* Mono ships wide by default; pulled in so five characters read as one word
+     rather than as spaced-out chrome. */
+  letter-spacing: -0.03em;
   color: var(--text);
 }
+
 .landing-nav-links {
   display: flex;
   align-items: center;
@@ -394,9 +401,9 @@
   min-width: 0;
 }
 .demo-mark {
-  font-family: var(--font-display);
+  font-family: var(--font-wordmark);
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text);
 }
 .demo-session,
@@ -881,7 +888,7 @@
   border-bottom: 1px solid var(--border);
 }
 .handover-mark {
-  font-family: var(--font-mono);
+  font-family: var(--font-wordmark);
   font-size: 0.75rem;
   letter-spacing: 0.01em;
   color: var(--text-dim);

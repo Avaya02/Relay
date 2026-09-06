@@ -1,5 +1,5 @@
 /* ==================================================================
-   PRIMITIVES — the four pieces the whole visual language rests on.
+   PRIMITIVES — the five pieces the whole visual language rests on.
    Everything in the landing page and the session chrome composes
    these rather than restating them.
 
@@ -37,6 +37,31 @@
     var(--border) 0 1px,
     transparent 1px 9px
   );
+}
+
+/* --- The mark ------------------------------------------------------
+   Inverted tile carrying the R. It rhymes with .btn-solid, so a nav
+   with the mark at one end and the button at the other reads as one
+   system rather than two unrelated elements sharing a row.
+
+   The tile is what carries the presence, which is why the glyph inside
+   can be the display face rather than a drawn letterform — and why the
+   favicon (app/icon.tsx) can reproduce it from the same two values.
+
+   Sized by --tile-size so the nav and the join screen can differ
+   without restating the rule. */
+.mark-tile {
+  display: grid;
+  place-items: center;
+  width: var(--tile-size, 1.5rem);
+  height: var(--tile-size, 1.5rem);
+  border-radius: var(--radius);
+  background: var(--text);
+  color: var(--bg);
+  font-family: var(--font-display);
+  font-size: calc(var(--tile-size, 1.5rem) * 0.667);
+  font-weight: 700;
+  line-height: 1;
 }
 
 /* --- Badge ---------------------------------------------------------

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { DM_Mono, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,6 +22,19 @@ const geistMono = Geist_Mono({
 // no extra download. It replaced Archivo, so the redesign is one font lighter.
 const geistDisplay = Geist({
   variable: "--font-display",
+  subsets: ["latin"],
+});
+
+// The wordmark, and nothing else. Geist is deliberately characterless — that is
+// what makes it a good UI face and a poor brand: set in it, "relay" reads as a
+// label rather than a name. A mono carries the CLI-first premise, and this one
+// has letterforms with enough personality to stand without a symbol beside it.
+//
+// One weight, one subset: it renders five characters on two surfaces, so
+// anything more is download nobody sees.
+const dmMono = DM_Mono({
+  variable: "--font-wordmark",
+  weight: "500",
   subsets: ["latin"],
 });
 
@@ -68,7 +81,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`dark ${geistSans.variable} ${geistMono.variable} ${geistDisplay.variable} h-full antialiased`}
+      className={`dark ${geistSans.variable} ${geistMono.variable} ${geistDisplay.variable} ${dmMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
