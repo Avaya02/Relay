@@ -1,0 +1,77 @@
+/* ==================================================================
+   PRIMITIVES — the four pieces the whole visual language rests on.
+   Everything in the landing page and the session chrome composes
+   these rather than restating them.
+
+   The look is an instrument faceplate: pure black ground, structure
+   carried by hairlines rather than fills or shadows, chrome set in
+   mono, corners effectively square. Depth comes from a lit border
+   edge, never from a drop shadow.
+   ================================================================== */
+
+/* --- The frame -----------------------------------------------------
+   Content sits inside visible vertical rails, with every section
+   separated by a full-width hairline. This is what reads as technical
+   drawing rather than web page. */
+.frame {
+  max-width: var(--measure, 75rem);
+  margin-inline: auto;
+  width: 100%;
+  border-inline: 1px solid var(--border);
+}
+.frame > section {
+  border-bottom: 1px solid var(--border);
+}
+.frame > section:last-child {
+  border-bottom: 0;
+}
+
+/* --- The hatch band ------------------------------------------------
+   Diagonal-striped divider. Pure CSS: no asset to load, no image to
+   go stale, and it scales to any width for free. */
+.hatch {
+  height: 3.5rem;
+  border-bottom: 1px solid var(--border);
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--border) 0 1px,
+    transparent 1px 9px
+  );
+}
+
+/* --- Badge ---------------------------------------------------------
+   Rectangular, mono, hairline-bordered. Colour is carried by the text
+   and border together — never a fill, which would compete with the
+   ledger for attention.
+
+   Every variant is measured against --surface: ok 7.30:1, error
+   5.31:1, live 9.84:1, neutral 7.43:1. There is no warn variant —
+   the reference has no pending colour, so pending reads neutral. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.1875rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: none;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--text-dim);
+}
+.badge--ok {
+  color: var(--state-ok);
+  border-color: color-mix(in oklch, var(--state-ok) 35%, transparent);
+}
+.badge--error {
+  color: var(--state-error);
+  border-color: color-mix(in oklch, var(--state-error) 35%, transparent);
+}
+.badge--live {
+  color: var(--accent);
+  border-color: color-mix(in oklch, var(--accent) 35%, transparent);
+}
+

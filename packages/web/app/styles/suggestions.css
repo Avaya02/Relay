@@ -1,0 +1,147 @@
+/* ---------------------------------------------------------------------------
+   SUGGESTIONS — the watcher's verb.
+
+   Set below the ledger and above the control bar, in the same register as the
+   composer: this is about what runs next, which is the composer's question
+   too. Accent is used on exactly one thing here — the driver's Send button —
+   because promoting a suggestion is an action that happens *now*. The rows
+   themselves stay in --text-dim, like the ledger: they are pending, not live.
+--------------------------------------------------------------------------- */
+
+.sugg-queue {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0.5rem 0.875rem 0.625rem;
+  max-height: 9rem;
+  overflow-y: auto;
+  flex: none;
+}
+
+.sugg-queue-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 0.375rem;
+}
+.sugg-queue-title { color: var(--text-dim); }
+.sugg-queue-hint { margin-left: auto; text-transform: none; letter-spacing: 0; }
+
+.sugg-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sugg-item {
+  display: grid;
+  grid-template-columns: minmax(3.5rem, auto) 1fr auto;
+  align-items: baseline;
+  gap: 0.625rem;
+  padding: 0.3125rem 0;
+  font-size: 0.8125rem;
+  border-top: 1px solid var(--border);
+}
+.sugg-item:first-child { border-top: 0; }
+
+.sugg-author {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sugg-text {
+  color: var(--text-dim);
+  overflow-wrap: anywhere;
+}
+.sugg-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.sugg-send {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 3px;
+  padding: 0.125rem 0.4375rem;
+  cursor: pointer;
+}
+.sugg-send:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+
+.sugg-drop {
+  font-size: 0.875rem;
+  line-height: 1;
+  color: var(--text-faint);
+  background: transparent;
+  border: 0;
+  padding: 0.125rem 0.25rem;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.sugg-drop:hover { color: var(--state-error); }
+
+.sugg-send:focus-visible,
+.sugg-drop:focus-visible,
+.sugg-input:focus-visible,
+.sugg-submit:focus-visible {
+  outline: 1px solid var(--border-lit);
+  outline-offset: 1px;
+}
+
+/* The watcher's composer. Same footprint as the real one so the layout does
+   not shift when the wheel changes hands mid-run. */
+.sugg-box {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+  flex: none;
+}
+
+.sugg-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.4375rem 0.625rem;
+  color: var(--text);
+  font-size: 0.8125rem;
+  font-family: inherit;
+}
+.sugg-input::placeholder { color: var(--text-faint); }
+.sugg-input:focus { outline: none; border-color: var(--border-lit); }
+
+.sugg-submit {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.4375rem 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sugg-submit:hover:not(:disabled) { color: var(--text); border-color: var(--border-lit); }
+.sugg-submit:disabled { opacity: 0.5; cursor: default; }
+
+@media (max-width: 640px) {
+  .sugg-item { grid-template-columns: 1fr auto; }
+  .sugg-author { grid-column: 1 / -1; }
+}
