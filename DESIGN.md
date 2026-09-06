@@ -12,14 +12,20 @@ migration — the same lighting condition as the terminal and editor already ope
 their screens. A light theme would be the odd window out. `dark` sits permanently on
 `<html>`; there is exactly one theme, which is honest rather than a workaround.
 
-The ground is **pure black**, with two barely-raised steps for layering. Depth comes
-from hairline rules and a lit border edge — never from shadows or glow. The earlier
-palette used a cool graphite base to avoid the near-black + acid-accent AI default; the
-answer to that risk turned out to be *restraint with the accent*, not a compromised
-black. Structure carries the design now, so the ground can commit.
+The ground is `#0A0A0A`, with two barely-raised steps for layering. Depth comes from
+hairline rules and a lit border edge — never from shadows or glow.
 
-Text is near-white (`#F4F5F7`) rather than `#FFF`: pure white on pure black halates on
-OLED and makes a long transcript tiring to read.
+It was pure black for one iteration, on the belief that the visual reference committed to
+black. Measuring that reference found `rgb(10,10,10)`, and the ramp moved to match. The
+history is worth keeping because it is the same mistake twice: the first palette was a
+cool graphite hedging against the near-black + acid-accent AI default, the second
+over-corrected to `#000000` from a screenshot. Both were guesses at a value that could
+have been read directly.
+
+Text is `#FAFAFA` rather than `#FFF`: pure white on a near-black ground halates on OLED
+and makes a long transcript tiring to read. The whole neutral ramp is achromatic — the
+blue cast the earlier values carried was inherited from the graphite era and had no
+reason to survive it.
 
 ## Color
 
@@ -29,47 +35,73 @@ Tokens as implemented, with measured contrast against their usual backgrounds.
 
 | Token | Value | Role |
 |---|---|---|
-| `--bg` | `#000000` | Page base |
-| `--surface` | `#0A0B0D` | Stream pane, header, rails |
-| `--surface-2` | `#131519` | Raised: composer, control bar, code blocks |
-| `--border` | `#1E2024` | Hairline separators — 1px, low contrast, never decorative |
-| `--border-lit` | `#2C2F35` | Frame edges and focus. The only "elevation" in the system |
+| `--bg` | `#0A0A0A` | Page base |
+| `--surface` | `#121212` | Stream pane, header, rails |
+| `--surface-2` | `#1A1A1A` | Raised: composer, control bar, code blocks |
+| `--border` | `rgba(250,250,250,0.12)` | Hairline separators — 1px, never decorative |
+| `--border-lit` | `rgba(250,250,250,0.20)` | Frame edges and focus. The only "elevation" in the system |
+
+The two border tokens are **alpha, not flat hex**. A hairline over a raised panel then
+resolves brighter than the same rule over the ground (`#262626` / `#2D2D2D` / `#343434`
+across the three surfaces), so structure stays legible as surfaces stack.
 
 ### Text
 
 | Token | Value | On `--surface` | On `--surface-2` |
 |---|---|---|---|
-| `--text` | `#F4F5F7` | 18.05:1 | 16.75:1 |
-| `--text-dim` | `#8C9098` | 6.15:1 | 5.71:1 |
-| `--text-faint` | `#7B8088` | 4.96:1 | 4.60:1 |
+| `--text` | `#FAFAFA` | 17.95:1 | 16.67:1 |
+| `--text-dim` | `#A3A3A3` | 7.43:1 | 6.90:1 |
+| `--text-faint` | `#8A8A8A` | 5.43:1 | 5.04:1 |
 
 All three clear WCAG AA for normal text (4.5:1) at every pairing used in the app,
 including the ledger's 12px mono rows.
 
-`--text-faint` is the one that had to be solved for rather than chosen. The intuitive
-value (`#70747C`) measured **3.90:1 on `--surface-2`** — under the floor. It was
-lightened until the *worst* of the three grounds cleared it, not the best.
+`--text-faint` is the one that has to be solved for rather than chosen, and it has now
+failed twice. `#70747C` measured 3.90:1 on `--surface-2`; `#7B8088` then measured
+**4.38:1** once the ground moved to `#1A1A1A`. The visual reference's own tertiary
+(`#7C7C7C`) fails too — 4.49:1 on `--surface`, 4.17:1 on `--surface-2` — and survives
+there only because that page uses it on the page ground alone, where Relay puts it on
+raised panels. Solved against the *worst* ground: `#828282` is the bare 4.5:1 minimum and
+`#8A8A8A` is that plus headroom.
 
 The same trap caught the recessed plan rows: `color-mix(… --text-dim 85%, --bg)`
-measured 4.9:1 against the old graphite and **4.38:1** once `--bg` became pure black,
-because mixing toward a darker ground darkens the result. Re-solved to 90%. Any token
-change to a background needs every `color-mix` that references it re-measured.
+measured 4.9:1 against the old graphite and **4.38:1** once `--bg` darkened, because
+mixing toward a darker ground darkens the result. Re-solved to 90%. Any token change to a
+background needs every `color-mix` that references it re-measured.
+
+**Measure with alpha compositing, or the number lies.** `getImageData` returns
+*unpremultiplied* RGB, so reading a semi-transparent fill straight off canvas hands back
+the colour as though it were opaque. A tinted row measured that way reported **1.01:1**
+and looked like a failure; composited against its real layer stack it was comfortably
+over the floor. Walk the ancestor chain to the first opaque background and paint the
+layers in order.
 
 ### Signal
 
 | Token | Value | Role |
 |---|---|---|
-| `--accent` | `#4DD0C7` | **Reserved for live / active / you-are-driving.** Signal cyan, 10.47:1 on `--surface`. Never decorative. |
-| `--state-ok` | `#5FD68A` | Completed. Outcome, not liveness — a finished run is green, a running one is cyan. |
-| `--state-warn` | `#E0B155` | Pending / queued. |
-| `--state-error` | `#E0715A` | Restrained amber-red. Failure states, disconnection. Deliberately *not* alarm-red — a failed tool call is a normal part of agent work, not an emergency. |
+| `--accent` | `#E2B64B` | **Reserved for live / active / you-are-driving.** Amber, 9.84:1 on `--surface`. Never decorative, and never in chrome. |
+| `--state-ok` | `#37B773` | Completed. Outcome, not liveness — a finished run is green, a running one is amber. |
+| `--state-error` | `#DE6060` | Failure states, disconnection. |
 
-**On accent discipline.** Moving to a black ground made the accent roughly twice as loud
-for the same value, and three places that had quietly become decorative had to give it
-up: the demo's Send button (a control, always present), the lock section's definition
-terms (headings), and any filled-cyan button. Cyan now appears only on: the live badge
-dot, the driving indicator, a hand-over, and the hero's one emphasized word. If it's on
-screen and it isn't happening *now*, it shouldn't be cyan.
+There is **no `--state-warn`**: the visual reference has no pending colour, so pending
+reads neutral. All three values are sampled from that reference's own product imagery by
+canvas readback rather than interpreted. Its red (`#C24F4F`) measures **3.75:1** on
+`--surface-2` and fails AA as text — it works there only by sitting on a tinted badge
+fill — so it is lifted along its own hue until the worst ground clears the floor.
+
+Amber is mid-luminance, unlike the cyan it replaced. Any filled-accent surface needs
+`--bg` text (5.90:1), never `--text`, which measures 3.22:1 and fails.
+
+**On accent discipline.** The rule has only ever tightened. Places that had quietly gone
+decorative and had to give the accent up, in order: the demo's Send button (a control,
+always present), the lock section's definition terms (headings), any filled-accent button,
+the hero's one emphasized word, and finally the hero eyebrow — which is chrome, so it is
+now grey and signals liveness by pulsing instead of by hue.
+
+The accent appears only on: the session status badge, the driving indicator, a hand-over,
+and a pending control request. If it is on screen and it isn't happening *now*, it isn't
+accent-coloured — and if it is chrome, it isn't coloured at all.
 
 ### Presence
 
@@ -81,27 +113,56 @@ ambient information, not an alert.
 
 ### Color strategy
 
-**Restrained.** Tinted neutrals carry the surface; accent appears on well under 10% of
-pixels. The ledger is almost entirely `--text-dim` and `--text`, with color used only
-where it carries meaning: accent for liveness, error for failure, presence hues for
-identity, and diff green/red inside expanded diffs.
+**Two layers, and the split is the whole rule.**
+
+| Layer | Colour |
+|---|---|
+| Chrome — nav, hero, headings, buttons, sections, footer | **Achromatic.** No accent at all. |
+| Product — ledger, status badges, demo panel, control bar | Status palette, above |
+
+This is what the visual reference actually does, which is not what it looks like it does.
+Its chrome measures **4 chromatic fills out of 156**, and its one colour token renders on
+three 20×20px squares; the colour a visitor sees comes from the status badges inside its
+product screenshots. So: monochrome chrome wrapped around product imagery that carries a
+normal status palette — Relay's own shape exactly, with a live ledger where the reference
+has a PNG.
+
+Measured result on the landing page: **one chromatic element on the entire page**, the
+driver's name inside the session panel.
+
+A control is never accent-filled. `--primary` maps to `--text`, not `--accent` — it was
+mapped to the accent for a long time, which quietly gave every shadcn `<Button>` an accent
+fill in violation of this rule. Cyan merely looked like a bright CTA; amber and coral both
+read as status, which is what finally exposed it.
 
 ## Typography
 
-Paired on a genuine contrast axis, not two similar sans faces.
+Two families. The contrast axis is **sans against mono**, not sans against sans.
 
 | Role | Family | Usage |
 |---|---|---|
-| Display | **Archivo** (`--font-display`) | Landing hero, section titles, the `relay` wordmark. Big and rare. Never body, buttons, labels, or data. |
-| Body / UI | **Geist Sans** (`--font-geist-sans`) | All prose, controls, labels. Quiet by design — the personality lives elsewhere. |
-| Mono | **JetBrains Mono** (`--font-mono`) | **Load-bearing.** All agent tool output, the action ledger, timestamps, session ids, diffs. The agent's actions should read like a terminal, because that is the subject's native material. Ligatures are **disabled** in the ledger — `=>` must render as `=>`, not `⇒`, because that surface is a record of what the code actually contains. |
+| Display | **Geist** (`--font-display`) | Landing hero, section titles, the `relay` wordmark. Big and rare. Never body, buttons, labels, or data. |
+| Body / UI | **Geist** (`--font-geist-sans`) | All prose, controls, labels. Quiet by design — the personality lives elsewhere. |
+| Mono | **Geist Mono** (`--font-mono`) | **Load-bearing.** All agent tool output, the action ledger, timestamps, session ids, diffs. The agent's actions should read like a terminal, because that is the subject's native material. |
 
-**On the display face.** `RELAY_BUILD_SPEC.md` §7 asks for "a characterful grotesque with
-personality" and names Space Grotesk as an *example*. Archivo satisfies that direction from a
-different starting point: it descends from grotesques cut for print signage and wayfinding,
-which is the right physical reference for an instrument — a cockpit placard, not a startup
-wordmark. Space Grotesk is also among the most over-reached-for display faces in generated
-design work; avoiding it is the point, not a deviation from the spec.
+**Display and body are the same family, deliberately.** An earlier system paired Archivo
+against Geist on the argument that a display face needs a genuine contrast axis. The
+visual reference does not do that — it sets every heading in the same sans as its body
+copy and gets its separation from mono instead. Matching it removed a font rather than
+adding one, so the page is lighter than before. `--font-display` stays a distinct token
+even though it currently aliases Geist: the indirection is what lets the display face
+change later without touching every call site.
+
+**Weight is not how emphasis is made here.** Headings are `400`. Presence comes from size
+and −0.05em tracking; setting them at 600 was the single largest tell that this was a
+different system from the one it was matching.
+
+**On ligatures.** The ledger disables them, because `=>` must render as `=>` — that
+surface is a record of what the code actually contains, and a diff showing characters the
+file does not have is editorializing. Geist Mono forms none of these to begin with
+(`=>`, `!=`, `->`, `===` all measure identical advance widths with and without
+suppression), so the rule is currently a no-op. It is kept anyway: the guarantee belongs
+to the surface, not to whichever mono face happens to be mounted on it.
 
 The mono face is the one that matters. It is not a stylistic choice — it is what makes
 the ledger legible as a machine record rather than as prose.
@@ -316,9 +377,16 @@ The replay is an enhancement over a complete default — the full transcript ren
 paint and under `prefers-reduced-motion: reduce`, so nothing depends on JS or motion to be
 visible.
 
-**Composition.** One shared measure (`--measure: 84rem`) and gutter, so the nav mark, hero
-headline, every section title, and the footer sit on the same left edge. The hero is
-deliberately asymmetric (5fr copy / 7fr session) because the session carries the argument.
+**Composition.** One shared measure (`--measure: 75rem`, 1200px) and a 2rem gutter, so the
+nav mark, hero headline, every section title, and the footer sit on the same left edge. The
+hero splits 1:1 — copy and session carry equal weight. Sections are a flat 4rem block.
+
+**Texture.** A 1-bit dithered ridgeline band frames the session panel, bleeding past it on
+three sides so the panel sits over it. It is generated by `scripts/generate-dither.py`
+(ordered Bayer screen, 1600×460, under 4KB), not photographed and not bought: the
+reference's weight comes from a photograph put through a halftone screen, and a repeating
+CSS gradient cannot produce tonal range or a subject because it has no image in it. Stock
+landscape would have imported someone else's brand along with it.
 Color strategy stays Restrained, but the accent carries considerably more here than in the
 app — "live" is the entire pitch.
 
@@ -397,6 +465,13 @@ ring is perceptually invisible against an accent-filled button.
 
 ## Radius & spacing
 
-`--radius` `0.625rem`, with a `sm`/`md`/`lg`/`xl` scale derived from it. Ledger rows
-are square — radius is for containers (cards, inputs, buttons, code blocks), not for
-records.
+`--radius` is `0`, with a `sm`/`md`/`lg`/`xl` scale derived from it. Everything is
+square: cards, inputs, buttons, code blocks and ledger rows alike.
+
+This went `0.625rem` → `0.125rem` → `0`. The 10px radius was the strongest "generic web
+app" signal in the original system; 2px was a guess at the reference; `0` is what the
+reference actually measures on every structural card, panel, badge and button. The only
+curves left are circles — presence dots and avatars.
+
+Measure is `75rem` (1200px) with a 2rem gutter, and sections are a flat 4rem block —
+all three measured rather than chosen.
