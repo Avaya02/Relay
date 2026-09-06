@@ -48,6 +48,7 @@ rather than wedging the session.
 |---|---|
 | `--repo <path>` | Repository to work in (default: current directory) |
 | `--api-key <key>` | Bill runs to this key instead of your Claude Code login |
+| `--model <id>` | Model to run (default: `claude-sonnet-5`) |
 | `--mock` | Scripted offline agent — see below |
 | `--session <id>` | Reattach to an existing session (needs `--token`) |
 | `--token <tok>` | Runner token for `--session` |
@@ -92,7 +93,12 @@ relayrun --session 8M2zrrx9Ng --token <runner-token>
 
 - Node.js >= 20.9.0
 - `git`, and a repository to run in
-- A Claude Code login or an Anthropic API key (unless using `--mock`)
+- **A Claude Code login or an Anthropic API key** (unless using `--mock`)
+
+A claude.ai browser session or the Claude Desktop app will *not* work — those
+are separate logins from Claude Code. If no credential is found, `relayrun`
+says so and exits before opening a session, rather than failing later in front
+of whoever you invited.
 
 ## License
 

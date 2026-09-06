@@ -29,12 +29,13 @@ export type RunOptions = {
    * does not work.
    */
   apiKeyHelper?: string;
+  /** Resolved by the CLI, which owns the default and the `--model` flag. */
+  model: string;
 };
 
 export async function runRealAgent(opts: RunOptions): Promise<void> {
-  const { emit, instruction, workingDir, signal, resume, apiKeyHelper } = opts;
+  const { emit, instruction, workingDir, signal, resume, apiKeyHelper, model } = opts;
   const pending = new Map<string, PendingTool>();
-  const model = process.env.RELAY_MODEL ?? "claude-haiku-4-5";
 
   // The SDK wants an AbortController, but ownership of stopping a run belongs
   // to the runner, which already holds one. Bridge the two.

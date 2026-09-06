@@ -2,6 +2,7 @@
 import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
+import { findClaudeLogin, hasClaudeCli, noLoginGuidance } from "./login.js";
 import { createRepo } from "./repo.js";
 import { startRunner } from "./runner.js";
 import {
@@ -24,6 +25,7 @@ const run = promisify(execFile);
  */
 const DEFAULT_SERVER = process.env.RELAY_SERVER ?? "https://relay-production-c9bd.up.railway.app";
 const DEFAULT_WEB = process.env.RELAY_WEB ?? "https://relay-web-green.vercel.app";
+const DEFAULT_MODEL = process.env.RELAY_MODEL ?? "claude-sonnet-5";
 
 const USAGE = `relayrun — run a Relay session against a repository on this machine
 
@@ -36,6 +38,7 @@ const USAGE = `relayrun — run a Relay session against a repository on this mac
                          Costs nothing, but ignores what you type and replays
                          a fixed script. For UI work, not for real answers.
   --api-key <key>        Bill runs to this key instead of your Claude Code login
+  --model <id>           Model to run (default: ${DEFAULT_MODEL})
   --session <id>         Reattach to an existing session (requires --token)
   --token <token>        Runner token for --session
   --github-repo <o/n>    Open a PR here on publish
@@ -148,6 +151,14 @@ async function resolveCredentials(args: Args): Promise<Credentials> {
   if (!key) {
     // No explicit key: the SDK uses whatever this machine is already logged in
     // with, exactly as Claude Code does.
+    //
+    // Checked now rather than left to fail on the first instruction. By then a
+    // link has been printed and shared, so the failure lands in front of
+    // whoever was invited — and reads as "this tool is broken" rather than
+    // "you need to log in".
+    if ((await findClaudeLogin()) === "missing") {
+      throw new Error(noLoginGuidance(await hasClaudeCli()));
+    }
     return { mode: "real", keySource: "oauth", keyHint: null };
   }
 
@@ -207,6 +218,7 @@ async function main(): Promise<void> {
   console.log(`\n  repo     ${path.basename(sourcePath)}  (${sourcePath})`);
   console.log(`  agent    ${billing}`);
   console.log(`  session  ${id}`);
+  console.log(`  shared   transcript only — code, keys and files stay on this machine`);
   console.log(`\n  Share this link:\n    ${new URL(`/session/${id}`, webUrl)}\n`);
   if (!existing) {
     console.log(`  To reattach after a restart:\n    relayrun --session ${id} --token ${runnerToken}\n`);
@@ -221,6 +233,7 @@ async function main(): Promise<void> {
     keySource: credentials.keySource,
     keyHint: credentials.keyHint,
     apiKeyHelper: credentials.apiKeyHelper,
+    model: str(args, "model") ?? DEFAULT_MODEL,
   });
 }
 

@@ -108,6 +108,7 @@ export default function Home() {
               <CommandBlock command="npx relayrun" />
               <span className="hero-cta-note">
                 Runs in your repo, on your machine. Prints a link to share.
+                Needs a Claude Code login or an Anthropic API key.
               </span>
             </div>
 

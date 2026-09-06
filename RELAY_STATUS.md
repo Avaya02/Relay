@@ -106,7 +106,7 @@ set `RELAY_AGENT=real`. Two env knobs:
 
 ```sh
 RELAY_AGENT=real      # opt in to the real Agent SDK (default: mock)
-RELAY_MODEL=...       # default: claude-haiku-4-5
+RELAY_MODEL=...       # default: claude-sonnet-5
 RELAY_SOURCE_REPO=... # default: /Applications/Projects/PromptGuard
 ```
 
