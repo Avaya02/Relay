@@ -32,9 +32,11 @@ const geistDisplay = Geist({
 //
 // One weight, one subset: it renders five characters on two surfaces, so
 // anything more is download nobody sees.
+// 400, not 500: reversed type looks heavier than it measures, so the weight
+// that reads as light on a white page reads as chunky on this one.
 const dmMono = DM_Mono({
   variable: "--font-wordmark",
-  weight: "500",
+  weight: "400",
   subsets: ["latin"],
 });
 

@@ -35,11 +35,16 @@
    The favicon keeps the tile, because a browser tab has no room for a word. */
 .landing-mark {
   font-family: var(--font-wordmark);
-  font-size: 1.0625rem;
-  font-weight: 500;
-  /* Mono ships wide by default; pulled in so five characters read as one word
-     rather than as spaced-out chrome. */
-  letter-spacing: -0.03em;
+  /* Roughly double the nav links. A wordmark set at body size reads as one more
+     label in the bar; the size is most of what makes it read as a mark at all,
+     and this is the only place on the page allowed to be the largest thing in
+     its row. */
+  font-size: 1.5rem;
+  font-weight: 400;
+  /* Open, not tightened. Mono's even rhythm is the whole reason to set a
+     wordmark in one — compressing it back to sans spacing throws away the
+     characteristic that made the face worth choosing. */
+  letter-spacing: 0.01em;
   color: var(--text);
 }
 
@@ -403,7 +408,7 @@
 .demo-mark {
   font-family: var(--font-wordmark);
   font-size: 0.8125rem;
-  font-weight: 500;
+  font-weight: 400;
   color: var(--text);
 }
 .demo-session,
