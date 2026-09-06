@@ -117,7 +117,7 @@ answer to a question you never asked.
 | `--session <id>` + `--token` | — | Reattach to a session after restarting |
 | `--github-repo` / `--github-token` | — | Open a PR on publish |
 
-`RELAY_MODEL` (default `claude-haiku-4-5`) selects the model.
+`--model` (or `RELAY_MODEL`) selects the model; the default is `claude-sonnet-5`.
 
 ### The server
 

@@ -19,6 +19,7 @@ export type RunnerOptions = {
   keyHint: string | null;
   /** Set only when the operator supplied a key explicitly. */
   apiKeyHelper?: string;
+  model: string;
 };
 
 const RECONNECT_BASE_MS = 1_000;
@@ -72,6 +73,7 @@ export function startRunner(opts: RunnerOptions): void {
           signal: abort.signal,
           resume,
           apiKeyHelper: opts.apiKeyHelper,
+          model: opts.model,
         });
       }
     } catch (err) {
