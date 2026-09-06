@@ -115,9 +115,8 @@ export default function Home() {
               <em>Together.</em>
             </h1>
             <p className="hero-sub">
-              Everyone with the link watches the same coding session, live, in
-              the same moment. One person drives — and can hand over the wheel
-              mid-task.
+              Everyone on the link watches the same session as it runs. One
+              person drives at a time, and control passes mid-task.
             </p>
 
             <div className="hero-cta" id="start">

@@ -147,7 +147,12 @@
   padding: clamp(2.5rem, 6vw, 4rem) clamp(1.5rem, 3vw, 2.5rem)
     clamp(2.5rem, 6vw, 4rem) var(--gutter);
 }
+/* Hugs its text. `.badge` is inline-flex, but the copy column is a flex column
+   whose default `align-items: stretch` blew this out to the full measure — a
+   763px rule with four words at one end of it. Every other child of the column
+   is block-level and wants that width; this one does not. */
 .hero-eyebrow {
+  align-self: flex-start;
   margin-bottom: 1.5rem;
 }
 /* The dot is the live signal itself, so it keeps the status dot's pulse and
@@ -471,10 +476,14 @@
   color: var(--text);
   font-weight: 500;
 }
+/* White, not the accent — the same fill as Send, which it swaps places with.
+   In the accent it read as a status light rather than as a control, and it
+   left the accent doing two jobs in one panel. The accent now marks exactly
+   one thing here: the live status. */
 .demo-bar-action {
   font-size: 0.75rem;
   color: var(--bg);
-  background: var(--accent);
+  background: var(--text);
   border-radius: var(--radius);
   padding: 0.3125rem 0.6875rem;
   white-space: nowrap;
