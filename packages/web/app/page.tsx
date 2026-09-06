@@ -90,6 +90,11 @@ export default function Home() {
           </a>
         </header>
 
+        {/* The reference sets this band directly under its nav, before any
+            content — it reads as the top edge of an instrument rather than as
+            a divider between two things. */}
+        <div className="hatch" aria-hidden />
+
         {/* Fold 1 — the claim, and the thing itself. */}
         <section className="hero">
           <div className="hero-copy">
@@ -150,8 +155,7 @@ export default function Home() {
           <div className="hero-demo">
             <DemoLedger />
             <p className="hero-demo-note">
-              A recording of a real session — 13 tool calls against a live
-              repository.
+              Recording of a real session — 13 tool calls, live repository.
             </p>
           </div>
         </section>

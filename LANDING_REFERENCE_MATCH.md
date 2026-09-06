@@ -446,17 +446,28 @@ Geist Mono `14px / 400 / -0.04em`, `--text-dim`, `1px` top border. Currently `0.
 
 ### 4.9 Texture — the reversed decision
 
-The user has overturned "leave the dithered photography." Three routes, in order of fidelity:
+The user has overturned "leave the dithered photography." **Resolved: real photography, ungraded
+into a screen.** The user supplied `packages/web/assets/hero-background.png` (a black-and-white
+alpine photograph, 1536×1024); `scripts/prepare-hero-image.py` grades and crops it into
+`public/hero-ridge.webp` and `public/band-ridge.webp`.
 
-1. **Real dithered photography.** Highest fidelity, and the only one that actually matches.
-   Requires source images Relay does not have and I will not invent — see §9 Q1. If images are
-   supplied, the treatment is: greyscale, Floyd–Steinberg or ordered-Bayer dither, used as a
-   large low-contrast field behind section headers, never behind running text.
-2. **CSS-native Bayer dither.** A 4×4 or 8×8 ordered-dither matrix as a repeating
-   `conic-gradient` / `background-image`, applied over a subtle luminance ramp. Reproduces the
-   *texture* without the photography. No assets, no licensing, no weight. This is my
-   recommendation if no images are supplied.
-3. **Keep `.texture-dots`.** Already shipped. Lowest fidelity to the reference.
+Four routes were built before this one landed, and each looked defensible on paper:
+
+- **CSS-native Bayer dither.** Shipped first. A gradient has no image in it, so it produced
+  texture with no subject — read as a screen defect, not as photography.
+- **Procedural terrain.** The generator originally synthesised fractal ridge noise to dodge the
+  licensing question. Credible silhouette, still read as a pattern: there is no incidental
+  detail in noise. The version the user called "not looking good enough."
+- **1-bit ordered dither of the real photograph.** Closer, but dots at 2px read as dots.
+- **The same, plus a Gaussian blur** to stop the pine detail resolving as speckle. Blurring a
+  photograph to fix an artefact of throwing away its tone is a fix on top of a mistake.
+
+The mistake underneath all four: the reference is **not** 1-bit. It holds continuous grey tone.
+See DESIGN.md § Texture for the shipped technique and why the black point is graded onto `--bg`.
+
+Scope note: the reference repeats this treatment on **every** product panel down its page, not
+just the hero, and the hero-only version left the lower half reading as a plainer site. The
+lock and trust panels now carry the same band, from a second wide crop.
 
 Whichever is chosen, it is a `--border`-level contrast field. It must never sit behind body
 copy, and it must not appear in the session UI.
@@ -691,7 +702,7 @@ committed unless you ask.
 | 3 | Landing type scale: weights to 400, tracking to −0.05em, sizes to the measured scale | C | revert `styles/landing.css` |
 | 4 | Landing layout: hero 1:1, 75rem measure, 32px gutter, 64px section padding | C | revert `styles/landing.css` |
 | 5 | Page rhythm: `HandoverPanel` + `TopologyDiagram` (§4.10) | C | delete both files, revert `page.tsx` |
-| 6 | Texture decision (§4.9 / §9 Q1) | C | revert `styles/primitives.css` |
+| 6 | Texture (§4.9): grade the supplied photograph, hero right half + section bands, panels inset over it | C | revert `styles/landing.css`, delete `public/*-ridge.webp` |
 | 7 | Session UI: de-chrome status, glyph-carried failure, ledger ligature check | D | revert `styles/{ledger,chrome,rails,agent}.css` |
 | 8 | `opengraph-image.tsx`, `DESIGN.md`, surface brief, screenshots | E, F | revert individually |
 
@@ -711,13 +722,13 @@ product is a screen and is already on the page live. Confirm that, or say you wa
 screenshot parity — in which case the plan needs a screenshot-capture step and a policy for
 keeping ~7 PNGs current, since the repo has no capture tooling today.
 
-**Q1 — Texture assets (blocks Phase 6).** Matching the reference's dithered photography needs
-source images. Relay has none, and I will not invent or source them unilaterally. Either
-supply images (and confirm licensing), or approve the CSS-native Bayer dither in §4.9 option 2.
-I recommend option 2: no assets, no licensing, and it reads as the same instrument-print
-family as the existing hatch. Note the reference bakes photo and product panel into one flat
-PNG per section; Relay cannot do that with live panels, so the photography would sit *behind*
-the panels as a separate field rather than composited with them.
+**Q1 — Texture assets (blocks Phase 6). CLOSED.** The user supplied
+`packages/web/assets/hero-background.png`, so route 1 in §4.9 is live and the licensing
+question is theirs to have already answered. The note below still holds and shaped the
+layout: the reference bakes photo and product panel into one flat PNG per section, which
+Relay cannot do with a live panel. The photograph therefore sits *behind* the panel as a
+separate field, and the composition is carried by the panel's asymmetric inset — pushed down
+and right until the ridge line reads past its top-left corner — rather than by compositing.
 
 **Q2 — Ledger ligatures (blocks Phase 7).** `DESIGN.md` treats "`=>` renders as `=>`" as
 load-bearing. Geist Mono's ligature set differs from JetBrains Mono's. If
