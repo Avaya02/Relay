@@ -30,7 +30,7 @@
 .chrome-wordmark {
   font-family: var(--font-wordmark);
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 400;
   color: var(--text);
   letter-spacing: -0.01em;
 }
@@ -580,9 +580,9 @@
 .join-wordmark {
   font-family: var(--font-wordmark);
   font-size: 1.375rem;
-  font-weight: 500;
+  font-weight: 400;
+  letter-spacing: 0.01em;
   color: var(--text);
-  letter-spacing: -0.02em;
 }
 .join-tag {
   font-family: var(--font-mono);
