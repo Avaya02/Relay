@@ -34,8 +34,15 @@ from PIL import Image  # the only non-stdlib dependency in the repo's scripts
 OUTPUTS = [
     # The hero's right column at its widest: 599x710 CSS px inside a 75rem frame.
     ("packages/web/public/hero-ridge.webp", 1200, 1420, 0.11),
-    # The band above the lock and trust panels: full measure, and short.
+    # The band above the lock panel: full measure, and short.
     ("packages/web/public/band-ridge.webp", 2400, 720, 0.10),
+    # The band above the trust panel. Same file, same box as band-ridge, but a
+    # much later top crop: 0.10 and 0.11 land on nearly the same frame, so a
+    # small nudge here would have shipped the same cloud twice. At 0.55 the
+    # cloud recedes to a top-right accent and the ridge/mountain-haze in the
+    # lower half of the source photo carries the frame instead — one real
+    # photograph, a genuinely different moment in it, not a repeat.
+    ("packages/web/public/trust-ridge.webp", 2400, 720, 0.55),
 ]
 
 # The page ground, from tokens.css --bg. The photograph's black is mapped onto

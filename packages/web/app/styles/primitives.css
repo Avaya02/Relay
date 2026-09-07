@@ -166,3 +166,69 @@
   border-color: color-mix(in oklch, var(--accent) 35%, transparent);
 }
 
+/* --- Buttons -------------------------------------------------------
+   One primary button shape, shared by the landing page and the app's
+   composer. Square, mono, white-filled: the reference's most literal
+   move, and the one place the two registers should look identical. */
+.btn-solid {
+  height: 2.25rem;
+  padding-inline: 1rem;
+  border-radius: var(--radius);
+  background: var(--text);
+  color: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  transition: background-color 140ms ease-out;
+}
+.btn-solid:hover:not(:disabled) {
+  background: #ffffff;
+}
+.btn-lg {
+  height: 2.75rem;
+  padding-inline: 1.5rem;
+  font-size: 0.8125rem;
+}
+
+/* The secondary shape. Outlined rather than filled, so it can sit beside a
+   solid button without the two competing — same rule that made Stop quieter
+   than Send in the composer. */
+.btn-quiet {
+  height: 2.25rem;
+  padding-inline: 1rem;
+  border: 1px solid var(--border-lit);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  transition:
+    border-color 140ms ease-out,
+    color 140ms ease-out;
+}
+.btn-quiet:hover:not(:disabled) {
+  border-color: var(--text-dim);
+}
+.btn-quiet:disabled {
+  color: var(--text-faint);
+  border-color: var(--border);
+  cursor: not-allowed;
+}
+
+/* Visually hidden, still announced. For live-region text that would be
+   redundant on screen. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+

@@ -362,6 +362,132 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Fold 6 — objections, answered before the CTA that follows rather
+            than after it. Ordered by how much each would stop someone from
+            actually running the command; the file-boundary question leads,
+            because it's the one "Your code stays on your machine" invites and
+            doesn't fully answer on its own. Native <details name="faq">
+            groups: an exclusive accordion with no JS, the same reasoning
+            ControlBar's hand-over menu uses a native <select> for. */}
+        <section className="faq" id="faq">
+          <div className="faq-inner faq-grid">
+            <div className="faq-head">
+              <span className="faq-eyebrow">Questions</span>
+              <h2 className="section-title">Before you run it</h2>
+              <p className="faq-lede">
+                The things worth knowing before you paste this into a
+                terminal.
+              </p>
+            </div>
+
+            <div className="faq-list">
+              <details className="faq-item" name="faq" open>
+                <summary className="faq-q">
+                  <span className="step-n">01</span>
+                  <span className="faq-q-text">
+                    Does my code go to Anthropic?
+                  </span>
+                  <span className="faq-icon" aria-hidden>
+                    +
+                  </span>
+                </summary>
+                <p className="faq-a">
+                  Yes. The agent is the Claude Agent SDK, so file contents
+                  reach the Anthropic API exactly as they do in Claude Code.
+                  The repository itself doesn&apos;t — Relay&apos;s server
+                  only ever sees the event stream.
+                </p>
+              </details>
+
+              <details className="faq-item" name="faq">
+                <summary className="faq-q">
+                  <span className="step-n">02</span>
+                  <span className="faq-q-text">
+                    What can the agent do to my repo?
+                  </span>
+                  <span className="faq-icon" aria-hidden>
+                    +
+                  </span>
+                </summary>
+                <p className="faq-a">
+                  Full shell access, with your own permissions, inside a
+                  disposable clone that&apos;s discarded when the room empties.
+                  Nothing touches your real checkout until you publish, which
+                  commits the diff to a branch in your own repository.
+                </p>
+              </details>
+
+              <details className="faq-item" name="faq">
+                <summary className="faq-q">
+                  <span className="step-n">03</span>
+                  <span className="faq-q-text">
+                    Can someone watching change anything?
+                  </span>
+                  <span className="faq-icon" aria-hidden>
+                    +
+                  </span>
+                </summary>
+                <p className="faq-a">
+                  No. The lock lives on the server, not in the UI. An
+                  instruction from anyone who isn&apos;t the driver is
+                  rejected before it reaches the agent — a hand-crafted
+                  WebSocket frame can&apos;t bypass it either.
+                </p>
+              </details>
+
+              <details className="faq-item" name="faq">
+                <summary className="faq-q">
+                  <span className="step-n">04</span>
+                  <span className="faq-q-text">
+                    What happens if I close my laptop?
+                  </span>
+                  <span className="faq-icon" aria-hidden>
+                    +
+                  </span>
+                </summary>
+                <p className="faq-a">
+                  The session stops. The agent runs on your machine, so it
+                  can&apos;t outlive it — an honest limitation, not a feature
+                  we&apos;re hiding.
+                </p>
+              </details>
+
+              <details className="faq-item" name="faq">
+                <summary className="faq-q">
+                  <span className="step-n">05</span>
+                  <span className="faq-q-text">
+                    Do I need to connect an account?
+                  </span>
+                  <span className="faq-icon" aria-hidden>
+                    +
+                  </span>
+                </summary>
+                <p className="faq-a">
+                  No. No OAuth, no repo picker, no signup.{" "}
+                  <code>npx relayrun</code> in whichever directory
+                  you&apos;re already in.
+                </p>
+              </details>
+
+              <details className="faq-item" name="faq">
+                <summary className="faq-q">
+                  <span className="step-n">06</span>
+                  <span className="faq-q-text">What does it cost?</span>
+                  <span className="faq-icon" aria-hidden>
+                    +
+                  </span>
+                </summary>
+                <p className="faq-a">
+                  Nothing from Relay. Runs are billed to your own Claude Code
+                  login, or to your own Anthropic API key if you pass one —
+                  the credential never leaves your machine, and Relay never
+                  sees it.
+                </p>
+              </details>
+            </div>
+          </div>
+        </section>
+
         <section className="close">
           <h2 className="close-title">Run it. Send the link.</h2>
           <div className="close-cta">
@@ -370,8 +496,39 @@ export default function Home() {
         </section>
 
         <footer className="landing-foot">
-          <span>relay</span>
-          <span>Live agent sessions, shared.</span>
+          <div className="landing-foot-brand">
+            <span className="landing-foot-mark">relay</span>
+            <p className="landing-foot-tag">Live agent sessions, shared.</p>
+            <span className="landing-foot-copy">© 2026</span>
+          </div>
+
+          {/* No repo link yet — Avaya02/Relay isn't public. A link to a
+              private repo 404s for every visitor, which is worse than no
+              link; add a "Source" entry here the day it goes public. */}
+          <nav className="landing-foot-col">
+            <span className="landing-foot-head">Elsewhere</span>
+            <a
+              href="https://www.npmjs.com/package/relayrun"
+              target="_blank"
+              rel="noreferrer"
+            >
+              relayrun on npm
+            </a>
+            <a
+              href="https://docs.claude.com/en/api/agent-sdk/overview"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Agent SDK ↗
+            </a>
+          </nav>
+
+          <nav className="landing-foot-col">
+            <span className="landing-foot-head">On this page</span>
+            <a href="#lock">What it is</a>
+            <a href="#how">How it works</a>
+            <a href="#faq">Questions</a>
+          </nav>
         </footer>
       </div>
     </div>
