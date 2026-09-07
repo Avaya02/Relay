@@ -14,12 +14,17 @@
    separated by a full-width hairline. This is what reads as technical
    drawing rather than web page. */
 .frame {
-  --corner: 5px;
+  --corner: 9px;
 
+  position: relative;
   max-width: var(--measure, 75rem);
   margin-inline: auto;
   width: 100%;
-  border-inline: 1px solid var(--border);
+  /* A closed box, not two rails. The nav used to run off the top of the
+     viewport, which read as a page that starts mid-scroll; ruled above and
+     below, the whole thing reads as one drawn sheet. `.landing` supplies the
+     breathing room outside it. */
+  border: 1px solid var(--border);
 }
 .frame > section {
   border-bottom: 1px solid var(--border);
@@ -29,53 +34,62 @@
 }
 
 /* --- Corner marks --------------------------------------------------
-   A small plate on every crossing where a section rule meets a rail.
-   Technical drawings put a mark on the joint rather than letting two
-   lines simply intersect, and it is the detail that separates "boxes
-   with borders" from "a drawn frame".
+   A right-angle bracket on every crossing where a section rule meets a
+   frame rail: one short stroke along the rule, one up the rail, lit
+   brighter than the line they sit on. Registration marks, the way a
+   technical drawing ends a corner rather than letting two lines simply
+   cross.
 
-   One pseudo-element per rule, not two: `.close` already owns its
-   `::before` for the dot field, so only `::after` is free. The strip
-   spans the full width and paints a plate at each end, which also
-   means it never has to know how wide the frame is.
+   This first shipped as a small filled plate over the joint, which read
+   as a dot rather than as a corner — the bracket traces the corner, so
+   it belongs to the box instead of interrupting it.
 
-   Four background layers, in paint order: the inner fill sits on top
-   of the larger outline square, so each plate is a 1px box filled
-   with the page ground — it genuinely covers the joint rather than
-   sitting beside it. */
+   One pseudo-element per rule, not four: `.close` already owns its
+   `::before` for the dot field, so only `::after` is free. Four
+   background layers — stroke along, stroke up, twice — anchored left and
+   right, so it never has to know how wide the frame is. Offset -1px on
+   both axes so the strokes land ON the 1px borders rather than beside
+   them. */
 .frame > .landing-nav,
 .frame > .hatch,
 .frame > section {
   position: relative;
 }
+.frame::before,
+.frame::after,
 .frame > .landing-nav::after,
 .frame > .hatch::after,
 .frame > section::after {
   content: "";
   position: absolute;
-  /* Centred on the rails, which sit on the frame's border box — hence
-     the negative inline offsets rather than 0. */
-  left: calc(var(--corner) / -2);
-  right: calc(var(--corner) / -2);
-  bottom: calc(var(--corner) / -2);
-  height: var(--corner);
+  left: -1px;
+  right: -1px;
+  height: calc(var(--corner) + 1px);
   pointer-events: none;
   background-image:
-    linear-gradient(var(--bg), var(--bg)),
     linear-gradient(var(--border-lit), var(--border-lit)),
-    linear-gradient(var(--bg), var(--bg)),
+    linear-gradient(var(--border-lit), var(--border-lit)),
+    linear-gradient(var(--border-lit), var(--border-lit)),
     linear-gradient(var(--border-lit), var(--border-lit));
   background-size:
-    calc(var(--corner) - 2px) calc(var(--corner) - 2px),
-    var(--corner) var(--corner),
-    calc(var(--corner) - 2px) calc(var(--corner) - 2px),
-    var(--corner) var(--corner);
-  background-position:
-    left 1px center,
-    left center,
-    right 1px center,
-    right center;
+    var(--corner) 1px,
+    1px var(--corner),
+    var(--corner) 1px,
+    1px var(--corner);
   background-repeat: no-repeat;
+}
+/* Brackets open upward, into the box the rule closes. */
+.frame::after,
+.frame > .landing-nav::after,
+.frame > .hatch::after,
+.frame > section::after {
+  bottom: -1px;
+  background-position: left bottom, left bottom, right bottom, right bottom;
+}
+/* The frame's own top rule has no box above it, so its pair opens downward. */
+.frame::before {
+  top: -1px;
+  background-position: left top, left top, right top, right top;
 }
 
 /* --- The hatch band ------------------------------------------------
