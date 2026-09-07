@@ -14,6 +14,8 @@
    separated by a full-width hairline. This is what reads as technical
    drawing rather than web page. */
 .frame {
+  --corner: 5px;
+
   max-width: var(--measure, 75rem);
   margin-inline: auto;
   width: 100%;
@@ -24,6 +26,56 @@
 }
 .frame > section:last-child {
   border-bottom: 0;
+}
+
+/* --- Corner marks --------------------------------------------------
+   A small plate on every crossing where a section rule meets a rail.
+   Technical drawings put a mark on the joint rather than letting two
+   lines simply intersect, and it is the detail that separates "boxes
+   with borders" from "a drawn frame".
+
+   One pseudo-element per rule, not two: `.close` already owns its
+   `::before` for the dot field, so only `::after` is free. The strip
+   spans the full width and paints a plate at each end, which also
+   means it never has to know how wide the frame is.
+
+   Four background layers, in paint order: the inner fill sits on top
+   of the larger outline square, so each plate is a 1px box filled
+   with the page ground — it genuinely covers the joint rather than
+   sitting beside it. */
+.frame > .landing-nav,
+.frame > .hatch,
+.frame > section {
+  position: relative;
+}
+.frame > .landing-nav::after,
+.frame > .hatch::after,
+.frame > section::after {
+  content: "";
+  position: absolute;
+  /* Centred on the rails, which sit on the frame's border box — hence
+     the negative inline offsets rather than 0. */
+  left: calc(var(--corner) / -2);
+  right: calc(var(--corner) / -2);
+  bottom: calc(var(--corner) / -2);
+  height: var(--corner);
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--bg), var(--bg)),
+    linear-gradient(var(--border-lit), var(--border-lit)),
+    linear-gradient(var(--bg), var(--bg)),
+    linear-gradient(var(--border-lit), var(--border-lit));
+  background-size:
+    calc(var(--corner) - 2px) calc(var(--corner) - 2px),
+    var(--corner) var(--corner),
+    calc(var(--corner) - 2px) calc(var(--corner) - 2px),
+    var(--corner) var(--corner);
+  background-position:
+    left 1px center,
+    left center,
+    right 1px center,
+    right center;
+  background-repeat: no-repeat;
 }
 
 /* --- The hatch band ------------------------------------------------

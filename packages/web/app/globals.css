@@ -11,6 +11,7 @@
 @import "./styles/primitives.css";
 @import "./styles/landing.css";
 @import "./styles/ledger.css";
+@import "./styles/two-screens.css";
 @import "./styles/chrome.css";
 @import "./styles/rails.css";
 @import "./styles/agent.css";
