@@ -192,8 +192,8 @@ export default function Home() {
               <div>
                 <dt>No input races, by construction</dt>
                 <dd>
-                  One writer means competing instructions can&apos;t interleave
-                  — there is nothing to reconcile.
+                  One writer means instructions arrive one at a time, in order
+                  — never two at once.
                 </dd>
               </div>
             </dl>
@@ -228,7 +228,8 @@ export default function Home() {
                 <dt>The server is a relay, not a runtime</dt>
                 <dd>
                   It orders events, enforces the lock, and fans out the
-                  transcript. No repository, no shell, no API keys — ever.
+                  transcript — and that&apos;s the whole job. Your repository,
+                  shell and API keys never enter into it.
                 </dd>
               </div>
               <div>
@@ -318,8 +319,8 @@ export default function Home() {
                 <dt>Topology</dt>
                 <dd>
                   The agent runs on the host&apos;s machine and streams events
-                  up over one WebSocket. The server coordinates; it never holds
-                  code.
+                  up over one WebSocket. The server coordinates; your code
+                  stays put.
                 </dd>
               </div>
               <div className="spec-row">
@@ -347,8 +348,8 @@ export default function Home() {
               <div className="spec-row">
                 <dt>Reconnect</dt>
                 <dd>
-                  A 30-second grace window holds your identity, so a wifi blip
-                  doesn&apos;t take the wheel away.
+                  A 30-second grace window holds your identity — your seat
+                  stays reserved through a wifi blip.
                 </dd>
               </div>
               <div className="spec-row">
@@ -428,10 +429,10 @@ export default function Home() {
                   </span>
                 </summary>
                 <p className="faq-a">
-                  No. The lock lives on the server, not in the UI. An
-                  instruction from anyone who isn&apos;t the driver is
-                  rejected before it reaches the agent — a hand-crafted
-                  WebSocket frame can&apos;t bypass it either.
+                  No. The lock lives on the server, not in the UI. Only the
+                  driver&apos;s own instructions ever reach the agent —
+                  enforced the same way whether you click a button or
+                  hand-craft a WebSocket frame yourself.
                 </p>
               </details>
 
@@ -447,8 +448,8 @@ export default function Home() {
                 </summary>
                 <p className="faq-a">
                   The session stops. The agent runs on your machine, so it
-                  can&apos;t outlive it — an honest limitation, not a feature
-                  we&apos;re hiding.
+                  ends when your machine does — an honest limitation, not a
+                  feature we&apos;re hiding.
                 </p>
               </details>
 
@@ -463,9 +464,9 @@ export default function Home() {
                   </span>
                 </summary>
                 <p className="faq-a">
-                  No. No OAuth, no repo picker, no signup.{" "}
-                  <code>npx relayrun</code> in whichever directory
-                  you&apos;re already in.
+                  No. Point <code>npx relayrun</code> at whichever directory
+                  you&apos;re already in — no account to connect, nothing else
+                  needed.
                 </p>
               </details>
 
