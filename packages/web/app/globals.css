@@ -10,8 +10,15 @@
 @import "./styles/base.css";
 @import "./styles/primitives.css";
 @import "./styles/landing.css";
+@import "./styles/hero.css";
 @import "./styles/ledger.css";
+@import "./styles/lock-trust.css";
 @import "./styles/two-screens.css";
+@import "./styles/how.css";
+@import "./styles/spec.css";
+@import "./styles/faq.css";
+@import "./styles/close.css";
+@import "./styles/footer.css";
 @import "./styles/chrome.css";
 @import "./styles/rails.css";
 @import "./styles/agent.css";

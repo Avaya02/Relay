@@ -9,7 +9,7 @@
 
 export function TopologyDiagram() {
   return (
-    <div className="on-photo" aria-hidden>
+    <div className="on-photo on-photo--trust" aria-hidden>
       <div className="topo">
         <div className="topo-side">
           <span className="topo-label">Your machine</span>

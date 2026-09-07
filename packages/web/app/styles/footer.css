@@ -1,0 +1,64 @@
+/* ==================================================================
+   FOOTER — three tracks: the mark, links off the machine, links on
+   this page. Its own file, moved out of landing.css to buy back room
+   under the 1000-line cap in CLAUDE.md.
+
+   No fourth "Source" column: the repository is not public yet, and a
+   footer link to a private repo 404s for every visitor. It goes in
+   the moment the repo does — see the note above the JSX in page.tsx.
+   ================================================================== */
+
+.landing-foot {
+  border-top: 1px solid var(--border);
+  padding: 2rem var(--gutter);
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(1.5rem, 4vw, 3rem);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+.landing-foot-mark {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.landing-foot-tag {
+  margin: 0.625rem 0 0;
+  max-width: 26ch;
+  color: var(--text-dim);
+  letter-spacing: -0.02em;
+}
+.landing-foot-copy {
+  display: block;
+  margin-top: 1.25rem;
+  color: var(--text-dim);
+  opacity: 0.7;
+}
+.landing-foot-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+.landing-foot-head {
+  color: var(--text-faint);
+  letter-spacing: 0.02em;
+  margin-bottom: 0.25rem;
+}
+.landing-foot-col a {
+  color: var(--text-dim);
+  text-decoration: none;
+  width: fit-content;
+  transition: color 150ms ease-out;
+}
+.landing-foot-col a:hover {
+  color: var(--text);
+}
+
+@media (max-width: 640px) {
+  .landing-foot {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
