@@ -377,6 +377,22 @@ The replay is an enhancement over a complete default — the full transcript ren
 paint and under `prefers-reduced-motion: reduce`, so nothing depends on JS or motion to be
 visible.
 
+**Corner marks.** A small plate sits on every crossing where a section rule meets a frame
+rail — 5px, a 1px outline filled with the page ground, centred on the joint so it genuinely
+covers it. Technical drawings mark the joint rather than letting two lines simply intersect,
+and it is the detail that separates "boxes with borders" from a drawn frame.
+
+One pseudo-element per rule, not two: `.close` already owns its `::before` for the dot field,
+so only `::after` is free. The strip spans the full width and paints a plate at each end via
+four background layers (inner fill over outline, twice), which means it never has to know how
+wide the frame is. Below the 75rem measure the rails sit on the window edge, so the plates
+half-clip there — consistent with the rails themselves, which already touch the edge.
+
+**Nav balance.** The links sit beside the mark, not against the far edge. Pushed right they
+sat next to the CTA and read as a toolbar; next to the mark they read as this product's own
+sections, which is what they are. The CTA carries the auto margin, so it is the only thing on
+the right.
+
 **Composition.** One shared measure (`--measure: 75rem`, 1200px) and a 2rem gutter, so the
 nav mark, hero headline, every section title, and the footer sit on the same left edge. The
 hero splits 1:1 into two halves divided by a hairline, with no gutter between them: copy on
@@ -437,6 +453,24 @@ The caption under it is left-aligned to the panel edge rather than centred: cent
 as a figure caption in a document, on the edge it reads as a label on an instrument. It stays
 visible either way — this page does not get to imply a live session is running when it is a
 replay.
+
+**The lock section proves itself rather than asserting.** "One writer. Never two." is argued in
+the only form that can carry it: the same session, at the same instant, on two people's screens.
+Both viewports render from one piece of state, so the transcripts cannot drift — the claim is
+structural, not captioned. The only difference between the halves is `selfId`, which is why the
+real `ControlBar` drops into both: it already renders the driver's controls or the viewer's from
+that one prop, so nothing re-implements the product in order to describe it. A shared header
+spanning both halves carries one session id, one `seq` and one status, which is what makes the
+two panes read as one session instead of two screenshots.
+
+Two details do the work. The control area has a fixed floor tall enough for its tallest state,
+so the frame does not jump a row the instant someone asks to drive — the moment the eye is meant
+to be reading. And both control areas flash once together when the lock moves, keyed on the
+driver: simultaneity is the claim, and a silent swap reads as two independent panels that
+happened to change. The participants are `avi` and `noor`, not "you": `ControlBar` renders
+"<name> is driving", so a participant named "you" produces "you is driving". The hero puts the
+visitor in the seat; this section is the mechanism seen from outside, which is the right register
+for evidence.
 
 **Green for the handover, not the accent.** The driver's name and the "handed control to you"
 row were both set in the accent, which means *in progress* everywhere else in the system — and

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { DemoLedger } from "@/components/landing/DemoLedger";
 import { RecentSessions } from "@/components/RecentSessions";
 import { CommandBlock } from "@/components/landing/CommandBlock";
-import { HandoverPanel } from "@/components/landing/HandoverPanel";
+import { TwoScreens } from "@/components/landing/TwoScreens";
 import { TopologyDiagram } from "@/components/landing/TopologyDiagram";
 
 // The landing page, in the brand register: instrument faceplate. Structure is
@@ -197,7 +197,7 @@ export default function Home() {
                 </dd>
               </div>
             </dl>
-            <HandoverPanel />
+            <TwoScreens />
           </div>
         </section>
 

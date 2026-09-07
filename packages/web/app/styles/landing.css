@@ -24,8 +24,7 @@
 .landing-nav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
+  gap: clamp(1.5rem, 3vw, 2.5rem);
   padding: 1rem var(--gutter);
   border-bottom: 1px solid var(--border);
 }
@@ -48,11 +47,14 @@
   color: var(--text);
 }
 
+/* Beside the mark, not against the far edge. Pushed right they sat next to the
+   CTA and read as a toolbar; next to the mark they read as this product's own
+   sections, which is what they are. The CTA takes the auto margin instead, so
+   it is the only thing on the right. */
 .landing-nav-links {
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  margin-left: auto;
 }
 .landing-nav-link {
   font-family: var(--font-mono);
@@ -122,6 +124,7 @@
 .landing-nav-cta {
   display: inline-flex;
   align-items: center;
+  margin-left: auto;
 }
 
 /* Visually hidden, still announced. For live-region text that would be
