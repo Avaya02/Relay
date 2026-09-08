@@ -23,6 +23,12 @@ const AVI: Participant = { id: "p-avi", displayName: "avi" };
 const NOOR: Participant = { id: "p-noor", displayName: "noor" };
 const PARTICIPANTS = [AVI, NOOR];
 
+// One id, rendered in both address bars and in the frame's own header. Same
+// URL on two machines is the claim this section makes, so it is stated once
+// here rather than typed out per screen.
+const SESSION_ID = "4Kp2xQmN";
+const SESSION_URL = `relayrun.in/session/${SESSION_ID}`;
+
 type Step =
   | { kind: "instruction"; who: string; text: string }
   | { kind: "text"; text: string }
@@ -72,14 +78,43 @@ const DWELL: Record<Step["kind"], number> = {
 // reads as the demo breaking rather than as a replay looping.
 const FLOOR = 2;
 
+// How long the transcript takes to settle after a row lands. Deliberately
+// longer than the shortest dwell (an action, at 520ms) so consecutive rows
+// hand off to one continuous drift rather than a series of jumps.
+const SCROLL_MS = 900;
+
 export function TwoScreens() {
   const [shown, setShown] = useState(SCRIPT.length);
   const [started, setStarted] = useState(false);
+  const [looping, setLooping] = useState(false);
+  const [inView, setInView] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // The replay used to start on mount, which meant it had already run for as
+  // long as the visitor took to scroll here — they arrived at whatever frame
+  // it happened to be on. It now waits until it is nearly on screen, and
+  // stops again when it leaves: an animation nobody can see is just timers.
+  //
+  // The 300px pre-roll is doing a second job. First paint is the WHOLE
+  // transcript, so that a pre-hydration paint and anyone with reduced motion
+  // (for whom the loop never runs) gets something complete rather than two
+  // orphaned rows. That means the run has to rewind to its opening frame
+  // once before it can play — and the margin is where that happens, while
+  // the frame is still below the fold with nobody watching.
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => setInView(entry?.isIntersecting ?? false),
+      { rootMargin: "300px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   useEffect(() => {
+    if (!inView) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    // Every state change happens inside the timeout, so the first paint always
-    // matches the server's markup.
     const delay = !started
       ? 800
       : shown >= SCRIPT.length
@@ -91,15 +126,27 @@ export function TwoScreens() {
         setShown(FLOOR);
         return;
       }
-      setShown((n) => (n >= SCRIPT.length ? FLOOR : n + 1));
+      // Ending the run raises `looping` rather than rewinding on the spot —
+      // twelve rows vanishing between two frames read as the demo breaking.
+      if (shown >= SCRIPT.length) setLooping(true);
+      else setShown((n) => n + 1);
     }, delay);
     return () => clearTimeout(t);
-  }, [started, shown]);
+  }, [inView, started, shown]);
+
+  // The rewind itself, once the fade has had time to land.
+  useEffect(() => {
+    if (!looping) return;
+    const t = setTimeout(() => {
+      setShown(FLOOR);
+      setLooping(false);
+    }, 320);
+    return () => clearTimeout(t);
+  }, [looping]);
 
   const visible = SCRIPT.slice(0, shown);
   const handedOver = visible.some((s) => s.kind === "handover");
   const requested = visible.some((s) => s.kind === "request");
-  const finished = visible.some((s) => s.kind === "done");
 
   const driverId = handedOver ? NOOR.id : AVI.id;
   // The request is pending only in the window between asking and being granted.
@@ -109,20 +156,13 @@ export function TwoScreens() {
     // inert, not aria-hidden: this is a depiction of a claim the prose above
     // already makes, and aria-hidden alone would leave ControlBar's buttons and
     // select in the tab order — focusable controls inside a hidden subtree.
-    <div className="on-photo" inert>
-      <div className="twoscreen">
-        <div className="twoscreen-head">
-          <span className="twoscreen-mark">relay</span>
-          <span className="twoscreen-session">4Kp2xQmN</span>
-          {/* One counter, shared. Both halves render from it, so it is the
-              cheapest possible proof that this is one stream and not two
-              panels playing similar footage. */}
-          <span className="twoscreen-seq">seq {shown}</span>
-          <span className={finished ? "twoscreen-state" : "twoscreen-state twoscreen-state--live"}>
-            {finished ? "done" : "working"}
-          </span>
-        </div>
-
+    <div className="on-photo" inert ref={rootRef}>
+      {/* No Relay-branded bar above these. Two browser windows sitting under
+          one piece of this app's own chrome read as Relay containing browsers
+          containing Relay — and the shared seq counter it carried has been
+          made redundant by the address bars, which prove the two windows are
+          on one session far better than a number did: same URL, two machines. */}
+      <div className={looping ? "twoscreen twoscreen--looping" : "twoscreen"}>
         <div className="twoscreen-grid">
           <Screen self={AVI} driverId={driverId} pending={pending} visible={visible} shown={shown} />
           <Screen self={NOOR} driverId={driverId} pending={pending} visible={visible} shown={shown} />
@@ -149,19 +189,54 @@ function Screen({
 }) {
   const bodyRef = useRef<HTMLDivElement>(null);
 
+  // Driven here rather than by CSS `scroll-behavior: smooth`, which has no
+  // duration knob — the platform picks one, and its choice is a fast snap at
+  // these distances. A row landing should read as the transcript settling,
+  // so this eases it out over SCROLL_MS instead.
   useEffect(() => {
     const el = bodyRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    const to = el.scrollHeight - el.clientHeight;
+    const from = el.scrollTop;
+    if (to <= from) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      el.scrollTop = to;
+      return;
+    }
+    let raf = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / SCROLL_MS);
+      // ease-out cubic: quick to commit, long to settle.
+      el.scrollTop = from + (to - from) * (1 - Math.pow(1 - p, 3));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, [shown]);
 
   const driving = self.id === driverId;
 
   return (
-    <div className="screen">
-      <div className="screen-label">
-        <i className={driving ? "screen-dot screen-dot--driving" : "screen-dot"} />
-        <span className="screen-who">{self.displayName}</span>
-        <span className="screen-role">{driving ? "driving" : "watching"}</span>
+    <div className={driving ? "screen screen--driving" : "screen"}>
+      {/* A window, not a panel. Two browser frames around one identical
+          transcript say "two people, two machines" in a way a name label
+          above a bordered box never did — and the address bar carries the
+          proof, because it is the same URL in both.
+
+          The lights are macOS's own, including the part everyone forgets:
+          an unfocused window greys them out. So colour here marks which
+          screen holds the lock rather than decorating the frame, and the
+          handover moves it from one window to the other — which is the beat
+          this whole section exists for. */}
+      <div className="screen-chrome">
+        <span className="screen-lights" aria-hidden>
+          <i className="screen-light screen-light--close" />
+          <i className="screen-light screen-light--min" />
+          <i className="screen-light screen-light--max" />
+        </span>
+        <span className="screen-url">{SESSION_URL}</span>
+        <span className="screen-user">{self.displayName}</span>
       </div>
 
       <div className="screen-body" ref={bodyRef}>
