@@ -1,7 +1,7 @@
 /* ==================================================================
-   TWO SCREENS — the lock section's evidence. One session header over
-   two viewports, so "the same session on two screens" is carried by
-   the structure rather than by a caption pointing at it.
+   TWO SCREENS — the lock section's evidence. Two browser windows on
+   one session, so "the same session on two screens" is carried by the
+   structure rather than by a caption pointing at it.
 
    Its own file because landing.css sits at 995 lines against the
    1000-line cap in CLAUDE.md, and because this is one concern.
@@ -10,43 +10,6 @@
 .twoscreen {
   border: 1px solid var(--border);
   background: var(--surface);
-}
-
-/* The shared header spans both halves. That span is the argument: there is
-   one session id, one seq, one status — and then two ways of seeing it. */
-.twoscreen-head {
-  display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
-  padding: 0.625rem 1rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-2);
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  color: var(--text-dim);
-}
-.twoscreen-mark {
-  font-family: var(--font-display);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--text);
-}
-.twoscreen-session {
-  letter-spacing: 0.01em;
-}
-/* Tabular so the counter cannot change width as it climbs — a header that
-   twitches once a second undoes the calm the rest of this is going for. */
-.twoscreen-seq {
-  margin-left: auto;
-  font-variant-numeric: tabular-nums;
-}
-.twoscreen-state--live {
-  color: var(--accent);
-}
-@media (prefers-reduced-motion: no-preference) {
-  .twoscreen-state--live {
-    animation: demo-pulse 1.9s ease-in-out infinite;
-  }
 }
 
 /* One hairline between the halves, not a gap. Two panels with air between
@@ -65,45 +28,126 @@
   min-width: 0;
 }
 
-.screen-label {
+/* --- Window chrome --------------------------------------------------
+   The one place on this page that is allowed a colour outside the state
+   vocabulary, and it is a deliberate, argued exception (see the note in
+   tokens.css about --state-warn). These are macOS's literal traffic-light
+   hues, NOT the state tokens — close to Relay's red and green but not the
+   same values, because they belong to the depicted operating system rather
+   than to this design system, and reusing the tokens would have made that
+   claim in code as well as on screen.
+
+   They earn the exception by carrying state anyway: macOS greys the lights
+   on an unfocused window, so here the coloured set marks the screen holding
+   the driver lock. At the handover the colour crosses to the other window. */
+.screen-chrome {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.875rem;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  transition: background-color 240ms ease-out;
+}
+.screen--driving .screen-chrome {
+  background: var(--surface-2);
+}
+.screen-lights {
+  display: flex;
+  gap: 0.375rem;
+  flex: none;
+}
+.screen-light {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 999px;
+  background: var(--border-lit);
+  transition: background-color 240ms ease-out;
+}
+.screen--driving .screen-light--close {
+  background: #ff5f57;
+}
+.screen--driving .screen-light--min {
+  background: #febc2e;
+}
+.screen--driving .screen-light--max {
+  background: #28c840;
+}
+/* The proof, and the reason the address bar is here at all: both windows are
+   pointed at the same URL. Centred and pill-shaped because that is what the
+   thing being depicted looks like. */
+.screen-url {
+  flex: 1;
+  min-width: 0;
+  padding: 0.1875rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   color: var(--text-dim);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.screen-who {
-  color: var(--text);
-}
-.screen-role {
-  margin-left: auto;
-}
-.screen-dot {
-  width: 0.375rem;
-  height: 0.375rem;
-  border-radius: 999px;
+/* Whose machine this is. The role that used to sit beside it is gone: the
+   control bar at the foot of the same window already says it in words, and
+   said twice it read as a label rather than as a window. */
+.screen-user {
   flex: none;
-  background: var(--border-lit);
-  transition: background-color 220ms ease-out;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  transition: color 240ms ease-out;
 }
-/* Green, matching the hero panel: the driver is the one thing in this frame
-   that has definitively resolved. The accent stays on the live status alone. */
-.screen-dot--driving {
-  background: var(--state-ok);
+.screen--driving .screen-user {
+  color: var(--text);
 }
 
 /* Fixed height, so the frame never resizes as rows land and the two halves
    can never disagree about how tall they are. Scrolls internally, pinned to
-   the bottom — the same thing the real session view does on a long run. */
+   the bottom — the same thing the real session view does on a long run.
+
+   No scrollbar. In the session view it is load-bearing — it is what tells
+   you the transcript continues past the frame. Here the panel is `inert`
+   and scrolls itself, so the bar afforded nothing and only drew a chrome
+   edge down the inside of a window that is meant to read as a screenshot.
+
+   Scrolling is eased in the component (SCROLL_MS), not by
+   `scroll-behavior: smooth` — that property has no duration control, and
+   the platform's own choice is a snap at these distances. */
 .screen-body {
-  height: 15.5rem;
+  height: 19rem;
   overflow-y: auto;
   padding: 0.75rem 0.875rem;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-lit) transparent;
+  scrollbar-width: none;
+  transition: opacity 300ms ease-out;
+}
+.screen-body::-webkit-scrollbar {
+  display: none;
+}
+/* The replay reaching its end. Both transcripts dip together for one beat so
+   the rewind reads as a loop rather than as twelve rows disappearing. */
+.twoscreen--looping .screen-body {
+  opacity: 0;
+}
+/* Rows arrive rather than appear. Only newly mounted ones animate — the rows
+   already on screen keep their nodes, so nothing re-runs on every tick. */
+@media (prefers-reduced-motion: no-preference) {
+  .screen-body .ledger-item {
+    animation: screen-row-in 260ms ease-out;
+  }
+}
+@keyframes screen-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .screen-who-said {
@@ -161,6 +205,6 @@
     border-top: 1px solid var(--border);
   }
   .screen-body {
-    height: 12.5rem;
+    height: 15rem;
   }
 }
