@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // A replay of a REAL captured session — the transcript below is a trimmed,
 // verbatim excerpt of an actual Relay run against a real repository (Claude
@@ -40,8 +40,22 @@ const SCRIPT: Step[] = [
   { kind: "done", summary: "13 steps · 46s · $0.04" },
 ];
 
-const STEP_MS = 760;
-const HOLD_MS = 4200;
+// How long each kind of step stays on screen before the next one lands.
+//
+// This was one flat 760ms for every step, which spent exactly as much of the
+// replay on "read README.md" as on the handover — the one moment in the loop
+// that shows something no other agent product does. Three things change at
+// once there (the ledger row, the presence line, the composer unlocking), and
+// at 760ms all three were gone before they registered. Tool calls now rip,
+// and the handover gets a beat to land in.
+const DWELL: Record<Step["kind"], number> = {
+  instruction: 1100,
+  action: 480,
+  text: 900,
+  handover: 2800,
+  done: 4200,
+};
+const HOLD_MS = DWELL.done;
 
 /**
  * Rows the replay never drops below, including when it loops.
@@ -61,16 +75,29 @@ export function DemoLedger() {
   // rather than an empty frame.
   const [shown, setShown] = useState(SCRIPT.length);
   const [started, setStarted] = useState(false);
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  // The frame is a fixed square, so a long run scrolls inside it the way the
+  // real session view does. Pinning to the bottom keeps the newest row in
+  // view; without it the replay silently continues below the fold of its own
+  // panel and looks like it stalled.
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [shown]);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     // Every state change happens inside the timeout, never in the effect body,
     // so the first paint always matches the server's markup.
+    // Keyed off the step that just landed, not the one coming next: the dwell
+    // belongs to what the visitor is currently looking at.
     const delay = !started
       ? 700
       : shown >= SCRIPT.length
         ? HOLD_MS
-        : STEP_MS;
+        : (DWELL[SCRIPT[shown - 1]?.kind] ?? DWELL.action);
     const t = setTimeout(() => {
       if (!started) {
         setStarted(true);
@@ -108,7 +135,7 @@ export function DemoLedger() {
         </div>
       </div>
 
-      <div className="demo-body">
+      <div className="demo-body" ref={bodyRef}>
         <div className="ledger-rail flex flex-col">
           {visible.map((step, i) => (
             <DemoRow key={i} step={step} />
@@ -142,7 +169,7 @@ function DemoRow({ step }: { step: Step }) {
     case "instruction":
       return (
         <div className="ledger-item ledger-instruction">
-          <span className="text-[var(--accent)]">{step.who}</span>
+          <span className="text-[var(--state-ok)]">{step.who}</span>
           <span className="text-[var(--text-dim)]"> → </span>
           <span className="text-[var(--text)]">{step.text}</span>
         </div>
