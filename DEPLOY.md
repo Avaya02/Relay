@@ -195,7 +195,7 @@ the top:
 
 ```ts
 const DEFAULT_SERVER = process.env.RELAY_SERVER ?? "https://relay-production-c9bd.up.railway.app";
-const DEFAULT_WEB    = process.env.RELAY_WEB    ?? "https://relay-web-green.vercel.app";
+const DEFAULT_WEB    = process.env.RELAY_WEB    ?? "https://relayrun.in";
 ```
 
 Pin the agent's `dev` script to localhost in the same commit, or `pnpm dev`
