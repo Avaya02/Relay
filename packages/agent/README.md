@@ -26,7 +26,7 @@ That's it. You'll get:
   session  8M2zrrx9Ng
 
   Share this link:
-    https://relay-web-green.vercel.app/session/8M2zrrx9Ng
+    https://relayrun.in/session/8M2zrrx9Ng
 ```
 
 Send the link to anyone. They watch the agent work — every tool call, every
