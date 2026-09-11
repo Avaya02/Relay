@@ -24,7 +24,7 @@ const run = promisify(execFile);
  * so a contributor can point at a scratch deployment without editing source.
  */
 const DEFAULT_SERVER = process.env.RELAY_SERVER ?? "https://relay-production-c9bd.up.railway.app";
-const DEFAULT_WEB = process.env.RELAY_WEB ?? "https://relay-web-green.vercel.app";
+const DEFAULT_WEB = process.env.RELAY_WEB ?? "https://relayrun.in";
 const DEFAULT_MODEL = process.env.RELAY_MODEL ?? "claude-sonnet-5";
 
 const USAGE = `relayrun — run a Relay session against a repository on this machine
