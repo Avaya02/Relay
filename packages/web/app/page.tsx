@@ -6,11 +6,17 @@ import { Button } from "@/components/ui/button";
 import { DemoLedger } from "@/components/landing/DemoLedger";
 import { RecentSessions } from "@/components/RecentSessions";
 import { CommandBlock } from "@/components/landing/CommandBlock";
+import { TwoScreens } from "@/components/landing/TwoScreens";
+import { TopologyDiagram } from "@/components/landing/TopologyDiagram";
 
 // The landing page, in the brand register: instrument faceplate. Structure is
 // carried by hairline rules and a visible frame rather than cards and shadows,
-// chrome is set in mono, and the only saturated colour on the page is the
-// accent marking something live.
+// and chrome is set in mono.
+//
+// Chrome here is achromatic — every heading, control and label is a neutral.
+// The only colour on the page lives inside the session panels, marking live
+// state, which is the same split the reference makes between its monochrome
+// chrome and the status badges inside its product screenshots.
 //
 // Two things this page deliberately does NOT do, both of which the reference
 // aesthetic would have suggested:
@@ -84,12 +90,22 @@ export default function Home() {
           </a>
         </header>
 
+        {/* The reference sets this band directly under its nav, before any
+            content — it reads as the top edge of an instrument rather than as
+            a divider between two things. */}
+        <div className="hatch" aria-hidden />
+
         {/* Fold 1 — the claim, and the thing itself. */}
         <section className="hero">
           <div className="hero-copy">
             {/* The one eyebrow on the whole page. One as a deliberate system
-                is voice; one above every section is scaffolding. */}
-            <span className="badge badge--live hero-eyebrow">
+                is voice; one above every section is scaffolding.
+
+                Deliberately not badge--live: chrome is achromatic here, so the
+                dot carries liveness by pulsing rather than by hue. The colour
+                answer to "is this live" sits in the session panel beside it,
+                which is where status belongs. */}
+            <span className="badge hero-eyebrow">
               <span className="badge-dot" aria-hidden />
               Live multiplayer
             </span>
@@ -99,9 +115,8 @@ export default function Home() {
               <em>Together.</em>
             </h1>
             <p className="hero-sub">
-              Everyone with the link watches the same coding session, live, in
-              the same moment. One person drives — and can hand over the wheel
-              mid-task.
+              Everyone on the link watches the same session as it runs. One
+              person drives at a time, and control passes mid-task.
             </p>
 
             <div className="hero-cta" id="start">
@@ -139,8 +154,7 @@ export default function Home() {
           <div className="hero-demo">
             <DemoLedger />
             <p className="hero-demo-note">
-              A recording of a real session — 13 tool calls against a live
-              repository.
+              Recording of a real session — 13 tool calls, live repository.
             </p>
           </div>
         </section>
@@ -178,11 +192,12 @@ export default function Home() {
               <div>
                 <dt>No input races, by construction</dt>
                 <dd>
-                  One writer means competing instructions can&apos;t interleave
-                  — there is nothing to reconcile.
+                  One writer means instructions arrive one at a time, in order
+                  — never two at once.
                 </dd>
               </div>
             </dl>
+            <TwoScreens />
           </div>
         </section>
 
@@ -213,7 +228,8 @@ export default function Home() {
                 <dt>The server is a relay, not a runtime</dt>
                 <dd>
                   It orders events, enforces the lock, and fans out the
-                  transcript. No repository, no shell, no API keys — ever.
+                  transcript — and that&apos;s the whole job. Your repository,
+                  shell and API keys never enter into it.
                 </dd>
               </div>
               <div>
@@ -224,6 +240,7 @@ export default function Home() {
                 </dd>
               </div>
             </dl>
+            <TopologyDiagram />
           </div>
         </section>
 
@@ -302,8 +319,8 @@ export default function Home() {
                 <dt>Topology</dt>
                 <dd>
                   The agent runs on the host&apos;s machine and streams events
-                  up over one WebSocket. The server coordinates; it never holds
-                  code.
+                  up over one WebSocket. The server coordinates; your code
+                  stays put.
                 </dd>
               </div>
               <div className="spec-row">
@@ -331,8 +348,8 @@ export default function Home() {
               <div className="spec-row">
                 <dt>Reconnect</dt>
                 <dd>
-                  A 30-second grace window holds your identity, so a wifi blip
-                  doesn&apos;t take the wheel away.
+                  A 30-second grace window holds your identity — your seat
+                  stays reserved through a wifi blip.
                 </dd>
               </div>
               <div className="spec-row">
@@ -346,6 +363,132 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Fold 6 — objections, answered before the CTA that follows rather
+            than after it. Ordered by how much each would stop someone from
+            actually running the command; the file-boundary question leads,
+            because it's the one "Your code stays on your machine" invites and
+            doesn't fully answer on its own. Native <details name="faq">
+            groups: an exclusive accordion with no JS, the same reasoning
+            ControlBar's hand-over menu uses a native <select> for. */}
+        <section className="faq" id="faq">
+          <div className="faq-inner faq-grid">
+            <div className="faq-head">
+              <span className="faq-eyebrow">Questions</span>
+              <h2 className="section-title">Before you run it</h2>
+              <p className="faq-lede">
+                The things worth knowing before you paste this into a
+                terminal.
+              </p>
+            </div>
+
+            <div className="faq-list">
+              <details className="faq-item" name="faq" open>
+                <summary className="faq-q">
+                  <span className="step-n">01</span>
+                  <span className="faq-q-text">
+                    Does my code go to Anthropic?
+                  </span>
+                  <span className="faq-icon" aria-hidden>
+                    +
+                  </span>
+                </summary>
+                <p className="faq-a">
+                  Yes. The agent is the Claude Agent SDK, so file contents
+                  reach the Anthropic API exactly as they do in Claude Code.
+                  The repository itself doesn&apos;t — Relay&apos;s server
+                  only ever sees the event stream.
+                </p>
+              </details>
+
+              <details className="faq-item" name="faq">
+                <summary className="faq-q">
+                  <span className="step-n">02</span>
+                  <span className="faq-q-text">
+                    What can the agent do to my repo?
+                  </span>
+                  <span className="faq-icon" aria-hidden>
+                    +
+                  </span>
+                </summary>
+                <p className="faq-a">
+                  Full shell access, with your own permissions, inside a
+                  disposable clone that&apos;s discarded when the room empties.
+                  Nothing touches your real checkout until you publish, which
+                  commits the diff to a branch in your own repository.
+                </p>
+              </details>
+
+              <details className="faq-item" name="faq">
+                <summary className="faq-q">
+                  <span className="step-n">03</span>
+                  <span className="faq-q-text">
+                    Can someone watching change anything?
+                  </span>
+                  <span className="faq-icon" aria-hidden>
+                    +
+                  </span>
+                </summary>
+                <p className="faq-a">
+                  No. The lock lives on the server, not in the UI. Only the
+                  driver&apos;s own instructions ever reach the agent —
+                  enforced the same way whether you click a button or
+                  hand-craft a WebSocket frame yourself.
+                </p>
+              </details>
+
+              <details className="faq-item" name="faq">
+                <summary className="faq-q">
+                  <span className="step-n">04</span>
+                  <span className="faq-q-text">
+                    What happens if I close my laptop?
+                  </span>
+                  <span className="faq-icon" aria-hidden>
+                    +
+                  </span>
+                </summary>
+                <p className="faq-a">
+                  The session stops. The agent runs on your machine, so it
+                  ends when your machine does — an honest limitation, not a
+                  feature we&apos;re hiding.
+                </p>
+              </details>
+
+              <details className="faq-item" name="faq">
+                <summary className="faq-q">
+                  <span className="step-n">05</span>
+                  <span className="faq-q-text">
+                    Do I need to connect an account?
+                  </span>
+                  <span className="faq-icon" aria-hidden>
+                    +
+                  </span>
+                </summary>
+                <p className="faq-a">
+                  No. Point <code>npx relayrun</code> at whichever directory
+                  you&apos;re already in — no account to connect, nothing else
+                  needed.
+                </p>
+              </details>
+
+              <details className="faq-item" name="faq">
+                <summary className="faq-q">
+                  <span className="step-n">06</span>
+                  <span className="faq-q-text">What does it cost?</span>
+                  <span className="faq-icon" aria-hidden>
+                    +
+                  </span>
+                </summary>
+                <p className="faq-a">
+                  Nothing from Relay. Runs are billed to your own Claude Code
+                  login, or to your own Anthropic API key if you pass one —
+                  the credential never leaves your machine, and Relay never
+                  sees it.
+                </p>
+              </details>
+            </div>
+          </div>
+        </section>
+
         <section className="close">
           <h2 className="close-title">Run it. Send the link.</h2>
           <div className="close-cta">
@@ -354,8 +497,39 @@ export default function Home() {
         </section>
 
         <footer className="landing-foot">
-          <span>relay</span>
-          <span>Live agent sessions, shared.</span>
+          <div className="landing-foot-brand">
+            <span className="landing-foot-mark">relay</span>
+            <p className="landing-foot-tag">Live agent sessions, shared.</p>
+            <span className="landing-foot-copy">© 2026</span>
+          </div>
+
+          {/* No repo link yet — Avaya02/Relay isn't public. A link to a
+              private repo 404s for every visitor, which is worse than no
+              link; add a "Source" entry here the day it goes public. */}
+          <nav className="landing-foot-col">
+            <span className="landing-foot-head">Elsewhere</span>
+            <a
+              href="https://www.npmjs.com/package/relayrun"
+              target="_blank"
+              rel="noreferrer"
+            >
+              relayrun on npm
+            </a>
+            <a
+              href="https://docs.claude.com/en/api/agent-sdk/overview"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Agent SDK ↗
+            </a>
+          </nav>
+
+          <nav className="landing-foot-col">
+            <span className="landing-foot-head">On this page</span>
+            <a href="#lock">What it is</a>
+            <a href="#how">How it works</a>
+            <a href="#faq">Questions</a>
+          </nav>
         </footer>
       </div>
     </div>

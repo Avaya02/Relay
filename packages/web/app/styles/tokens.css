@@ -1,0 +1,139 @@
+/*
+ ---break---
+ */
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Relay design tokens (RELAY_BUILD_SPEC.md §7).
+ * Dark is the only theme (no toggle) — `.dark` stays permanently on <html>
+ * (see layout.tsx) purely so shadcn's `dark:`-prefixed utility refinements
+ * apply deterministically, not based on OS preference.
+ */
+:root {
+  /* Ground. Measured off the reference, not chosen: it is #0A0A0A, not black.
+     The previous value assumed pure black from screenshots and was wrong. */
+  --bg: #0a0a0a;
+  --surface: #121212; /* header, rails, panels */
+  --surface-2: #1a1a1a; /* raised: composer, expanded detail, popovers */
+
+  /* Alpha rather than flat hex, which is what the reference does: a hairline
+     over a raised panel resolves brighter than the same rule over the ground,
+     so the structure stays legible as surfaces stack. Composites to #262626 /
+     #2D2D2D / #343434 across the three grounds. */
+  --border: rgba(250, 250, 250, 0.12);
+  --border-lit: rgba(250, 250, 250, 0.2);
+
+  /* Achromatic. The old ramp carried a blue cast inherited from the graphite
+     system that preceded it; the reference's neutrals have no hue at all. */
+  --text: #fafafa;
+  --text-dim: #a3a3a3;
+  /* The reference's own tertiary (#7C7C7C) measures 4.49:1 on --surface and
+     4.17:1 on --surface-2 — it survives there only because that page uses it
+     on the ground alone. Relay puts it on raised panels (ledger timestamps),
+     so it is solved against the *worst* ground: #828282 is the 4.5:1 minimum,
+     this is that plus headroom. Measured 5.73 / 5.43 / 5.04. */
+  --text-faint: #8a8a8a;
+
+  /* Reserved for "live / active / you-are-driving" only — nothing
+     decorative. See RELAY_BUILD_SPEC.md §7.
+
+     Amber because that is what the reference uses for a run in progress. Its
+     CSS palette is genuinely achromatic — 4 chromatic fills out of 156, and
+     its one colour token (#F6543E) renders on three 20px squares — so the
+     colour a visitor actually sees there comes from the status badges inside
+     its product screenshots, not from its chrome. Relay's chrome follows the
+     chrome; its status vocabulary follows the screenshots. */
+  --accent: #e2b64b;
+
+  /* Sampled from the reference's own hero screenshot by canvas readback, so
+     these are its literal status hues rather than an interpretation of them.
+     Its red (#C24F4F) measures 3.75:1 on --surface-2 and fails AA as text —
+     it survives there only by sitting on a tinted badge fill — so it is
+     lifted along its own hue until the worst ground clears the floor.
+     There is no --state-warn: the reference has no pending colour, and
+     pending now reads as neutral. */
+  --state-ok: #37b773;
+  --state-error: #de6060;
+
+  /* Small fixed palette assigned per participant (name dot, driving
+     cursor) — muted, not neon. Cycled by join order in Presence.tsx. */
+  --presence-1: #e5a3b3;
+  --presence-2: #9bb4e0;
+  --presence-3: #b9e0a5;
+  --presence-4: #e0c48a;
+
+  /* shadcn semantic roles, mapped onto the tokens above rather than left at
+     shadcn's own defaults. */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--surface-2);
+  --popover-foreground: var(--text);
+  /* Not the accent. A control is not live state, and DESIGN.md already rules
+     out filled-accent buttons — but this mapping kept handing every shadcn
+     <Button> an accent fill anyway. Cyan merely looked like a bright CTA;
+     coral reads as destructive, which turned a latent rule violation into a
+     misleading one. Matches the landing page's .btn-solid exactly. */
+  --primary: var(--text);
+  --primary-foreground: var(--bg);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--text-dim);
+  --accent-foreground: var(--bg);
+  --destructive: var(--state-error);
+  --destructive-foreground: var(--bg);
+  --input: var(--border);
+  --ring: var(--accent);
+  /* Square. 2px was a good guess at the reference; measuring it gave 0 — every
+     structural card, panel, badge and button there has no radius at all. Flows
+     through every shadcn primitive via the --radius-sm/md/lg chain below. */
+  --radius: 0;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-lit: var(--border-lit);
+  --color-text: var(--text);
+  --color-text-dim: var(--text-dim);
+  --color-text-faint: var(--text-faint);
+  --color-accent: var(--accent);
+  --color-state-ok: var(--state-ok);
+  --color-state-error: var(--state-error);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  /* Characterful display face — landing hero + session title ONLY. Never
+     used for buttons, labels, or data (RELAY_BUILD_SPEC.md §7 + product-
+     register typography rules: one working family everywhere else). */
+  --font-heading: var(--font-display);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}

@@ -1,0 +1,60 @@
+/* ==================================================================
+   CLOSE — the final call to action. Its own file because landing.css
+   sat at the 1000-line cap in CLAUDE.md and this is one concern:
+   everything here is scoped to <section className="close">.
+   ================================================================== */
+
+.close-cta {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+/* The closing call to action carries the page's one texture field: a plotter
+   dot grid, masked to fade out toward the edges so it reads as a printed
+   ground rather than a tiled background. This is Relay's own texture — NOT
+   the reference's dithered photography, which is that product's brand and
+   would make the borrowing obvious. */
+.close {
+  position: relative;
+  isolation: isolate;
+  padding: clamp(2.5rem, 6vw, 4rem) var(--gutter);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.75rem;
+  text-align: center;
+}
+/* A dot field behind the closing call to action. Not the hero photograph: this
+   is the last thing on the page and wants a texture, not a subject. Two grids
+   offset by half a cell read as one screen — the coarse one as the shadow
+   field, the fine one as the mid-tone. Each is masked so it fades out rather
+   than stopping on a hard line, which would read as a bug. Two gradients, no
+   assets, no bytes. */
+.close::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    radial-gradient(var(--border-lit) 1px, transparent 1.1px),
+    radial-gradient(var(--border) 1.5px, transparent 1.6px);
+  background-size:
+    4px 4px,
+    8px 8px;
+  background-position:
+    0 0,
+    2px 2px;
+  pointer-events: none;
+}
+.close::before {
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 20%, transparent 100%);
+}
+.close-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 4vw, 3.375rem);
+  font-weight: 400;
+  letter-spacing: -0.05em;
+  color: var(--text);
+  margin: 0;
+}

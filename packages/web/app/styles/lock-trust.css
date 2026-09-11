@@ -1,0 +1,198 @@
+/* ==================================================================
+   LOCK / TRUST — the twin "claim, then evidence" sections (#lock and
+   #trust). Both reuse the same .lock-grid layout with different
+   content, and both stand a product panel on the same photo band
+   (.on-photo), so they share one file rather than splitting the
+   layout two ways for no reason other than the two <h2>s differing.
+
+   Its own file because landing.css sat at the 1000-line cap in
+   CLAUDE.md and this is one concern.
+   ================================================================== */
+
+.lock-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: clamp(1.75rem, 4vw, 4rem);
+  /* start, not stretch — the shorter column shouldn't inherit the taller
+     one's height and leave a void under its content. */
+  align-items: start;
+}
+.lock-lede {
+  margin: 1.25rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+  color: var(--text-dim);
+  max-width: 42ch;
+}
+.lock-facts {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.lock-facts dt {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+  color: var(--text);
+  margin-bottom: 0.375rem;
+}
+.lock-facts dd {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: var(--text-dim);
+  max-width: 52ch;
+}
+
+/* --- Section visuals ------------------------------------------------
+   The lock and trust sections carried the page's two strongest claims
+   in prose alone, with every visual on the page spent on the hero.
+   These are the counterweight. Both span the grid rather than sitting
+   in a column: the claim above is the caption, so the evidence gets
+   the full measure. */
+/* Same move as the hero: the panel stands on the photograph, pushed down and
+   right so a band of cloud shows above it and a strip of ridge down its left.
+   The reference repeats this on every product panel down its page, and it is
+   what stops the lower half reading as a different, plainer site.
+
+   The photograph has to hang off a WRAPPER, not off the panel itself. A
+   `z-index: -1` pseudo-element paints after its own element's background but
+   before that element's text — so putting it on the panel slid the clouds
+   between the panel's fill and its labels, and the diagram became unreadable.
+   On a wrapper with no background of its own, the panel is an ordinary child
+   and its opaque fill occludes the image the way it should. Same reason the
+   hero works: `.hero-demo` carries the image, `.demo-frame` carries the fill. */
+.on-photo {
+  --photo-top: clamp(3.5rem, 7vw, 5.5rem);
+  --photo-left: clamp(1.25rem, 3vw, 3rem);
+
+  grid-column: 1 / -1;
+  position: relative;
+  isolation: isolate;
+  margin-top: var(--photo-top);
+  padding-left: var(--photo-left);
+}
+.on-photo::before {
+  content: "";
+  position: absolute;
+  /* Bleeds to the frame's rails on both sides — the section's own gutter is
+     cancelled out, so the band is the full measure rather than an inset strip. */
+  inset: calc(-1 * var(--photo-top)) calc(-1 * var(--gutter)) 0
+    calc(-1 * var(--gutter));
+  z-index: -1;
+  /* The wide crop, not the hero's. The tall one stretched across a band this
+     shape would be cropped to a sliver of sky with no ridge in it. */
+  background-image: url("/band-ridge.webp");
+  background-size: cover;
+  background-position: left top;
+  mask-image: linear-gradient(to bottom, #000 0%, #000 48%, transparent 88%);
+  pointer-events: none;
+}
+/* The trust section's panel stands on a later moment in the same photograph
+   (see scripts/prepare-hero-image.py) rather than repeating band-ridge — two
+   panels in a row on the identical crop read as a tiled texture, not as a
+   photograph. Only the image differs; the mask and position stay shared. */
+.on-photo--trust::before {
+  background-image: url("/trust-ridge.webp");
+}
+
+/* --- Topology ------------------------------------------------------
+   Three columns so the boundary is a column of its own rather than a
+   border between two: what crosses the network is the subject, so it
+   gets the same weight as the two things it separates. */
+.topo {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(1rem, 3vw, 2rem);
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+.topo-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.topo-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.01em;
+  color: var(--text);
+}
+.topo-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+.topo-items li {
+  padding-left: 0.875rem;
+  position: relative;
+}
+.topo-items li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.4375rem;
+  width: 4px;
+  height: 1px;
+  background: var(--border-lit);
+}
+/* Struck through and dimmed, never colour alone — the absence is the
+   whole point of the diagram, so it has to survive any colour vision. */
+.topo-absent {
+  color: var(--text-faint);
+  text-decoration: line-through;
+}
+.topo-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 7rem;
+}
+.topo-wire {
+  flex: 1;
+  width: 1px;
+  min-height: 1.25rem;
+  background: linear-gradient(to bottom, transparent, var(--border-lit), transparent);
+}
+.topo-payload {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.01em;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  padding: 0.25rem 0.5rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .lock-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .topo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .topo-link {
+    flex-direction: row;
+    min-width: 0;
+  }
+  .topo-wire {
+    width: auto;
+    height: 1px;
+    min-height: 0;
+    background: linear-gradient(to right, transparent, var(--border-lit), transparent);
+  }
+}

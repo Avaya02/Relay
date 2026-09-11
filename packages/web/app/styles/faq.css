@@ -1,0 +1,131 @@
+/* ==================================================================
+   FAQ — objections answered before the final CTA, not after it. Six
+   questions, in descending order of how much they'd stop someone from
+   running the command: the file-boundary question leads.
+
+   Its own file because landing.css sits at the 1000-line cap in
+   CLAUDE.md and this is one concern.
+   ================================================================== */
+
+.faq {
+  padding-block: clamp(3rem, 7vw, 5.5rem);
+}
+.faq-inner {
+  padding-inline: var(--gutter);
+}
+.faq-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: clamp(1.75rem, 4vw, 4rem);
+  align-items: start;
+}
+.faq-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+  margin-bottom: 0.75rem;
+}
+/* A tick, not a bullet — the same achromatic-chrome rule the hero eyebrow's
+   dot follows: this marks a label, it doesn't signal state, so it stays
+   neutral rather than reaching for --accent. */
+.faq-eyebrow::before {
+  content: "";
+  width: 2px;
+  height: 0.875rem;
+  background: var(--text-dim);
+}
+/* Same rule as .lock-lede, copied rather than shared: this section owns its
+   own file, and reaching into landing.css for one class would tie the two
+   together for no reason other than that the properties happen to match. */
+.faq-lede {
+  margin: 1.25rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+  color: var(--text-dim);
+  max-width: 38ch;
+}
+
+/* A bordered card, not a floating list — the same move as .spec-sheet and
+   .demo-frame: this system gets its boxes from a 1px edge, never a shadow.
+   The list border-top this replaced left the accordion looking untethered
+   from the rest of the page's boxed vocabulary. */
+.faq-list {
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.faq-item {
+  border-bottom: 1px solid var(--border);
+}
+.faq-item:last-child {
+  border-bottom: 0;
+}
+/* One open question at a time: <details name="faq"> is a native exclusive
+   accordion (Chrome 120+, Safari 17.2+, Firefox 118+) — the browser closes
+   the others, no JS, no state. On an older browser every item just opens
+   independently, which is a worse interaction and not a broken one, so
+   nothing here needs a fallback. */
+.faq-q {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  cursor: pointer;
+  list-style: none;
+  transition: background-color 150ms ease-out;
+}
+.faq-q::-webkit-details-marker {
+  display: none;
+}
+.faq-q:hover {
+  background: var(--surface-2);
+}
+.faq-q:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+/* Full brightness by default, same as .spec-row dt: a question is a label
+   you're scanning, not a result you haven't earned yet. Dimming every closed
+   row to --text-dim was the thing actually worth fixing here — it fought the
+   one job an FAQ list has, which is to be read closed before it's opened. */
+.faq-q-text {
+  flex: 1;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.faq-item[open] .faq-q-text {
+  font-weight: 500;
+}
+/* A plus that rotates into a cross on open — one glyph, no icon swap, no
+   layout shift between the two states. */
+.faq-icon {
+  font-family: var(--font-mono);
+  font-size: 1.0625rem;
+  color: var(--text-dim);
+  transition: transform 200ms ease-out;
+}
+.faq-item[open] .faq-icon {
+  transform: rotate(45deg);
+}
+.faq-a {
+  margin: 0;
+  /* Left indent matches the question's own text start (measured, not
+     estimated: 55px at this padding/gap/step-n width), so the answer reads
+     as continuing the question rather than starting a new block. */
+  padding: 0 1.5rem 1.5rem 3.4375rem;
+  max-width: 56ch;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+@media (max-width: 900px) {
+  .faq-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

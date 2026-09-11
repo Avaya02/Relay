@@ -1,0 +1,210 @@
+/* ==================================================================
+   TWO SCREENS — the lock section's evidence. Two browser windows on
+   one session, so "the same session on two screens" is carried by the
+   structure rather than by a caption pointing at it.
+
+   Its own file because landing.css sits at 995 lines against the
+   1000-line cap in CLAUDE.md, and because this is one concern.
+   ================================================================== */
+
+.twoscreen {
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+/* One hairline between the halves, not a gap. Two panels with air between
+   them read as two products; one frame divided reads as one session. */
+.twoscreen-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.screen + .screen {
+  border-left: 1px solid var(--border);
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* --- Window chrome --------------------------------------------------
+   The one place on this page that is allowed a colour outside the state
+   vocabulary, and it is a deliberate, argued exception (see the note in
+   tokens.css about --state-warn). These are macOS's literal traffic-light
+   hues, NOT the state tokens — close to Relay's red and green but not the
+   same values, because they belong to the depicted operating system rather
+   than to this design system, and reusing the tokens would have made that
+   claim in code as well as on screen.
+
+   They earn the exception by carrying state anyway: macOS greys the lights
+   on an unfocused window, so here the coloured set marks the screen holding
+   the driver lock. At the handover the colour crosses to the other window. */
+.screen-chrome {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  transition: background-color 240ms ease-out;
+}
+.screen--driving .screen-chrome {
+  background: var(--surface-2);
+}
+.screen-lights {
+  display: flex;
+  gap: 0.375rem;
+  flex: none;
+}
+.screen-light {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 999px;
+  background: var(--border-lit);
+  transition: background-color 240ms ease-out;
+}
+.screen--driving .screen-light--close {
+  background: #ff5f57;
+}
+.screen--driving .screen-light--min {
+  background: #febc2e;
+}
+.screen--driving .screen-light--max {
+  background: #28c840;
+}
+/* The proof, and the reason the address bar is here at all: both windows are
+   pointed at the same URL. Centred and pill-shaped because that is what the
+   thing being depicted looks like. */
+.screen-url {
+  flex: 1;
+  min-width: 0;
+  padding: 0.1875rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Whose machine this is. The role that used to sit beside it is gone: the
+   control bar at the foot of the same window already says it in words, and
+   said twice it read as a label rather than as a window. */
+.screen-user {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  transition: color 240ms ease-out;
+}
+.screen--driving .screen-user {
+  color: var(--text);
+}
+
+/* Fixed height, so the frame never resizes as rows land and the two halves
+   can never disagree about how tall they are. Scrolls internally, pinned to
+   the bottom — the same thing the real session view does on a long run.
+
+   No scrollbar. In the session view it is load-bearing — it is what tells
+   you the transcript continues past the frame. Here the panel is `inert`
+   and scrolls itself, so the bar afforded nothing and only drew a chrome
+   edge down the inside of a window that is meant to read as a screenshot.
+
+   Scrolling is eased in the component (SCROLL_MS), not by
+   `scroll-behavior: smooth` — that property has no duration control, and
+   the platform's own choice is a snap at these distances. */
+.screen-body {
+  height: 19rem;
+  overflow-y: auto;
+  padding: 0.75rem 0.875rem;
+  scrollbar-width: none;
+  transition: opacity 300ms ease-out;
+}
+.screen-body::-webkit-scrollbar {
+  display: none;
+}
+/* The replay reaching its end. Both transcripts dip together for one beat so
+   the rewind reads as a loop rather than as twelve rows disappearing. */
+.twoscreen--looping .screen-body {
+  opacity: 0;
+}
+/* Rows arrive rather than appear. Only newly mounted ones animate — the rows
+   already on screen keep their nodes, so nothing re-runs on every tick. */
+@media (prefers-reduced-motion: no-preference) {
+  .screen-body .ledger-item {
+    animation: screen-row-in 260ms ease-out;
+  }
+}
+@keyframes screen-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.screen-who-said {
+  color: var(--state-ok);
+}
+.screen-failed {
+  color: var(--state-error);
+}
+.screen-lock {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--state-ok);
+  padding-block: 0.375rem;
+}
+
+/* Anchored to the bottom with room for the tallest state it can reach (a
+   pending request stacked over the driver row). Without the floor the frame
+   jumps by a row the instant someone asks to drive, which is exactly the
+   moment the eye is supposed to be reading, not re-finding its place. */
+.screen-control {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 5.25rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+/* Both halves flash once, together, when the lock moves. The simultaneity is
+   the claim — a silent swap reads as two independent panels that happen to
+   have changed. Keyed on driverId in the component, so it replays on the
+   handover and never on an ordinary row. */
+@media (prefers-reduced-motion: no-preference) {
+  .screen-control {
+    animation: screen-flip 620ms ease-out;
+  }
+}
+@keyframes screen-flip {
+  0% {
+    background: color-mix(in oklch, var(--state-ok) 14%, var(--surface-2));
+  }
+  100% {
+    background: var(--surface-2);
+  }
+}
+
+/* Stacked, the divider between the halves has to become horizontal — side by
+   side is the whole point, so this is the last thing to give way. */
+@media (max-width: 860px) {
+  .twoscreen-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .screen + .screen {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+  .screen-body {
+    height: 15rem;
+  }
+}
