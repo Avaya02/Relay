@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdir, rm } from "node:fs/promises";
-import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -45,7 +45,18 @@ export function createRepo(config: RepoConfig) {
   // Scratch space under the OS temp dir, not inside the operator's repo — the
   // clones are disposable and must never show up in their working tree.
   const root = path.join(tmpdir(), "relayrun");
-  const pristineDir = path.join(root, "pristine");
+  // Keyed by source path, not a single shared `pristine/`. Sharing it meant the
+  // first repository the CLI was ever run in won permanently: every later repo
+  // found the path already there, skipped cloning, and ran the session against
+  // the wrong codebase — silently, under the right repo's name.
+  const pristineDir = path.join(
+    root,
+    "pristine",
+    `${path.basename(config.sourcePath).replace(/[^a-zA-Z0-9._-]/g, "-")}-${createHash("sha256")
+      .update(config.sourcePath)
+      .digest("hex")
+      .slice(0, 12)}`,
+  );
   const sessionsDir = path.join(root, "sessions");
 
   let pristineReady: Promise<void> | null = null;
@@ -76,8 +87,37 @@ export function createRepo(config: RepoConfig) {
 
   // `git clone` copies committed state only — no node_modules, no .DS_Store,
   // and deliberately none of the operator's uncommitted work.
+  async function isGitRepo(dir: string): Promise<boolean> {
+    try {
+      await run("git", ["-C", dir, "rev-parse", "--git-dir"]);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async function ensurePristine(): Promise<void> {
-    if (existsSync(pristineDir)) return;
+    // Asking git rather than checking the path exists: macOS reaps files from
+    // its per-user temp directory after a few days but leaves the directory
+    // skeletons behind, so the path outlives the repository inside it. Nothing
+    // else ever deletes pristine, so that state was sticky — every later run,
+    // in every repository, failed with "repository does not exist" until it was
+    // removed by hand.
+    if (await isGitRepo(pristineDir)) {
+      // Refreshed, not reused as-is: pristine outlives the process, so a clone
+      // cached by an earlier run would hand the agent the repository as it was
+      // days ago with nothing to indicate it was stale. `origin` is the
+      // operator's own path, so this is a local fetch.
+      try {
+        await run("git", ["-C", pristineDir, "fetch", "--prune", "origin", "HEAD"]);
+        await run("git", ["-C", pristineDir, "reset", "--hard", "FETCH_HEAD"]);
+        return;
+      } catch {
+        // A pristine that cannot be refreshed isn't worth diagnosing when
+        // replacing it costs one local clone.
+      }
+    }
+    await rm(pristineDir, { recursive: true, force: true });
     await mkdir(path.dirname(pristineDir), { recursive: true });
     await run("git", ["clone", config.sourcePath, pristineDir]);
   }

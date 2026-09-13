@@ -22,8 +22,9 @@ That's it. You'll get:
 
 ```
   repo     your-project  (/Users/you/your-project)
-  agent    claude code login
+  agent    real agent — billed to this machine's Claude Code login
   session  8M2zrrx9Ng
+  shared   transcript only — code, keys and files stay on this machine
 
   Share this link:
     https://relayrun.in/session/8M2zrrx9Ng

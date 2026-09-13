@@ -1,6 +1,6 @@
 {
   "name": "relayrun",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Run a Relay session against a repository on your own machine — everyone with the link watches the agent work, one person drives.",
   "keywords": [
     "claude",
@@ -10,13 +10,23 @@
     "cli"
   ],
   "license": "MIT",
+  "homepage": "https://relayrun.in",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Avaya02/Relay.git",
+    "directory": "packages/agent"
+  },
+  "bugs": {
+    "url": "https://github.com/Avaya02/Relay/issues"
+  },
   "type": "module",
   "bin": {
     "relayrun": "dist/cli.js"
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=20.9.0"
@@ -26,6 +36,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/cli.js",
     "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts",
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {

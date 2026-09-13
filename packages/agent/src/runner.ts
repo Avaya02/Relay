@@ -231,6 +231,9 @@ export function startRunner(opts: RunnerOptions): void {
   };
   process.on("SIGINT", cleanup);
   process.on("SIGTERM", cleanup);
+  // Closing the terminal window sends SIGHUP, not SIGTERM — the most common way
+  // a session actually ends, and without this it left its clone behind.
+  process.on("SIGHUP", cleanup);
 
   connect();
 }
