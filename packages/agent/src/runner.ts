@@ -32,6 +32,9 @@ export function startRunner(opts: RunnerOptions): void {
   let attempts = 0;
   let workingDir: string | null = null;
   let currentRun: AbortController | null = null;
+  // Kept so a reconnect can offer it back. Only meaningful alongside a
+  // surviving workingDir — see resumeAgentSession in the hello below.
+  let agentSessionId: string | null = null;
   // Set when the server says the problem is permanent, so `close` stops
   // rescheduling and the process can exit instead of spinning.
   let giveUp = false;
@@ -43,7 +46,10 @@ export function startRunner(opts: RunnerOptions): void {
   const emit: RunEmitter = {
     event: (kind, data) => send({ type: "runner_event", kind, data }),
     status: (status) => send({ type: "runner_status", status }),
-    agentSession: (id) => send({ type: "runner_agent_session", agentSessionId: id }),
+    agentSession: (id) => {
+      agentSessionId = id;
+      send({ type: "runner_agent_session", agentSessionId: id });
+    },
   };
 
   // Prepared on the first instruction rather than at startup: cloning for a
@@ -198,6 +204,9 @@ export function startRunner(opts: RunnerOptions): void {
         mode,
         keySource: opts.keySource,
         keyHint: opts.keyHint,
+        // Offered only when this process still holds the clone those turns ran
+        // against. A restarted CLI has neither, and correctly starts fresh.
+        ...(workingDir && agentSessionId ? { resumeAgentSession: agentSessionId } : {}),
       });
     });
 
@@ -225,15 +234,51 @@ export function startRunner(opts: RunnerOptions): void {
     });
   }
 
-  const cleanup = () => {
+  function cleanup(code: number): void {
     currentRun?.abort();
-    void repo.disposeWorkingDir(sessionId).finally(() => process.exit(0));
-  };
-  process.on("SIGINT", cleanup);
-  process.on("SIGTERM", cleanup);
+    void repo.disposeWorkingDir(sessionId).finally(() => process.exit(code));
+  }
+
+  // Set by the first interrupt, so a second one leaves immediately — including
+  // one pressed while the check below is still running.
+  let quitArmed = false;
+
+  /**
+   * Ctrl-C is how most sessions end, and it takes the clone with it. Anything
+   * the agent wrote but nobody published dies there, with the transcript left
+   * describing edits that no longer exist anywhere — so the first interrupt
+   * says what is about to be lost instead of deleting it silently.
+   *
+   * The in-flight run is deliberately left alone: stopping it and then not
+   * exiting would leave a dead run inside a live session.
+   */
+  async function interrupt(): Promise<void> {
+    if (quitArmed) return cleanup(0);
+    quitArmed = true;
+
+    if (!workingDir) return cleanup(0);
+    let pending = 0;
+    try {
+      pending = (await repo.sessionChanges(workingDir)).files.length;
+    } catch {
+      // Never let a failed diff strand someone in a process that won't quit.
+      return cleanup(0);
+    }
+    if (pending === 0) return cleanup(0);
+
+    console.log(
+      `\n  ${pending} ${pending === 1 ? "file" : "files"} changed in this session and not published.` +
+        `\n  Publish from the session page to keep the work, or press Ctrl-C again to discard it.\n`,
+    );
+  }
+
+  process.on("SIGINT", () => void interrupt());
+  // No prompt on these two: SIGTERM is programmatic and SIGHUP means the
+  // terminal is already gone, so a warning would print to nobody.
+  process.on("SIGTERM", () => cleanup(0));
   // Closing the terminal window sends SIGHUP, not SIGTERM — the most common way
   // a session actually ends, and without this it left its clone behind.
-  process.on("SIGHUP", cleanup);
+  process.on("SIGHUP", () => cleanup(0));
 
   connect();
 }

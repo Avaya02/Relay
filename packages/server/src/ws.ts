@@ -208,6 +208,13 @@ export function attachWs(wss: WebSocketServer): void {
     session.agentMode = msg.mode;
     session.keySource = msg.keySource;
     session.keyHint = msg.keyHint;
+    // Restored only on the runner's word that the clone those turns ran against
+    // is still on its disk. Dropping it on every disconnect cost a reconnecting
+    // laptop its whole conversation, when nothing about the work had moved.
+    if (msg.resumeAgentSession) {
+      session.agentSessionId = msg.resumeAgentSession;
+      mirrorSessionMeta(session);
+    }
     runnerSockets.set(socket, session);
     cancelReap(session);
 

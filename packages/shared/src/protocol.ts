@@ -202,6 +202,17 @@ export type RunnerHelloMessage = {
   mode: "mock" | "real";
   keySource: "oauth" | "api-key" | "mock";
   keyHint: string | null;
+  /**
+   * The agent conversation this runner can still continue, sent only when its
+   * working directory survived the disconnect.
+   *
+   * The server drops the conversation id whenever a runner's socket closes,
+   * because resuming against a deleted clone would have the agent believe in
+   * edits that no longer exist. But a dropped socket is not always a dead
+   * process: a closed laptop or a wifi blip reconnects with the same clone
+   * still on disk, and the runner is the only party that knows which happened.
+   */
+  resumeAgentSession?: string;
 };
 
 export type RunnerEventMessage = {
