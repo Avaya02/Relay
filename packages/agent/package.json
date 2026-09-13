@@ -1,6 +1,6 @@
 {
   "name": "relayrun",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Run a Relay session against a repository on your own machine — everyone with the link watches the agent work, one person drives.",
   "keywords": [
     "claude",
