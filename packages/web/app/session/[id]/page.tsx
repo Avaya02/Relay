@@ -77,7 +77,10 @@ export default function SessionPage({
         sessionId={sessionId}
         connection={session.connection}
         lastError={session.lastError}
-        joining={attemptedJoin}
+        // A remembered identity is already being sent, so the form would be
+        // asking for a name the page is about to supply itself.
+        joining={attemptedJoin || session.resuming}
+        resuming={session.resuming}
         onJoin={(name) => {
           session.join(name);
           setAttemptedJoin(true);
@@ -247,12 +250,14 @@ function JoinGate({
   connection,
   lastError,
   joining,
+  resuming,
   onJoin,
 }: {
   sessionId: string;
   connection: string;
   lastError: string | null;
   joining: boolean;
+  resuming: boolean;
   onJoin: (displayName: string) => void;
 }) {
   const [name, setName] = useState("");
@@ -275,9 +280,13 @@ function JoinGate({
       </div>
 
       <div className="join-panel">
-        <h1 className="join-heading">Join session</h1>
+        <h1 className="join-heading">{resuming ? "Rejoining" : "Join session"}</h1>
         <p className="join-id">{sessionId}</p>
 
+
+        {resuming ? (
+          <p className="join-message">reconnecting you to this session…</p>
+        ) : (
         <form onSubmit={handleSubmit} className="join-form">
           <Input
             autoFocus
@@ -296,6 +305,7 @@ function JoinGate({
             {joining && !lastError ? "Joining…" : "Join"}
           </Button>
         </form>
+        )}
 
         {/* Says what actually happens next, without inventing presence data
             the client doesn't have until after it joins. */}

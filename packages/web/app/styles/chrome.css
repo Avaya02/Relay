@@ -12,10 +12,16 @@
    unless it carries live state.
    ================================================================== */
 
+/* Wrapping is the default, not a breakpoint behaviour: the bar's width is
+   driven by content nobody controls — a repository name, however many people
+   are watching — so any fixed width where it happens to fit is a width the
+   next participant breaks. It wraps only when it must, so the desktop row is
+   unchanged. */
 .chrome-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 1rem;
   padding: 0.625rem 1rem;
   background: var(--surface);
@@ -66,6 +72,8 @@
 .chrome-right {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 0.875rem;
   min-width: 0;
 }
@@ -124,6 +132,8 @@
 .presence {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 0.75rem;
   min-width: 0;
 }
@@ -182,6 +192,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.75rem;
 }
 .control-status {
@@ -777,3 +788,48 @@
   font-weight: 500;
 }
 
+
+/* ── Session header on a phone ──────────────────────────────────────────────
+   Measured at 393px (iPhone 16): the bar needed 447px and the presence list
+   ran off the right edge, so the one thing a watcher most needs — who is
+   driving — was the thing cut off.
+
+   It wraps onto a second line rather than shrinking, because every item here
+   is already at its minimum: these are 11px mono labels and 6px dots, and
+   scaling them down to fit would trade one unreadable state for another. */
+@media (max-width: 640px) {
+  .chrome-bar {
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    padding: 0.5rem 0.75rem;
+  }
+  .chrome-right {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem 0.75rem;
+    /* Takes the second line whole once the mark no longer fits beside it. */
+    flex: 1 1 100%;
+  }
+  .presence {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  /* The id is in the address bar already, and the dividers are decoration —
+     both are pure width on the surface with the least of it to spare. */
+  .chrome-session-id,
+  .chrome-divider {
+    display: none;
+  }
+  /* A long repository name truncates instead of pushing the row wider. */
+  .chrome-repo {
+    max-width: 10rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* Driver hand-off is a two-control row that does not fit beside its label. */
+  .control-row {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+}

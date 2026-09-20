@@ -44,6 +44,11 @@ export type ReplayedSession = {
 export type UseSessionResult = {
   connection: ConnectionState;
   selfId: string | null;
+  /**
+   * A rejoin is already in flight from a remembered identity, so the join
+   * form would be asking for something the page is about to supply itself.
+   */
+  resuming: boolean;
   events: Event[];
   participants: Participant[];
   driverId: string | null;
@@ -111,6 +116,53 @@ function runTotals(events: Event[]): {
   return { totalCostUsd, runCount };
 }
 
+/**
+ * The identity this tab holds in a session, so a refresh rejoins instead of
+ * asking who you are again.
+ *
+ * sessionStorage, deliberately, not localStorage: a token names one
+ * participant, and localStorage would hand the same one to every tab — two
+ * windows of the same session would then fight over a single seat. Per-tab
+ * also means closing the tab genuinely leaves.
+ */
+type SavedIdentity = { name: string; token: string };
+
+const identityKey = (sessionId: string) => `relay:identity:${sessionId}`;
+
+function readIdentity(sessionId: string): SavedIdentity | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(identityKey(sessionId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<SavedIdentity>;
+    if (typeof parsed.name !== "string" || typeof parsed.token !== "string") return null;
+    return parsed.name ? { name: parsed.name, token: parsed.token } : null;
+  } catch {
+    // Private mode, cleared storage, or a value someone else wrote. Asking
+    // for a name again is a fine outcome; throwing on mount is not.
+    return null;
+  }
+}
+
+function saveIdentity(sessionId: string, identity: SavedIdentity): void {
+  if (typeof window === "undefined" || !identity.name) return;
+  try {
+    window.sessionStorage.setItem(identityKey(sessionId), JSON.stringify(identity));
+  } catch {
+    // Storage is full or blocked — the session still works, it just won't
+    // survive a refresh.
+  }
+}
+
+function clearIdentity(sessionId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(identityKey(sessionId));
+  } catch {
+    // Nothing to recover from: the stale value simply stays.
+  }
+}
+
 // Connects once per mount, sends `join`, and reduces every incoming
 // ServerMessage into local state. Rendering strictly follows the server's
 // `seq` order (spec: "Never trust client timing") — events arrive already
@@ -126,8 +178,27 @@ export function useSession(sessionId: string): UseSessionResult {
   const pendingDisplayName = useRef<string | null>(null);
   const resumeToken = useRef<string | null>(null);
 
+  // Hydrated during the first render rather than in an effect: the socket
+  // opens from an effect, and a name that arrives after that has already
+  // missed the `join` it was needed for.
+  //
+  // Only refs are written, never state, so there is nothing for the server
+  // render to disagree with.
+  const hydrated = useRef(false);
+  if (!hydrated.current) {
+    hydrated.current = true;
+    const saved = readIdentity(sessionId);
+    if (saved) {
+      pendingDisplayName.current = saved.name;
+      resumeToken.current = saved.token;
+    }
+  }
+
   const [connection, setConnection] = useState<ConnectionState>("connecting");
   const [selfId, setSelfId] = useState<string | null>(null);
+  // The socket handlers are attached once and would otherwise close over the
+  // first render's `selfId` forever.
+  const selfIdRef = useRef<string | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [driverId, setDriverId] = useState<string | null>(null);
@@ -201,6 +272,14 @@ export function useSession(sessionId: string): UseSessionResult {
         switch (msg.type) {
           case "joined":
             resumeToken.current = msg.token;
+            // Written here rather than at join time because only the server
+            // can mint the token, and a name without one rejoins as a
+            // stranger.
+            saveIdentity(sessionId, {
+              name: pendingDisplayName.current ?? "",
+              token: msg.token,
+            });
+            selfIdRef.current = msg.participantId;
             setSelfId(msg.participantId);
             break;
           case "replay":
@@ -289,6 +368,10 @@ export function useSession(sessionId: string): UseSessionResult {
             );
             break;
           case "error":
+            // A refusal aimed at the rejoin itself means the stored identity
+            // is the problem; drop it so the next load asks cleanly rather
+            // than retrying the same bad token forever.
+            if (selfIdRef.current === null) clearIdentity(sessionId);
             setLastError(msg.message);
             break;
           case "pong":
@@ -396,6 +479,9 @@ export function useSession(sessionId: string): UseSessionResult {
   return {
     connection,
     selfId,
+    // A name was restored and the server hasn't confirmed it yet. Nothing to
+    // ask the viewer for, so the form shouldn't be on screen.
+    resuming: pendingDisplayName.current !== null && selfId === null && lastError === null,
     events,
     participants,
     driverId,
