@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Check, Copy } from "lucide-react";
 import type {
   DiffLine,
   Event,
@@ -415,36 +416,73 @@ function LedgerRow({
 // cheap when events are arriving several times a second.
 const PROSE_CLAMP_LINES = 14;
 
+/**
+ * Copies the answer as the agent wrote it — the markdown source, not the
+ * rendered text, because what people paste this into is usually another
+ * markdown surface and a flattened copy loses the code fences.
+ */
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const t = setTimeout(() => setCopied(false), 1600);
+    return () => clearTimeout(t);
+  }, [copied]);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+    } catch {
+      // Denied permission or an insecure origin. Staying silent is right:
+      // the selection is still there to copy by hand, and an error toast
+      // over the answer would cost more than the failure did.
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      className="prose-copy"
+      onClick={copy}
+      data-copied={copied || undefined}
+      aria-label={copied ? "Answer copied" : "Copy answer"}
+    >
+      {copied ? (
+        <Check size={13} strokeWidth={2} aria-hidden />
+      ) : (
+        <Copy size={13} strokeWidth={2} aria-hidden />
+      )}
+    </button>
+  );
+}
+
 function ProseRow({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
   const lineCount = text.split("\n").length;
   const long = lineCount > PROSE_CLAMP_LINES || text.length > 1200;
 
-  if (!long) {
-    return (
-      <div className="ledger-item markdown-body ledger-prose">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
-      </div>
-    );
-  }
-
   return (
-    <div className="ledger-item ledger-prose">
+    <div className="ledger-item ledger-prose prose-block">
+      <CopyButton text={text} />
       <div
         className={
-          open ? "markdown-body" : "markdown-body ledger-prose-clamped"
+          long && !open ? "markdown-body ledger-prose-clamped" : "markdown-body"
         }
       >
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
       </div>
-      <button
-        type="button"
-        className="ledger-prose-toggle"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-      >
-        {open ? "Show less" : `Show all ${lineCount} lines`}
-      </button>
+      {long && (
+        <button
+          type="button"
+          className="ledger-prose-toggle"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+        >
+          {open ? "Show less" : `Show all ${lineCount} lines`}
+        </button>
+      )}
     </div>
   );
 }

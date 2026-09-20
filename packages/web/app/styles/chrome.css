@@ -285,8 +285,11 @@
 }
 
 /* --- Composer ----------------------------------------------------- */
+/* Bottom-aligned, so the buttons stay level with the last line as the field
+   grows upward rather than drifting to the middle of a ten-line paste. */
 .composer {
   display: flex;
+  align-items: flex-end;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
   background: var(--surface-2);
@@ -295,11 +298,40 @@
 .composer-input {
   flex: 1;
   min-width: 0;
+  /* Height is set from scrollHeight on every keystroke; resize would let the
+     browser fight that, and the field already sizes itself. */
+  resize: none;
+  overflow-y: auto;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+.composer-input::placeholder {
+  color: var(--text-faint);
+}
+.composer-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+/* Kept on one row at the field's baseline whatever height it grows to. */
+.composer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 /* Stop is deliberately quieter than Send. Both were filled buttons of
    similar weight sitting side by side, which made the destructive
    action compete with the primary one on every keystroke. */
 .composer-stop {
+  /* Matched to .btn-solid: the two sit side by side and previously relied on
+     the flex row stretching them to equal height. */
+  height: 2.25rem;
   font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--state-error);
