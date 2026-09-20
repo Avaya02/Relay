@@ -86,6 +86,53 @@ function buildRows(events: Event[]): Row[] {
   return rows;
 }
 
+// A turn is the unit a reader actually thinks in: one thing asked, one answer
+// back, and the work in between. Grouping by it is what lets finished work
+// fold away while the answer it produced stays on the page.
+type Turn = {
+  key: string;
+  instruction: Extract<Row, { type: "instruction" }> | null;
+  rows: Row[];
+  /** No terminal row yet, so this turn is the one happening now. */
+  live: boolean;
+};
+
+function groupTurns(rows: Row[]): Turn[] {
+  const turns: Turn[] = [];
+  let current: Turn | null = null;
+
+  for (const row of rows) {
+    if (row.type === "instruction") {
+      current = { key: `t${row.event.seq}`, instruction: row, rows: [], live: true };
+      turns.push(current);
+      continue;
+    }
+    // A replay can open mid-run, with actions arriving before any instruction
+    // this viewer ever saw. They belong to a turn whose prompt is off-screen,
+    // not to nothing.
+    if (!current) {
+      current = { key: "t0", instruction: null, rows: [], live: true };
+      turns.push(current);
+    }
+    current.rows.push(row);
+    if (row.type === "done" || row.type === "error") current.live = false;
+  }
+  return turns;
+}
+
+/** The one-line stand-in a finished turn's steps collapse into. */
+function stepSummary(turn: Turn): string {
+  const steps = turn.rows.filter((r) => r.type === "action").length;
+  const done = turn.rows.find((r) => r.type === "done");
+  const parts: string[] = [`${steps} ${steps === 1 ? "step" : "steps"}`];
+  if (done) {
+    const d = done.event.data as { durationMs?: number; costUsd?: number };
+    if (typeof d.durationMs === "number") parts.push(`${(d.durationMs / 1000).toFixed(1)}s`);
+    if (typeof d.costUsd === "number") parts.push(`$${d.costUsd.toFixed(4)}`);
+  }
+  return parts.join("  ·  ");
+}
+
 export function StreamView({
   events,
   participants,
@@ -108,6 +155,7 @@ export function StreamView({
   const [seenAtBottom, setSeenAtBottom] = useState(0);
 
   const rows = useMemo(() => buildRows(events), [events]);
+  const turns = useMemo(() => groupTurns(rows), [rows]);
   const missed = pinnedToBottom ? 0 : Math.max(0, events.length - seenAtBottom);
 
   // Only auto-scroll when the viewer was already at the bottom. Scrolling up
@@ -171,10 +219,10 @@ export function StreamView({
           </div>
         ) : (
           <div className="ledger-rail flex flex-col">
-            {rows.map((row) => (
-              <LedgerRow
-                key={row.event.seq}
-                row={row}
+            {turns.map((turn) => (
+              <TurnBlock
+                key={turn.key}
+                turn={turn}
                 participants={participants}
                 selfId={selfId}
               />
@@ -202,6 +250,87 @@ function timeOf(event: Event): string {
     minute: "2-digit",
     second: "2-digit",
   });
+}
+
+/**
+ * One turn: what was asked, what came back, and — folded away once it's over —
+ * how it got there.
+ *
+ * While the agent is working, every step is on screen: that stream is the
+ * product's whole claim to being watchable. The moment the turn settles, the
+ * steps stop being news and become provenance, so they collapse to a single
+ * line beneath the answer. A ten-turn session stays readable as a conversation
+ * instead of scrolling as a hundred rows of tool calls.
+ */
+function TurnBlock({
+  turn,
+  participants,
+  selfId,
+}: {
+  turn: Turn;
+  participants: Participant[];
+  selfId: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const actionRows = turn.rows.filter((r) => r.type === "action");
+
+  return (
+    <section className="turn">
+      {turn.instruction && (
+        <LedgerRow row={turn.instruction} participants={participants} selfId={selfId} />
+      )}
+
+      {turn.rows.map((row) => {
+        // Collapsed into the footer below, along with the done row whose
+        // numbers the footer is showing.
+        if (!turn.live && row.type === "action") return null;
+        if (row.type === "done") return null;
+        return (
+          <LedgerRow
+            key={row.event.seq}
+            row={row}
+            participants={participants}
+            selfId={selfId}
+          />
+        );
+      })}
+
+      {!turn.live && (
+        <div className="turn-steps">
+          {actionRows.length > 0 ? (
+            <button
+              type="button"
+              className="turn-steps-toggle"
+              onClick={() => setOpen((v) => !v)}
+              aria-expanded={open}
+            >
+              <span className="turn-steps-chevron" aria-hidden>
+                ›
+              </span>
+              {stepSummary(turn)}
+            </button>
+          ) : (
+            // Nothing was run, so there is nothing to open — but the turn's
+            // cost and duration are still worth stating.
+            <span className="turn-steps-static">{stepSummary(turn)}</span>
+          )}
+
+          {open && (
+            <div className="turn-steps-list">
+              {actionRows.map((row) => (
+                <LedgerRow
+                  key={row.event.seq}
+                  row={row}
+                  participants={participants}
+                  selfId={selfId}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
 }
 
 function LedgerRow({

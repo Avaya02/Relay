@@ -189,30 +189,32 @@
    crosses it, the way a marker crosses a timeline.
    ================================================================== */
 
+/* The prompt is the question, and the reader already knows what they asked —
+   so it sets the scene rather than competing with the answer for attention.
+   Indented and dimmed on purpose: the asymmetry alone says "this side is the
+   asking", which a filled bubble would say more loudly and less quietly than
+   a surface with no other filled containers can afford. */
 .ledger-instruction {
   position: relative;
-  font-size: 0.875rem;
+  padding-left: 0.875rem;
+  border-left: 1px solid var(--border);
+  font-size: 0.8125rem;
   line-height: 1.6;
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  padding-block-end: 0.5rem;
-  border-top: 1px solid var(--border);
+  padding-block-end: 0.25rem;
 }
 .ledger-instruction--first {
   margin-top: 0;
-  padding-top: 0.5rem;
-  border-top: 0;
 }
+/* The turn number rides above the prompt rather than interrupting the rule,
+   which no longer runs across the column for it to sit in. */
 .ledger-turn {
-  position: absolute;
-  top: -0.4375rem;
-  left: 0;
-  padding-right: 0.5rem;
-  background: var(--bg);
+  display: block;
+  margin-bottom: 0.3125rem;
   font-family: var(--font-mono);
   font-size: 0.625rem;
   line-height: 1;
-  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
 }
 .ledger-instruction--first .ledger-turn {
   display: none;
@@ -221,9 +223,9 @@
   color: var(--accent);
 }
 .ledger-instruction-arrow {
-  color: var(--text-dim);
+  color: var(--text-faint);
 }
 .ledger-instruction-text {
-  color: var(--text);
+  color: var(--text-dim);
 }
 
