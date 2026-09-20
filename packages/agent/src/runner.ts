@@ -204,6 +204,10 @@ export function startRunner(opts: RunnerOptions): void {
         mode,
         keySource: opts.keySource,
         keyHint: opts.keyHint,
+        // Only when something actually answers with it. The scripted agent
+        // replays a fixture and never reaches a model, so naming one in the
+        // room would be the same lie the "Demo" label exists to prevent.
+        ...(mode === "real" ? { model: opts.model } : {}),
         // Offered only when this process still holds the clone those turns ran
         // against. A restarted CLI has neither, and correctly starts fresh.
         ...(workingDir && agentSessionId ? { resumeAgentSession: agentSessionId } : {}),

@@ -58,6 +58,8 @@ export type Session = {
   agentMode: "mock" | "real" | null;
   keySource: "oauth" | "api-key" | "mock" | null;
   keyHint: string | null;
+  /** Reported by the runner at connect; null until one attaches. */
+  model: string | null;
   // Proposed instructions from anyone in the room. Inert until the driver
   // promotes one, which is what keeps "one writer" true while still giving
   // watchers something to do.
@@ -100,6 +102,7 @@ function createSession(id: string): Session {
     agentMode: null,
     keySource: null,
     keyHint: null,
+    model: null,
     suggestions: [],
   };
   sessions.set(id, session);
@@ -178,6 +181,7 @@ export function agentInfo(session: Session): AgentInfo {
     mode: session.agentMode ?? "mock",
     keySource: session.keySource ?? "mock",
     keyHint: session.keyHint,
+    model: session.model,
     runnerConnected: session.runnerSocket !== null,
   };
 }

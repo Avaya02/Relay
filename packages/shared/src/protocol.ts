@@ -203,6 +203,11 @@ export type RunnerHelloMessage = {
   keySource: "oauth" | "api-key" | "mock";
   keyHint: string | null;
   /**
+   * The model this runner was started with. Optional so a CLI published
+   * before this field existed still connects and simply reports nothing.
+   */
+  model?: string;
+  /**
    * The agent conversation this runner can still continue, sent only when its
    * working directory survived the disconnect.
    *
@@ -335,6 +340,12 @@ export type AgentInfo = {
   keySource: "oauth" | "api-key" | "mock";
   /** Last four characters of the key, when the runner was launched with one. */
   keyHint: string | null;
+  /**
+   * Which model is answering, as the runner reported it. Null in mock mode,
+   * and for a runner too old to send it — the room then knows a real agent is
+   * attached without knowing which one, which is the honest rendering.
+   */
+  model: string | null;
   /** Without an attached runner, nothing can execute an instruction. */
   runnerConnected: boolean;
 };

@@ -20,6 +20,18 @@ import type { AgentInfo } from "@relay/shared";
 //   Live         — the real Agent SDK on the host's own Claude Code login.
 //   Live ··wxyz  — the real Agent SDK on a key the host passed to the CLI.
 
+/**
+ * `claude-sonnet-5` → `sonnet-5`, for the chip.
+ *
+ * Only the vendor prefix is dropped, and only when it is there — no lookup
+ * table of friendly names, because that table is wrong the day a model ships
+ * and nobody remembers this file exists.
+ */
+function shortModel(model: string | null): string {
+  if (!model) return "Live";
+  return model.replace(/^claude-/, "");
+}
+
 export function AgentChip({ agent }: { agent: AgentInfo | null }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -47,14 +59,21 @@ export function AgentChip({ agent }: { agent: AgentInfo | null }) {
 
   const offline = !agent.runnerConnected;
   const live = !offline && agent.mode === "real";
-  const label = offline ? "Offline" : live ? "Live" : "Demo";
+  // The model name replaces "Live" rather than sitting beside it: a model is
+  // only ever named when something real is attached, so it carries the same
+  // signal in the same width — and answers "which one" at a glance, which the
+  // chip previously could not. "Live" remains the fallback for a runner too
+  // old to report one.
+  const label = offline ? "Offline" : live ? shortModel(agent.model) : "Demo";
 
   const title = offline
     ? "No agent is connected — nothing can run in this session"
     : live
-      ? agent.keySource === "api-key"
-        ? "Running on the host's machine, billed to the key they supplied"
-        : "Running on the host's machine, billed to their Claude Code login"
+      ? `${agent.model ?? "The Agent SDK"} on the host's machine, billed to ${
+          agent.keySource === "api-key"
+            ? "the key they supplied"
+            : "their Claude Code login"
+        }`
       : "Running a scripted agent on the host's machine — no model, no cost";
 
   return (
@@ -107,9 +126,7 @@ function AgentPanel({ agent }: { agent: AgentInfo }) {
     return (
       <>
         <p className="agent-title">
-          {agent.keySource === "api-key"
-            ? "Running on a supplied key"
-            : "Running on the host's login"}
+          {agent.model ? <code>{agent.model}</code> : "Real agent"}
         </p>
         <p className="agent-body">
           The real Claude Agent SDK, on the machine of whoever started this
@@ -125,8 +142,8 @@ function AgentPanel({ agent }: { agent: AgentInfo }) {
         </p>
         <p className="agent-note">
           No credential reaches this server or your browser. The repository
-          never leaves their machine either — everything here is a description
-          of what happened to it.
+          stays on their machine — what travels is the transcript: the agent&apos;s
+          actions, and the diff of every file it changed.
         </p>
       </>
     );
