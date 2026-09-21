@@ -1,321 +1,45 @@
 /* ==================================================================
-   WORKSPACE RAIL — what the session did to the repo, standing in its
-   own column rather than summoned from under the ledger.
+   RAILS — the two columns either side of the stream.
 
-   Rules that govern it:
-
-   1. It frames, never competes. Same surface as the chrome, one
-      border away from the ledger. Accent appears only on real
-      insertions, error tone only on real deletions — a "+0" is
-      neither, and renders dim (.workspace-zero).
-   2. Status is never colour alone. Every row carries an A / M / D
-      letter as well as a tone, so the list survives any form of
-      colour blindness (PRODUCT.md: never colour-alone).
-   3. Only measured rows are expandable. A file the agent has written
-      but the server hasn't diffed yet is a plain row, not a button
-      that does nothing.
-   4. Path order, always. Sorting by recency would reshuffle the list
-      under the reader's cursor every time a row gets measured.
+   Left: the way back — sessions this browser has been in. Right: what
+   this session did to the repo. Same grammar on both sides: a head with
+   a title and an icon button, a scrolling body, a collapsed strip that
+   still answers "is there anything in there?" with a count.
    ================================================================== */
 
-.session-body {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-}
-.session-main {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-}
-
-.workspace {
+.rail,
+.changes {
   display: flex;
   flex-direction: column;
   flex: none;
-  width: 20rem;
   min-height: 0;
   background: var(--surface);
+}
+.rail {
+  width: 14.5rem;
+  border-right: 1px solid var(--border);
+}
+.changes {
+  width: 20rem;
   border-left: 1px solid var(--border);
 }
 @media (min-width: 1600px) {
-  .workspace {
-    width: 24rem;
+  .changes {
+    width: 22rem;
   }
 }
-
-.workspace-head {
-  display: flex;
+.rail--collapsed,
+.changes--collapsed {
+  width: 2.75rem;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.625rem 0.875rem;
-  border-bottom: 1px solid var(--border);
+  padding-top: 0.5rem;
+  gap: 0.25rem;
 }
-.workspace-title {
+.rail-count {
   font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--text);
-}
-.workspace-collapse,
-.workspace-expand {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.375rem;
-  background: none;
-  border: 0;
-  padding: 0.25rem;
-  border-radius: 0.25rem;
-  color: var(--text-dim);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  line-height: 1;
-  cursor: pointer;
-  transition: color 120ms ease-out;
-}
-.workspace-collapse:hover,
-.workspace-expand:hover {
-  color: var(--text);
-}
-.workspace-collapse:focus-visible,
-.workspace-expand:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-/* Collapsed: a strip narrow enough to give the space back, wide enough
-   to still answer "is there anything in there?" with a count. */
-.workspace--collapsed {
-  width: 2.5rem;
-  align-items: center;
-  padding-top: 0.625rem;
-}
-.workspace-expand {
-  flex-direction: column;
-  padding: 0.375rem 0.25rem;
-}
-.workspace-expand-count {
+  font-size: var(--fs-2xs);
   font-variant-numeric: tabular-nums;
-  font-size: 0.6875rem;
-  color: var(--text);
-}
-
-.workspace-summary {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  padding: 0.5rem 0.875rem;
-  border-bottom: 1px solid var(--border);
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-}
-.workspace-count {
   color: var(--text-dim);
-}
-
-.workspace-body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-.workspace-empty {
-  margin: 0;
-  padding: 1rem 0.875rem;
-  font-size: 0.75rem;
-  line-height: 1.6;
-  color: var(--text-dim);
-}
-
-.workspace-files {
-  list-style: none;
-  margin: 0;
-  padding: 0.25rem 0;
-}
-.workspace-file {
-  position: relative;
-}
-.workspace-file-row {
-  display: grid;
-  grid-template-columns: 0.875rem minmax(0, 1fr) auto;
-  align-items: baseline;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0.3125rem 0.875rem;
-  background: none;
-  border: 0;
-  text-align: left;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-}
-.workspace-file-row--open {
-  cursor: pointer;
-  transition: background-color 120ms ease-out;
-}
-.workspace-file-row--open:hover {
-  background: var(--surface-2);
-}
-.workspace-file-row--open:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-
-.workspace-mark {
-  font-size: 0.6875rem;
-  text-align: center;
-}
-.workspace-mark--added {
-  color: var(--accent);
-}
-.workspace-mark--modified {
-  color: var(--presence-4);
-}
-.workspace-mark--deleted {
-  color: var(--state-error);
-}
-.workspace-mark--pending {
-  color: var(--text-dim);
-}
-
-/* Directory dim, filename bright: the eye lands on the name it's looking
-   for, and a long path truncates from the *left* so the name survives. */
-.workspace-path {
-  display: flex;
-  min-width: 0;
-  overflow: hidden;
-}
-/* No `direction: rtl` here. It's the usual trick for truncating a path from
-   the left, and it silently reorders the trailing separator — "docs/" renders
-   as "/docs", so the row reads "/docssession-log.md". Truncating the
-   directory from the right instead keeps the separator where it belongs, and
-   the filename is a separate span so it never truncates at all. */
-.workspace-dir {
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-dim);
-}
-.workspace-base {
-  flex: none;
-  color: var(--text);
-  white-space: nowrap;
-}
-
-.workspace-stats {
-  display: flex;
-  gap: 0.375rem;
-  font-size: 0.6875rem;
-}
-.workspace-pending {
-  font-size: 0.6875rem;
-  color: var(--text-dim);
-}
-
-/* Dimmed by size, not by colour. Mixing --text-dim 85% toward --bg was the
-   obvious way to recess this and measured 4.27:1 — under the 4.5:1 floor for
-   text this small. The size difference alone carries the hierarchy. */
-.workspace-turn {
-  display: block;
-  padding: 0 0.875rem 0.25rem 2.25rem;
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  color: var(--text-dim);
-}
-
-.workspace-diff {
-  margin: 0 0 0.5rem;
-  padding: 0.5rem 0.875rem;
-  background: var(--bg);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  font-family: var(--font-mono);
-  font-variant-ligatures: none;
-  font-feature-settings: "liga" 0, "calt" 0;
-  font-size: 0.6875rem;
-  line-height: 1.6;
-  max-height: 22rem;
-  overflow: auto;
-  color: var(--text-dim);
-}
-
-.workspace-foot {
-  padding: 0.625rem 0.875rem;
-  border-top: 1px solid var(--border);
-}
-.workspace-note {
-  margin: 0 0 0.5rem;
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  line-height: 1.5;
-  color: var(--text-dim);
-}
-.workspace-note code {
-  color: var(--text);
-}
-.workspace-note a {
-  color: var(--accent);
-}
-.workspace-note--error {
-  color: var(--state-error);
-}
-
-/* Below this the rail can't be a column without starving the ledger, so
-   it drops underneath as a capped, scrollable panel. */
-@media (max-width: 900px) {
-  .session-body {
-    flex-direction: column;
-  }
-  .workspace,
-  .workspace--collapsed {
-    width: auto;
-    max-height: 40vh;
-    border-left: 0;
-    border-top: 1px solid var(--border);
-  }
-  .workspace--collapsed {
-    align-items: stretch;
-    padding-top: 0;
-  }
-  .workspace-expand {
-    flex-direction: row;
-    justify-content: flex-start;
-    padding: 0.5rem 0.875rem;
-  }
-  .workspace-expand-chevron {
-    transform: rotate(90deg);
-  }
-}
-
-/* ==================================================================
-   SESSIONS RAIL — the way back.
-
-   Relay has no accounts, so this is per-browser (localStorage). It is a
-   short reverse-chronological list, not a nav tree: the question it
-   answers is "what was I just in?", and three date buckets answer it
-   better than a calendar would.
-
-   Mirrors the workspace rail's grammar exactly — same head, same
-   collapse affordance, same surface — because they are the same kind
-   of object on opposite sides of the stream.
-   ================================================================== */
-
-.rail {
-  display: flex;
-  flex-direction: column;
-  flex: none;
-  width: 14rem;
-  min-height: 0;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-}
-.rail--collapsed {
-  width: 2.5rem;
-  align-items: center;
-  padding-top: 0.625rem;
 }
 
 .rail-head {
@@ -323,60 +47,31 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.625rem 0.875rem;
+  height: 2.5rem;
+  padding: 0 0.5rem 0 0.875rem;
   border-bottom: 1px solid var(--border);
 }
 .rail-title {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  font-weight: 500;
   color: var(--text);
+}
+.rail-title-meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  font-weight: 400;
+  color: var(--text-faint);
+  white-space: nowrap;
 }
 .rail-head-actions {
   display: flex;
   align-items: center;
   gap: 0.125rem;
 }
-.rail-new,
-.rail-collapse,
-.rail-expand {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.375rem;
-  min-width: 1.25rem;
-  padding: 0.25rem;
-  border: 0;
-  background: none;
-  border-radius: 0.25rem;
-  color: var(--text-dim);
-  font-family: var(--font-mono);
-  font-size: 0.8125rem;
-  line-height: 1;
-  text-decoration: none;
-  cursor: pointer;
-  transition: color 120ms ease-out;
-}
-.rail-new:hover,
-.rail-collapse:hover,
-.rail-expand:hover {
-  color: var(--text);
-}
-.rail-new:focus-visible,
-.rail-collapse:focus-visible,
-.rail-expand:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-.rail-expand {
-  flex-direction: column;
-  padding: 0.375rem 0.25rem;
-}
-.rail-expand-count {
-  font-size: 0.6875rem;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-
 .rail-body {
   flex: 1;
   min-height: 0;
@@ -385,23 +80,24 @@
 }
 .rail-empty {
   margin: 0;
-  padding: 1rem 0.875rem;
-  font-size: 0.75rem;
-  line-height: 1.6;
+  padding: 0.875rem;
+  font-size: var(--fs-xs);
+  line-height: 1.55;
   color: var(--text-dim);
 }
 
+/* --- Sessions ----------------------------------------------------- */
 .rail-group-label {
   margin: 0;
   padding: 0.75rem 0.875rem 0.25rem;
   font-family: var(--font-mono);
-  font-size: 0.625rem;
-  color: var(--text-dim);
+  font-size: var(--fs-2xs);
+  color: var(--text-faint);
 }
 .rail-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 0.375rem;
 }
 .rail-item {
   position: relative;
@@ -409,85 +105,279 @@
   align-items: stretch;
 }
 .rail-link {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  column-gap: 0.5rem;
   flex: 1;
   min-width: 0;
-  padding: 0.375rem 0.875rem;
+  padding: 0.4375rem 0.5rem;
+  border-radius: var(--radius-control);
   text-decoration: none;
-  border-left: 2px solid transparent;
   transition: background-color 120ms ease-out;
 }
 .rail-link:hover {
   background: var(--surface-2);
 }
-.rail-link:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-/* The session you're in is marked, never hidden. A list that omits where
-   you are makes you count rows to work out where you are. */
 .rail-item--current .rail-link {
-  border-left-color: var(--accent);
   background: var(--surface-2);
 }
-.rail-name {
+.rail-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  margin-top: 0.4375rem;
+  border-radius: 50%;
+  background: var(--border-lit);
+}
+.rail-dot--working {
+  background: var(--accent);
+}
+.rail-dot--done {
+  background: var(--state-ok);
+}
+.rail-dot--error {
+  background: var(--state-error);
+}
+.rail-text {
   display: flex;
-  align-items: baseline;
-  gap: 0.375rem;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--text);
+  flex-direction: column;
+  gap: 0.125rem;
   min-width: 0;
 }
-/* The repo is the part that may be long, so it's the part that truncates —
-   the marker beside it stays whole. */
-.rail-repo {
-  flex: 0 1 auto;
-  min-width: 0;
+.rail-name {
+  font-size: var(--fs-sm);
+  line-height: 1.35;
+  color: var(--text-dim);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.rail-here {
-  flex: none;
-  font-size: 0.625rem;
-  color: var(--accent);
-}
-.rail-id {
-  flex: none;
-  font-size: 0.625rem;
-  color: var(--text-dim);
+.rail-item--current .rail-name,
+.rail-link:hover .rail-name {
+  color: var(--text);
 }
 .rail-meta {
   font-family: var(--font-mono);
-  font-size: 0.625rem;
-  color: var(--text-dim);
+  font-size: var(--fs-2xs);
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-/* Appears on hover/focus only: it's a tidying control, not something the
-   eye should have to skip past on every row. */
+/* A tidying control: revealed on hover and focus, never in the way. */
 .rail-forget {
-  flex: none;
-  width: 1.5rem;
-  border: 0;
-  background: none;
-  color: var(--text-dim);
-  font-size: 0.875rem;
-  line-height: 1;
-  cursor: pointer;
+  position: absolute;
+  top: 0.375rem;
+  right: 0.375rem;
   opacity: 0;
-  transition: opacity 120ms ease-out, color 120ms ease-out;
 }
 .rail-item:hover .rail-forget,
 .rail-forget:focus-visible {
   opacity: 1;
 }
-.rail-forget:hover {
+
+/* --- Changes ------------------------------------------------------ */
+.changes-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0.375rem;
+}
+.changes-row {
+  display: grid;
+  grid-template-columns: 0.875rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  text-align: left;
+}
+button.changes-row {
+  cursor: pointer;
+  transition: background-color 120ms ease-out;
+}
+button.changes-row:hover {
+  background: var(--surface-2);
+}
+.changes-row[aria-pressed="true"] {
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border-lit);
+}
+.changes-mark {
+  font-size: var(--fs-2xs);
+  font-weight: 500;
+  text-align: center;
+  color: var(--text-faint);
+}
+.changes-mark--added {
+  color: var(--state-ok);
+}
+.changes-mark--modified {
   color: var(--text);
 }
-.rail-forget:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
+.changes-mark--deleted {
+  color: var(--state-error);
+}
+/* Directory dim, filename bright, and the directory truncates from the
+   right — `direction: rtl` reorders the trailing separator. */
+.changes-path {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+}
+.changes-dir {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-faint);
+}
+.changes-base {
+  flex: none;
+  color: var(--text);
+  white-space: nowrap;
+}
+.changes-stats {
+  display: flex;
+  gap: 0.375rem;
+  font-size: var(--fs-2xs);
+  font-variant-numeric: tabular-nums;
+}
+.changes-pending {
+  font-size: var(--fs-2xs);
+  color: var(--text-faint);
+}
+.stat--add {
+  color: var(--state-ok);
+}
+.stat--del {
+  color: var(--state-error);
+}
+.stat--zero {
+  color: var(--text-faint);
+}
+.changes-foot {
+  padding: 0.625rem 0.875rem;
+  border-top: 1px solid var(--border);
+}
+.changes-note {
+  margin: 0 0 0.625rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+.changes-note code {
+  color: var(--text);
+}
+.changes-note a {
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: var(--border-lit);
+}
+.changes-note--error {
+  color: var(--state-error);
+}
+.changes-publish {
+  width: 100%;
+  height: 2rem;
+  border: 1px solid var(--border-lit);
+  border-radius: var(--radius-control);
+  background: none;
+  font-size: var(--fs-sm);
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 120ms ease-out, border-color 120ms ease-out;
+}
+.changes-publish:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--text-dim);
+}
+.changes-publish:disabled {
+  color: var(--text-faint);
+  cursor: default;
 }
 
+/* --- Diff drawer -------------------------------------------------- */
+/* A file's patch, opened over the stream rather than inside a 20rem
+   column where a real line of code cannot be read. */
+.drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  width: min(42rem, 100%);
+  background: var(--surface);
+  border-left: 1px solid var(--border-lit);
+  box-shadow: -8px 0 24px rgb(0 0 0 / 0.35);
+}
+.drawer-head {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  height: 2.5rem;
+  padding: 0 0.5rem 0 0.875rem;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+.drawer-path {
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: ltr;
+}
+.drawer-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.drawer-body .diff {
+  max-height: none;
+  font-size: var(--fs-xs);
+  padding: 0.5rem 0;
+}
+.drawer-body .diff-hunk {
+  margin-top: 0.5rem;
+  padding-block: 0.125rem;
+  background: var(--surface-2);
+}
+
+/* --- Narrow ------------------------------------------------------- */
+@media (max-width: 1100px) {
+  .rail,
+  .rail--collapsed {
+    display: none;
+  }
+}
+@media (max-width: 900px) {
+  .shell-body {
+    flex-direction: column;
+  }
+  .changes,
+  .changes--collapsed {
+    width: auto;
+    max-height: 40vh;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+  .changes--collapsed {
+    flex-direction: row;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+  }
+  .drawer {
+    width: 100%;
+  }
+}

@@ -1,0 +1,658 @@
+/* ==================================================================
+   THE STREAM — the conversation, turn by turn.
+
+   A turn is the reading unit: what was asked, the steps the agent took,
+   and what came back. The prompt sits in a quiet container, the steps
+   in a hairline card that stays open while the turn is live and folds
+   to a one-line record once it settles, the answer as plain prose. The
+   whole column is one measure, centred, so the page reads at any width.
+   ================================================================== */
+
+.stream-wrap {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+.stream {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.stream-measure {
+  width: 100%;
+  max-width: calc(var(--measure-conversation) + 2rem);
+  margin: 0 auto;
+  padding: 1.5rem 1rem 1rem;
+}
+
+.turn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+[data-turn] + [data-turn],
+.turn + .turn {
+  margin-top: 2.25rem;
+}
+/* Only rows that are genuinely new animate in — see stream/newRows.tsx. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-new] {
+    animation: row-enter 160ms var(--ease-out);
+  }
+}
+@keyframes row-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* A queued instruction waits in line behind the run in progress. It is in
+   the record already — the server appended it — so it shows where it will
+   run, held back rather than hidden. */
+.turn--queued {
+  opacity: 0.55;
+}
+
+/* --- Prompt --------------------------------------------------------- */
+.prompt {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  padding: 0.625rem 0.875rem 0.75rem;
+}
+.prompt-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.375rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--text-faint);
+}
+.prompt-meta .avatar {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  box-shadow: none;
+  font-size: 0.5rem;
+}
+.prompt-who {
+  color: var(--text-dim);
+}
+.prompt-turn {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.prompt-queued {
+  color: var(--accent);
+}
+.prompt-text {
+  margin: 0;
+  font-size: var(--fs-md);
+  line-height: 1.6;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* --- Steps card ----------------------------------------------------- */
+.steps {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+.steps-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2rem;
+  padding: 0.25rem 0.625rem 0.25rem 0.5rem;
+  border: 0;
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease-out;
+}
+.steps-head:hover {
+  background: var(--surface-2);
+}
+.steps-chevron {
+  flex: none;
+  color: var(--text-faint);
+  transition: transform 140ms var(--ease-out);
+}
+.steps-head[aria-expanded="true"] .steps-chevron {
+  transform: rotate(90deg);
+}
+.steps-title {
+  color: var(--text);
+  white-space: nowrap;
+}
+.steps-histogram {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-dim);
+}
+.steps-state {
+  margin-left: auto;
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+.steps--live .steps-state {
+  color: var(--accent);
+}
+.steps--live .steps-head {
+  cursor: default;
+}
+.steps-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  border-top: 1px solid var(--border);
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+}
+
+/* One row per action. icon | verb | target | result | duration | mark. The
+   target keeps a floor so a long result can never crush it — knowing the
+   agent ran `npm test` matters more than the tail of why it failed. */
+.step-row {
+  display: grid;
+  grid-template-columns: 1rem 4.5rem minmax(8rem, 1fr) minmax(0, auto) 3rem 1rem;
+  align-items: baseline;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.25rem 0.625rem;
+  border: 0;
+  background: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  color: var(--text-dim);
+  text-align: left;
+}
+button.step-row {
+  cursor: pointer;
+  transition: background-color 120ms ease-out;
+}
+button.step-row:hover,
+button.step-row[aria-expanded="true"] {
+  background: var(--surface);
+}
+.step-icon {
+  align-self: center;
+  color: var(--text-faint);
+}
+.step-verb {
+  color: var(--text-dim);
+}
+.step-target {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.step-result {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-dim);
+}
+/* Never lose the reason to an ellipsis: the row wraps its result open on
+   hover and focus, and the row's label carries it for a screen reader. */
+button.step-row:hover .step-result,
+button.step-row:focus-visible .step-result,
+button.step-row[aria-expanded="true"] .step-result {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.step-duration {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+.step-mark {
+  align-self: center;
+  display: inline-grid;
+  place-items: center;
+  color: var(--text-faint);
+}
+.step--ok .step-mark {
+  color: var(--state-ok);
+}
+.step--fail .step-mark,
+.step--fail .step-result {
+  color: var(--state-error);
+}
+.step--pending .step-mark,
+.step--pending .step-result {
+  color: var(--accent);
+}
+/* Plan updates are timeline anchors, not work: recessed, still ≥4.5:1. */
+.step--muted .step-verb,
+.step--muted .step-target,
+.step--muted .step-result,
+.step--muted .step-icon {
+  color: color-mix(in oklch, var(--text-dim) 90%, var(--bg));
+}
+.step--muted .step-mark {
+  color: var(--text-faint);
+}
+/* A run of identical verbs folded into one row. */
+.step-count {
+  color: var(--text-faint);
+}
+.step-fold {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0.125rem 1.5rem;
+}
+.step-fold .step-row {
+  padding-block: 0.125rem;
+}
+
+/* The one moving thing on the canvas while the agent has the floor. */
+.step-working {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.375rem 0.625rem 0.375rem 0.6875rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--accent);
+}
+.step-working-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .step-working-dot {
+    animation: status-pulse 2s ease-in-out infinite;
+  }
+}
+
+/* Expanded detail — diffs and bulk output, inside the row's own card. */
+.step-detail {
+  margin: 0.125rem 0.625rem 0.5rem 2.125rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--bg);
+  overflow: hidden;
+}
+.step-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.3125rem 0.625rem;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--text-dim);
+}
+.step-detail-head .icon-btn {
+  color: var(--text-faint);
+}
+.step-detail-head .icon-btn[data-copied] {
+  color: var(--state-ok);
+}
+.step-output {
+  margin: 0;
+  padding: 0.625rem;
+  max-height: 22rem;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  line-height: 1.6;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* --- Diff lines — shared by step details and the changes drawer ---- */
+.diff {
+  margin: 0;
+  padding: 0.375rem 0;
+  max-height: 22rem;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+  font-size: var(--fs-2xs);
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+.diff-line {
+  display: block;
+  padding-inline: 0.625rem;
+  white-space: pre;
+}
+.diff-op {
+  display: inline-block;
+  width: 1ch;
+  margin-right: 0.75ch;
+  opacity: 0.7;
+}
+/* Colour carries meaning here, and the +/− glyph carries the same meaning
+   for anyone who can't see the hue. Green adds, red removes — the diff
+   convention every reader already knows. */
+.diff-add {
+  background: var(--ok-soft);
+  color: var(--text);
+}
+.diff-del {
+  background: var(--error-soft);
+  color: var(--text);
+}
+.diff-hunk {
+  color: var(--text-faint);
+}
+
+/* --- Answer --------------------------------------------------------- */
+.answer {
+  position: relative;
+  padding: 0.125rem 2.25rem 0 0.125rem;
+}
+.answer-copy {
+  position: absolute;
+  top: 0;
+  right: 0;
+  opacity: 0;
+  transition: opacity 120ms ease-out, color 120ms ease-out;
+}
+.answer:hover .answer-copy,
+.answer-copy:focus-visible,
+.answer-copy[data-copied] {
+  opacity: 1;
+}
+.answer-copy[data-copied] {
+  color: var(--state-ok);
+}
+@media (hover: none) {
+  .answer-copy {
+    opacity: 1;
+  }
+}
+/* A 130-line listing rendered whole pushes every other row off screen.
+   Past ~14 lines the answer clamps and opens in place. */
+.answer-clamped {
+  max-height: 20rem;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, #000 76%, transparent 100%);
+}
+.answer-toggle {
+  margin-top: 0.375rem;
+  padding: 0.125rem 0.375rem;
+  margin-left: -0.375rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.answer-toggle:hover {
+  color: var(--text);
+  background: var(--surface);
+}
+
+/* --- Error card ----------------------------------------------------- */
+.error-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.625rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--error-edge);
+  border-radius: var(--radius-card);
+  background: var(--error-soft);
+}
+.error-card svg {
+  color: var(--state-error);
+  margin-top: 0.125rem;
+}
+.error-card-message {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  line-height: 1.55;
+  color: var(--state-error);
+  overflow-wrap: anywhere;
+}
+.error-card-hint {
+  grid-column: 2;
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+/* --- Turn footer ---------------------------------------------------- */
+.turn-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.turn-foot-sep {
+  opacity: 0.6;
+}
+
+/* --- Turn marker & jump --------------------------------------------- */
+.turn-marker {
+  position: absolute;
+  top: 0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  padding: 0.1875rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--text-faint);
+  pointer-events: none;
+  user-select: none;
+}
+.jump {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 1.75rem;
+  padding: 0 0.625rem;
+  border: 1px solid var(--border-lit);
+  border-radius: var(--radius-control);
+  background: var(--surface-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: var(--shadow-popover);
+}
+.jump:hover {
+  border-color: var(--text-dim);
+}
+
+/* --- Empty canvas --------------------------------------------------- */
+/* An invitation, not a mood: what's attached, who's here, what to try. A
+   key/value sheet rather than a grid of cards — this is an instrument's
+   nameplate, and it stays quiet next to the composer that does the work. */
+.empty {
+  max-width: 34rem;
+  margin: clamp(1rem, 12vh, 6rem) auto 0;
+  padding: 0 0.125rem;
+}
+.empty-title {
+  margin: 0 0 0.375rem;
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.empty-lede {
+  margin: 0 0 1.5rem;
+  font-size: var(--fs-md);
+  line-height: 1.55;
+  color: var(--text-dim);
+  text-wrap: pretty;
+}
+.empty-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  margin: 0 0 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.empty-facts > div {
+  display: contents;
+}
+.empty-facts dt,
+.empty-facts dd {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-sm);
+}
+.empty-facts dt {
+  padding-right: 1.5rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  line-height: 1.85;
+  color: var(--text-faint);
+}
+.empty-facts dd {
+  margin: 0;
+  color: var(--text);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.empty-facts dd .avatar {
+  vertical-align: middle;
+  margin: 0 0.25rem 0 0;
+  box-shadow: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  font-size: 0.5rem;
+}
+.empty-facts .avatars {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-right: 0.375rem;
+}
+.empty-facts .avatars > * + * {
+  margin-left: -0.25rem;
+}
+.empty-fact-dim {
+  color: var(--text-dim);
+}
+.empty-fact-live {
+  color: var(--accent);
+}
+.empty-fact-error {
+  color: var(--state-error);
+}
+.empty-facts .cmd {
+  margin: 0.375rem 0 0;
+}
+.empty-try {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--text-faint);
+}
+.empty-examples {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+}
+.empty-example {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: none;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  text-align: left;
+  cursor: pointer;
+  transition: color 120ms ease-out, border-color 120ms ease-out, background-color 120ms ease-out;
+}
+.empty-example:hover {
+  color: var(--text);
+  border-color: var(--border-lit);
+  background: var(--surface);
+}
+.empty-example svg {
+  flex: none;
+  color: var(--text-faint);
+}
+.empty-invite {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+@media (max-width: 640px) {
+  .stream-measure {
+    padding: 1rem 0.75rem 0.75rem;
+  }
+  .step-row {
+    grid-template-columns: 1rem 4rem minmax(5rem, 1fr) minmax(0, auto) 1rem;
+  }
+  .step-duration {
+    display: none;
+  }
+  .step-detail {
+    margin-left: 0.625rem;
+  }
+}
+
+/* The pending marker on a step, the running pip in a plan: one shape. */
+.live-dot {
+  display: inline-block;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .step--pending .live-dot {
+    animation: status-pulse 2s ease-in-out infinite;
+  }
+}
+.step-icon--open {
+  transform: rotate(90deg);
+}

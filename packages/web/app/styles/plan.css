@@ -1,0 +1,137 @@
+/* ==================================================================
+   PLAN STRIP — the agent's own checklist, live. Sits between the top bar
+   and the stream, one row tall when closed: pips, the running step, a
+   count. It frames the stream and never competes with it.
+   ================================================================== */
+
+.plan {
+  flex: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.plan-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  max-width: calc(var(--measure-conversation) + 2rem);
+  margin: 0 auto;
+  min-height: 2.125rem;
+  padding: 0.25rem 1rem;
+  border: 0;
+  background: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  text-align: left;
+  cursor: pointer;
+}
+.plan-bar:hover .plan-now {
+  color: var(--text);
+}
+.plan-chevron {
+  flex: none;
+  color: var(--text-faint);
+  transition: transform 140ms var(--ease-out);
+}
+.plan-bar[aria-expanded="true"] .plan-chevron {
+  transform: rotate(90deg);
+}
+.plan-label {
+  flex: none;
+  color: var(--text-faint);
+}
+.plan-pips {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1875rem;
+  flex: none;
+}
+.plan-pip {
+  width: 0.3125rem;
+  height: 0.3125rem;
+  border-radius: 50%;
+  background: var(--border-lit);
+}
+.plan-pip--completed {
+  background: var(--state-ok);
+}
+.plan-pip--in_progress {
+  background: var(--accent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .plan-pip--in_progress {
+    animation: status-pulse 2s ease-in-out infinite;
+  }
+}
+.plan-now {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-dim);
+}
+.plan-now--active {
+  color: var(--text);
+}
+.plan-count {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+
+.plan-list {
+  list-style: none;
+  width: 100%;
+  max-width: calc(var(--measure-conversation) + 2rem);
+  margin: 0 auto;
+  padding: 0.125rem 1rem 0.75rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+}
+.plan-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  text-wrap: pretty;
+}
+.plan-mark {
+  width: 0.875rem;
+  flex: none;
+  text-align: center;
+  align-self: center;
+  display: inline-grid;
+  place-items: center;
+  color: var(--text-faint);
+}
+.plan-item--completed .plan-mark {
+  color: var(--state-ok);
+}
+.plan-item--completed .plan-text {
+  /* Struck through *and* dimmed: never colour alone. */
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in oklch, var(--text-dim) 60%, transparent);
+}
+.plan-item--in_progress {
+  color: var(--text);
+}
+.plan-item--in_progress .plan-mark {
+  color: var(--accent);
+}
+/* The same checklist frozen inside a past step's detail. */
+.plan-list--inline {
+  max-width: none;
+  margin: 0;
+  padding: 0.5rem 0.625rem;
+}
+
+@media (max-width: 640px) {
+  .plan-now {
+    display: none;
+  }
+}

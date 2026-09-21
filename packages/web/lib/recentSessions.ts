@@ -28,6 +28,12 @@ export type RecentSession = {
   /** The name you joined as, so a shared browser isn't confusing. */
   name: string;
   repo: string | null;
+  /**
+   * The first instruction, clipped — what the session was *about*. Two
+   * sessions on one repo are the normal case, and a list labelled only by
+   * repo is a list of identical rows. Empty until someone drives.
+   */
+  title: string;
   firstSeen: number;
   lastSeen: number;
   /** Cached from the last time this browser had the session open. */
@@ -86,6 +92,7 @@ export function rememberSession(
     id: patch.id,
     name: patch.name ?? existing?.name ?? "",
     repo: patch.repo ?? existing?.repo ?? null,
+    title: patch.title || existing?.title || "",
     firstSeen: existing?.firstSeen ?? now,
     lastSeen: now,
     files: patch.files ?? existing?.files ?? 0,

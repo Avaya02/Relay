@@ -217,6 +217,12 @@
   margin: 0;
   padding: 0;
 }
+.avatars > * {
+  display: inline-flex;
+}
+.avatars > * + * {
+  margin-left: -0.3125rem;
+}
 .avatar {
   --presence: var(--text-dim);
   position: relative;
@@ -224,7 +230,6 @@
   place-items: center;
   width: 1.5rem;
   height: 1.5rem;
-  margin-left: -0.3125rem;
   border-radius: 50%;
   background: color-mix(in oklch, var(--presence) 22%, var(--surface));
   box-shadow: 0 0 0 2px var(--surface);
@@ -235,9 +240,6 @@
   letter-spacing: 0.02em;
   text-transform: uppercase;
   user-select: none;
-}
-.avatar:first-child {
-  margin-left: 0;
 }
 .avatar::after {
   content: "";

@@ -3,8 +3,8 @@
 @import "shadcn/tailwind.css";
 /*
  * Split by concern, in cascade order. Tailwind v4 inlines these before it
- * compiles, so the result is byte-identical to the single file this replaced —
- * the import order below IS the cascade, and reordering it changes rendering.
+ * compiles, so the import order below IS the cascade, and reordering it
+ * changes rendering. Landing files first, then the session view.
  */
 @import "./styles/tokens.css";
 @import "./styles/base.css";
@@ -19,8 +19,10 @@
 @import "./styles/faq.css";
 @import "./styles/close.css";
 @import "./styles/footer.css";
-@import "./styles/chrome.css";
-@import "./styles/rails.css";
-@import "./styles/agent.css";
 @import "./styles/recent-sessions.css";
-@import "./styles/suggestions.css";
+@import "./styles/chrome.css";
+@import "./styles/plan.css";
+@import "./styles/stream.css";
+@import "./styles/markdown.css";
+@import "./styles/composer.css";
+@import "./styles/rails.css";

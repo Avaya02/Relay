@@ -1,0 +1,177 @@
+/* ==================================================================
+   MARKDOWN — the agent's answers. Scoped to .markdown-body so nothing
+   here can leak into shadcn primitives or the landing page.
+
+   Reading size, a real heading step, horizontal rules only in tables,
+   achromatic links: the answer is the one place the page relaxes into
+   prose, and it should read like a good document, not a chat bubble.
+   ================================================================== */
+
+.markdown-body {
+  font-size: var(--fs-lg);
+  line-height: 1.65;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.markdown-body > * {
+  margin: 0;
+}
+.markdown-body > * + * {
+  margin-top: 0.75em;
+}
+.markdown-body > :is(h1, h2, h3, h4) {
+  margin-top: 1.4em;
+}
+.markdown-body > :is(h1, h2, h3, h4) + * {
+  margin-top: 0.5em;
+}
+.markdown-body > :first-child {
+  margin-top: 0;
+}
+.markdown-body :is(h1, h2, h3, h4) {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  text-wrap: balance;
+}
+.markdown-body h1 {
+  font-size: 1.1875rem;
+}
+.markdown-body h2 {
+  font-size: 1.0625rem;
+}
+.markdown-body h3 {
+  font-size: 1rem;
+}
+.markdown-body h4 {
+  font-size: var(--fs-md);
+}
+.markdown-body p {
+  text-wrap: pretty;
+}
+.markdown-body a {
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: var(--border-lit);
+  text-underline-offset: 0.15em;
+  transition: text-decoration-color 120ms ease-out;
+}
+.markdown-body a:hover {
+  text-decoration-color: var(--text);
+}
+.markdown-body strong {
+  font-weight: 600;
+}
+.markdown-body em {
+  font-style: italic;
+}
+.markdown-body :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-control);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 1.5rem;
+}
+.markdown-body li + li {
+  margin-top: 0.25em;
+}
+.markdown-body li > ul,
+.markdown-body li > ol {
+  margin-top: 0.25em;
+}
+.markdown-body blockquote {
+  margin: 0;
+  padding-left: 0.875rem;
+  border-left: 1px solid var(--border-lit);
+  color: var(--text-dim);
+}
+.markdown-body hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+.markdown-body img {
+  max-width: 100%;
+  border-radius: var(--radius-control);
+}
+
+/* Tables: rules between rows, none between cells. A wide table scrolls in
+   its own wrapper rather than breaking the measure. */
+.markdown-body .table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+.markdown-body th,
+.markdown-body td {
+  padding: 0.4375rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+.markdown-body tr:last-child td {
+  border-bottom: 0;
+}
+.markdown-body th {
+  font-family: var(--font-mono);
+  font-size: 0.78em;
+  font-weight: 500;
+  color: var(--text-dim);
+  background: var(--surface);
+}
+.markdown-body td code {
+  white-space: nowrap;
+}
+
+/* Code blocks carry a header: the language, and a copy that takes just
+   this block rather than the whole answer. */
+.codeblock {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.codeblock-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  height: 1.875rem;
+  padding: 0 0.25rem 0 0.75rem;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--text-faint);
+}
+.codeblock-head .icon-btn {
+  color: var(--text-faint);
+}
+.codeblock-head .icon-btn[data-copied] {
+  color: var(--state-ok);
+}
+.codeblock pre {
+  margin: 0;
+  padding: 0.75rem;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--text);
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+}
+.codeblock code {
+  font: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+}
