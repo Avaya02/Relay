@@ -166,6 +166,26 @@
   border-color: color-mix(in oklch, var(--accent) 35%, transparent);
 }
 
+/* The one deliberate pulse. Shared by the hero eyebrow, the session status
+   pill, the plan strip's running pip and the reconnect dot, so none of them
+   can drift to a different rhythm. Every user of it gates on
+   prefers-reduced-motion at the call site. */
+@keyframes status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .badge--live .badge-dot,
+  .hero-eyebrow .badge-dot {
+    animation: status-pulse 2s ease-in-out infinite;
+  }
+}
+
 /* --- Buttons -------------------------------------------------------
    One primary button shape, shared by the landing page and the app's
    composer. Square, mono, white-filled: the reference's most literal

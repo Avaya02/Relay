@@ -1,0 +1,287 @@
+/* ==================================================================
+   COMPOSER — the raised card at the foot of the conversation, and the
+   dock that holds it together with the control strip and any pending
+   suggestions. One card for every role: the driver sends, a watcher
+   suggests, and the difference is copy and the primary control rather
+   than a second component with its own tokens.
+   ================================================================== */
+
+.dock {
+  flex: none;
+  width: 100%;
+  max-width: calc(var(--measure-conversation) + 2rem);
+  margin: 0 auto;
+  padding: 0 1rem 1rem;
+}
+.dock > * + * {
+  margin-top: 0.375rem;
+}
+
+.composer {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-2);
+  border: 1px solid var(--border-lit);
+  border-radius: var(--radius-card);
+  transition: border-color 120ms ease-out;
+}
+.composer:focus-within {
+  border-color: var(--text-dim);
+}
+.composer--disabled {
+  border-color: var(--border);
+}
+.composer-input {
+  width: 100%;
+  min-height: 3.25rem;
+  padding: 0.875rem 1rem 0.5rem;
+  border: 0;
+  background: none;
+  resize: none;
+  overflow-y: auto;
+  font-family: inherit;
+  font-size: var(--fs-md);
+  line-height: 1.55;
+  color: var(--text);
+}
+.composer-input::placeholder {
+  color: var(--text-faint);
+}
+.composer-input:focus-visible {
+  outline: none;
+}
+.composer-input:disabled {
+  color: var(--text-faint);
+  cursor: not-allowed;
+}
+
+.composer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.375rem 0.5rem 0.5rem 0.625rem;
+}
+.composer-context,
+.composer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+}
+.composer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  height: 1.625rem;
+  padding: 0 0.5rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 14rem;
+}
+.composer-chip svg {
+  flex: none;
+  color: var(--text-faint);
+}
+button.composer-chip {
+  cursor: pointer;
+  transition: color 120ms ease-out, background-color 120ms ease-out;
+}
+button.composer-chip:hover {
+  color: var(--text);
+  background: var(--surface-3);
+}
+.composer-offline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  font-size: var(--fs-xs);
+  color: var(--state-error);
+}
+.composer-offline .cmd {
+  margin: 0;
+  padding: 0.125rem 0.125rem 0.125rem 0.5rem;
+  height: 1.625rem;
+  font-size: var(--fs-2xs);
+}
+.composer-hint {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--text-faint);
+  white-space: nowrap;
+  user-select: none;
+}
+.composer-hint kbd {
+  font: inherit;
+}
+.composer-queued {
+  display: inline-flex;
+  align-items: center;
+  height: 1.625rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--accent-edge);
+  border-radius: var(--radius-control);
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--accent);
+  white-space: nowrap;
+}
+.composer-sent {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--state-ok);
+  white-space: nowrap;
+}
+
+/* The primary. An icon square when the word would add nothing ("send"), a
+   labelled button when it carries meaning the icon can't ("Queue", "Suggest"). */
+.composer-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  height: 1.75rem;
+  min-width: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--text);
+  color: var(--bg);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+.composer-send--label {
+  padding: 0 0.625rem 0 0.75rem;
+}
+.composer-send:hover:not(:disabled) {
+  background: #fff;
+}
+.composer-send:disabled {
+  background: var(--surface-3);
+  color: var(--text-faint);
+  cursor: default;
+}
+.composer-send kbd {
+  font: inherit;
+  opacity: 0.65;
+}
+
+/* Stop is quieter than the primary — an outlined icon button in the error
+   tone, never a second filled button competing on every keystroke. */
+.composer-stop {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 1.75rem;
+  padding: 0 0.625rem;
+  border: 1px solid var(--error-edge);
+  border-radius: var(--radius-control);
+  background: none;
+  font-size: var(--fs-sm);
+  color: var(--state-error);
+  cursor: pointer;
+  transition: background-color 120ms ease-out, border-color 120ms ease-out;
+}
+.composer-stop:hover {
+  background: var(--error-soft);
+  border-color: var(--state-error);
+}
+
+/* --- Suggestions — the watcher's verb -------------------------------- */
+/* Proposals wait above the card as chips: inert until the driver sends
+   one, which goes through the same server path as typing it. */
+.sugg-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0 0.25rem;
+}
+.sugg-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 1.875rem;
+  padding: 0.25rem 0.25rem 0.25rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  font-size: var(--fs-sm);
+}
+.sugg-author {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.sugg-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-dim);
+  overflow-wrap: anywhere;
+}
+.sugg-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  flex: none;
+}
+.sugg-send {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 1.5rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: none;
+  font-size: var(--fs-xs);
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 120ms ease-out, border-color 120ms ease-out;
+}
+.sugg-send:hover {
+  background: var(--surface-2);
+  border-color: var(--border-lit);
+}
+
+/* --- Ended card (replay) ---------------------------------------------- */
+.ended {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+.ended a {
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: var(--border-lit);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .dock {
+    padding: 0 0.5rem 0.5rem;
+  }
+  .composer-hint,
+  .composer-chip--model {
+    display: none;
+  }
+}

@@ -90,6 +90,32 @@
      structural card, panel, badge and button there has no radius at all. Flows
      through every shadcn primitive via the --radius-sm/md/lg chain below. */
   --radius: 0;
+
+  /* Session-view additions. The landing keeps the square instrument register;
+     the session runs a square *shell* with softened controls and cards, which
+     is what separates "SaaS app" from "faceplate" without touching the ramp. */
+  --surface-3: #202020; /* popovers, menus, hover on --surface-2 */
+  --radius-control: 4px; /* buttons, inputs, chips, hover fills */
+  --radius-card: 6px; /* composer, code blocks, popovers, detail panels */
+  --measure-conversation: 46rem;
+  --shadow-popover: 0 4px 16px rgb(0 0 0 / 0.35);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Named so a tint can't be re-derived slightly differently at each site. */
+  --accent-soft: color-mix(in oklch, var(--accent) 10%, transparent);
+  --accent-edge: color-mix(in oklch, var(--accent) 35%, transparent);
+  --ok-soft: color-mix(in oklch, var(--state-ok) 10%, transparent);
+  --ok-edge: color-mix(in oklch, var(--state-ok) 35%, transparent);
+  --error-soft: color-mix(in oklch, var(--state-error) 10%, transparent);
+  --error-edge: color-mix(in oklch, var(--state-error) 35%, transparent);
+
+  /* Type scale. 11px is meta only — timestamps, costs, turn numbers. Nothing
+     interactive sits below 12px; the old chrome ran almost entirely at 11. */
+  --fs-2xs: 0.6875rem;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-md: 0.875rem;
+  --fs-lg: 0.9375rem;
 }
 
 @theme inline {
