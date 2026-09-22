@@ -70,17 +70,35 @@
 .topbar-repo {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.4375rem;
   min-width: 0;
+  max-width: 24rem;
+  height: 1.75rem;
+  padding: 0 0.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: none;
+  font-family: var(--font-sans);
   font-size: var(--fs-sm);
+  font-weight: 500;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background-color 120ms ease-out, border-color 120ms ease-out;
+}
+.topbar-repo:hover,
+.topbar-repo[aria-expanded="true"] {
+  background: var(--surface-2);
+  border-color: var(--border);
 }
 .topbar-repo svg {
   flex: none;
   color: var(--text-dim);
+}
+.topbar-repo--offline svg {
+  color: var(--state-error);
 }
 .topbar-id {
   display: inline-flex;
@@ -113,43 +131,6 @@
 }
 .topbar-id[data-copied] {
   color: var(--state-ok);
-}
-
-/* Model + cost, one mono cluster that opens the session details. */
-.topbar-agent {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  height: 1.75rem;
-  padding: 0 0.5rem;
-  border: 1px solid transparent;
-  border-radius: var(--radius-control);
-  background: none;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--text-dim);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: color 120ms ease-out, background-color 120ms ease-out, border-color 120ms ease-out;
-}
-.topbar-agent:hover,
-.topbar-agent[aria-expanded="true"] {
-  color: var(--text);
-  background: var(--surface-2);
-  border-color: var(--border);
-}
-.topbar-agent-sep {
-  color: var(--text-faint);
-}
-.topbar-agent--offline {
-  color: var(--state-error);
-  border-color: var(--error-edge);
-}
-.topbar-agent--offline:hover {
-  color: var(--state-error);
-}
-.topbar-cost {
-  font-variant-numeric: tabular-nums;
 }
 
 /* --- Status pill -------------------------------------------------- */
@@ -387,11 +368,16 @@
   height: 1.5rem;
 }
 
-/* One focus treatment for everything in the shell. Accent with an offset so
-   it survives an accent-tinted background. */
-.shell :is(button, a, select, textarea, input, [tabindex]):focus-visible {
-  outline: 2px solid var(--accent);
+/* Keyboard focus on controls: a neutral ring, offset so it reads on any
+   fill. Text fields carry no ring at all — the card or field border brightens
+   instead, which is what a caret already sitting in the box needs. */
+.shell :is(button, a, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--text-dim);
   outline-offset: 2px;
+}
+.shell :is(textarea, input):focus-visible {
+  outline: none;
+  border-color: var(--text-dim);
 }
 
 /* --- Popovers ----------------------------------------------------- */
@@ -845,12 +831,11 @@
   }
 }
 @media (max-width: 640px) {
-  .topbar-id,
-  .topbar-sep {
+  .topbar-id {
     display: none;
   }
   .topbar-repo {
-    max-width: 9rem;
+    max-width: 10rem;
   }
   .presence-driver {
     display: none;

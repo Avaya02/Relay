@@ -35,15 +35,11 @@
   --text-faint: #8a8a8a;
 
   /* Reserved for "live / active / you-are-driving" only — nothing
-     decorative. See RELAY_BUILD_SPEC.md §7.
-
-     Amber because that is what the reference uses for a run in progress. Its
-     CSS palette is genuinely achromatic — 4 chromatic fills out of 156, and
-     its one colour token (#F6543E) renders on three 20px squares — so the
-     colour a visitor actually sees there comes from the status badges inside
-     its product screenshots, not from its chrome. Relay's chrome follows the
-     chrome; its status vocabulary follows the screenshots. */
-  --accent: #e2b64b;
+     decorative. A restrained blue: the amber it replaced read as a warning
+     everywhere it appeared, and yellow on near-black is the one accent that
+     cannot be made to look calm. Measured 8.1:1 on --surface; any filled-
+     accent surface takes --bg text. */
+  --accent: #6ea8fe;
 
   /* Sampled from the reference's own hero screenshot by canvas readback, so
      these are its literal status hues rather than an interpretation of them.

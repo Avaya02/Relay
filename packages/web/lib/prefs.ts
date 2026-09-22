@@ -94,3 +94,31 @@ export function useDraft(sessionId: string): [string, (next: string) => void] {
   );
   return [value, set];
 }
+
+const WIDTH_KEY = "relay.prefs.changesWidth";
+export const CHANGES_WIDTH = { min: 240, max: 640, initial: 272 };
+
+function readChangesWidth(): number {
+  try {
+    const n = Number(window.localStorage.getItem(WIDTH_KEY));
+    if (!Number.isFinite(n) || n === 0) return CHANGES_WIDTH.initial;
+    return Math.min(CHANGES_WIDTH.max, Math.max(CHANGES_WIDTH.min, n));
+  } catch {
+    return CHANGES_WIDTH.initial;
+  }
+}
+
+/** The changes rail's width, dragged by the reader and remembered per browser. */
+export function useChangesWidth(): [number, (px: number) => void] {
+  const value = useSyncExternalStore(subscribe, readChangesWidth, () => CHANGES_WIDTH.initial);
+  const set = useCallback((px: number) => {
+    const clamped = Math.round(Math.min(CHANGES_WIDTH.max, Math.max(CHANGES_WIDTH.min, px)));
+    try {
+      window.localStorage.setItem(WIDTH_KEY, String(clamped));
+    } catch {
+      return;
+    }
+    notify();
+  }, []);
+  return [value, set];
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, GitBranch } from "lucide-react";
 import type { AgentInfo, SessionStatus } from "@relay/shared";
 import { Popover } from "./Popover";
 import { useCopy } from "./useCopy";
@@ -45,12 +45,14 @@ export function SessionDetails({
   runCount,
   totalCostUsd,
   sessionId,
+  repo,
 }: {
   agent: AgentInfo | null;
   status: SessionStatus;
   runCount: number;
   totalCostUsd: number;
   sessionId: string;
+  repo: string | null;
 }) {
   const [showSteps, setShowSteps] = useShowSteps();
   const offline = !agent || !agent.runnerConnected;
@@ -63,25 +65,16 @@ export function SessionDetails({
       trigger={(props) => (
         <button
           type="button"
-          className={`topbar-agent${offline ? " topbar-agent--offline" : ""}`}
+          className={`topbar-repo${offline ? " topbar-repo--offline" : ""}`}
           title={
             offline
-              ? "No agent is connected — nothing can run in this session"
-              : live
-                ? `${agent.model ?? "The Agent SDK"} on the host's machine`
-                : "A scripted agent — no model, no cost"
+              ? `${repo ?? "This session"} — no agent connected`
+              : `${repo ?? "This session"} — ${live ? (agent.model ?? "real agent") : "demo agent"}, $${totalCostUsd.toFixed(2)} so far`
           }
           {...props}
         >
-          {agentLabel(agent)}
-          {runCount > 0 && (
-            <>
-              <span className="topbar-agent-sep" aria-hidden>
-                ·
-              </span>
-              <span className="topbar-cost">${totalCostUsd.toFixed(2)}</span>
-            </>
-          )}
+          <GitBranch size={13} />
+          {repo ?? "Session"}
         </button>
       )}
     >
@@ -136,6 +129,12 @@ export function SessionDetails({
       )}
 
       <dl className="popover-facts">
+        {!offline && (
+          <>
+            <dt>agent</dt>
+            <dd>{agentLabel(agent)}</dd>
+          </>
+        )}
         <dt>session</dt>
         <dd>
           <code>{sessionId}</code>

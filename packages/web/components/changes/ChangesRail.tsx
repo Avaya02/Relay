@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { PanelRight, PanelRightClose } from "lucide-react";
 import type { PublishState } from "@/lib/useSession";
+import { CHANGES_WIDTH, useChangesWidth } from "@/lib/prefs";
 import { STATUS_LABEL, STATUS_MARK, splitPath, type ChangedFile } from "./derive";
 
 /**
@@ -35,7 +36,49 @@ export function ChangesRail({
   onPublish: (title: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [savedWidth, saveWidth] = useChangesWidth();
+  // Live width while dragging, committed to storage on release so a drag
+  // doesn't write localStorage on every pointer move.
+  const [dragWidth, setDragWidth] = useState<number | null>(null);
+  const width = dragWidth ?? savedWidth;
+  const drag = useRef<{ startX: number; startWidth: number } | null>(null);
   const n = files.length;
+
+  useEffect(() => {
+    if (!drag.current) return;
+    const onMove = (e: PointerEvent) => {
+      if (!drag.current) return;
+      // The rail hangs off the right edge, so dragging left makes it wider.
+      const next = drag.current.startWidth + (drag.current.startX - e.clientX);
+      setDragWidth(Math.min(CHANGES_WIDTH.max, Math.max(CHANGES_WIDTH.min, next)));
+    };
+    const onUp = () => {
+      const w = drag.current ? (dragWidth ?? drag.current.startWidth) : null;
+      drag.current = null;
+      if (w !== null) saveWidth(w);
+      setDragWidth(null);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, { once: true });
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [dragWidth, saveWidth]);
+
+  function startDrag(e: ReactPointerEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    drag.current = { startX: e.clientX, startWidth: width };
+    setDragWidth(width);
+  }
+
+  function nudge(e: React.KeyboardEvent<HTMLButtonElement>) {
+    const step = e.shiftKey ? 64 : 16;
+    if (e.key === "ArrowLeft") saveWidth(width + step);
+    else if (e.key === "ArrowRight") saveWidth(width - step);
+    else return;
+    e.preventDefault();
+  }
 
   if (collapsed) {
     return (
@@ -55,7 +98,24 @@ export function ChangesRail({
   }
 
   return (
-    <aside className="changes">
+    <aside
+      className={`changes${dragWidth !== null ? " changes--dragging" : ""}`}
+      style={{ width }}
+    >
+      <button
+        type="button"
+        className="changes-resizer"
+        onPointerDown={startDrag}
+        onKeyDown={nudge}
+        data-dragging={dragWidth !== null || undefined}
+        aria-label="Resize changes panel"
+        aria-valuenow={width}
+        aria-valuemin={CHANGES_WIDTH.min}
+        aria-valuemax={CHANGES_WIDTH.max}
+        role="separator"
+        aria-orientation="vertical"
+        title="Drag to resize"
+      />
       <div className="rail-head">
         <span className="rail-title">
           Changes

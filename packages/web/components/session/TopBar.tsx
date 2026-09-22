@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Check, Copy, GitBranch } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import type { AgentInfo, Participant, SessionStatus } from "@relay/shared";
 import { Presence } from "@/components/Presence";
 import { StatusPill } from "./StatusPill";
@@ -10,9 +10,10 @@ import { SharePopover } from "./SharePopover";
 import { useCopy } from "./useCopy";
 
 /**
- * Three zones: what you're looking at, what state it's in, who's here.
- * Identity on the left, machine state in the middle, people and sharing on
- * the right — so the eye can find any of the three without reading the bar.
+ * Three zones: the product on the left, the session in the middle, the people
+ * on the right. The repository is the session's name and sits centre stage;
+ * it also opens the details (agent, cost, runs) that used to crowd the bar —
+ * the composer already says which model will run, so the bar doesn't repeat it.
  */
 export function TopBar({
   sessionId,
@@ -49,17 +50,9 @@ export function TopBar({
         <Link href="/" className="topbar-wordmark" title="Relay home">
           relay
         </Link>
-        {repo && (
-          <>
-            <span className="topbar-sep" aria-hidden>
-              /
-            </span>
-            <span className="topbar-repo" title={`Working on ${repo}`}>
-              <GitBranch size={13} />
-              {repo}
-            </span>
-          </>
-        )}
+        <span className="topbar-sep" aria-hidden>
+          /
+        </span>
         <button
           type="button"
           className="topbar-id"
@@ -75,21 +68,29 @@ export function TopBar({
 
       <div className="topbar-zone topbar-state">
         {ended ? (
-          <span className="pill" role="status">
-            <span className="pill-dot" aria-hidden />
-            Ended
-          </span>
+          <>
+            {repo && (
+              <span className="topbar-repo" style={{ cursor: "default" }}>
+                {repo}
+              </span>
+            )}
+            <span className="pill" role="status">
+              <span className="pill-dot" aria-hidden />
+              Ended
+            </span>
+          </>
         ) : (
-          <StatusPill status={status} workingSince={workingSince} />
-        )}
-        {!ended && (
-          <SessionDetails
-            agent={agent}
-            status={status}
-            runCount={runCount}
-            totalCostUsd={totalCostUsd}
-            sessionId={sessionId}
-          />
+          <>
+            <SessionDetails
+              agent={agent}
+              status={status}
+              runCount={runCount}
+              totalCostUsd={totalCostUsd}
+              sessionId={sessionId}
+              repo={repo}
+            />
+            <StatusPill status={status} workingSince={workingSince} />
+          </>
         )}
       </div>
 
