@@ -43,3 +43,4 @@ packages/server/src/generated/
 
 # personal, local-only — not project source
 resume/
+interview+fundamentals/

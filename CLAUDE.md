@@ -10,11 +10,11 @@ one person drives, and control hands over mid-task.
 | `packages/agent` | The `relayrun` CLI — holds the repo, runs the SDK on the host's own machine |
 | `packages/web` | Next.js client (read `packages/web/AGENTS.md` first — that Next.js has breaking changes) |
 
-## Architecture in flight
+## Architecture
 
-Mid-migration to `SCOPE_REVIEW.md` Option C: the agent moves **out** of the server and onto
-the host's machine, so the server never touches a repo, a shell, or a credential. Until that
-lands, expect `packages/server` to still contain agent/repo code that is on its way out.
+Migrated to `docs/internal/SCOPE_REVIEW.md` Option C: the agent runs **on the host's own
+machine**, not the server. `packages/server` never touches a repo, a shell, or a credential
+— verify that invariant before adding anything to it.
 
 ## Code conventions
 
