@@ -9,9 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { JoinScenePhoto, JoinSceneSky } from "./JoinScene";
 
-// Which left half to show. "photo" is the full-bleed ridge photograph, kept
-// as the backup.
-const JOIN_SCENE: "sky" | "photo" = "sky";
+// Which left half to show. The full-bleed ridge photograph is the one that
+// held up; "sky" (the graded painting) is kept for reference.
+const JOIN_SCENE: "sky" | "photo" = "photo";
 
 /**
  * The door into a session. Split evenly like a sign-in page: the scene on one
