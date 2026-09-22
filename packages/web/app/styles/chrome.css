@@ -791,39 +791,23 @@
   flex: none;
   color: var(--text);
 }
-/* The chromatic variant: black panel, the image as a tilting card in the
-   middle, the copy beneath it. */
+/* The chromatic variant: the canvas is the panel's own background. It sits
+   under the copy at z -1 like the photograph does, oversized slightly so the
+   tilt never shows an edge, with the same fade to --bg at the foot. */
 .join-scene--chromatic {
   background: var(--bg);
 }
-.join-scene--chromatic::after {
-  display: none;
-}
-.join-scene-stage {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  min-height: 0;
-  padding: 1.5rem 0;
-}
 .join-chromatic {
-  width: 100%;
-  max-width: 22rem;
-  aspect-ratio: 4 / 5;
-  border-radius: min(1.5vw, 18px);
-  outline: 1px solid var(--border-lit);
-  outline-offset: -1px;
+  position: absolute !important;
+  inset: -3%;
+  z-index: -1;
+  width: auto;
   background: var(--bg) !important;
+  mask-image: linear-gradient(to bottom, #000 0%, #000 55%, rgba(0, 0, 0, 0.35) 100%);
 }
-.join-scene-copy--centered {
-  max-width: 26rem;
-  margin: 0 auto;
-  text-align: left;
-}
-.join-scene-copy--centered .join-scene-title {
-  font-size: clamp(1.375rem, 2.2vw, 1.75rem);
-  margin-bottom: 0.875rem;
+.join-scene--chromatic .join-scene-top,
+.join-scene--chromatic .join-scene-copy {
+  pointer-events: none;
 }
 .join-main {
   display: flex;
@@ -891,12 +875,6 @@
   }
   .join-scene-facts {
     display: none;
-  }
-  .join-scene-stage {
-    padding: 1rem 0;
-  }
-  .join-chromatic {
-    max-width: 12rem;
   }
 }
 
