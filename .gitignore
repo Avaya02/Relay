@@ -44,3 +44,13 @@ packages/server/src/generated/
 # personal, local-only — not project source
 resume/
 interview+fundamentals/
+
+# internal planning logs, kept locally — SCOPE_REVIEW.md, PRODUCT.md and
+# DESIGN.md stay tracked; these are process notes, not reference material
+docs/internal/RELAY_BUILD_SPEC.md
+docs/internal/RELAY_PRODUCTION_PLAN.md
+docs/internal/REDESIGN_PLAN.md
+docs/internal/RELAY_STATUS.md
+docs/internal/RESEARCH_BRIEF.md
+docs/internal/LANDING_REFERENCE_MATCH.md
+docs/internal/DEPLOY.md
