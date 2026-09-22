@@ -17,42 +17,53 @@
   margin-top: 0.375rem;
 }
 
+/* The card. Rounder than anything else on the page on purpose — it is the
+   one object here that is held rather than read, and the shape says so. A
+   1px lit edge on --surface-2 and a faint inner top light do the lifting;
+   no shadow, no glow. */
 .composer {
+  --composer-radius: 1rem;
   display: flex;
   flex-direction: column;
   background: var(--surface-2);
   border: 1px solid var(--border-lit);
-  border-radius: var(--radius-card);
-  transition: border-color 120ms ease-out;
+  border-radius: var(--composer-radius);
+  box-shadow: inset 0 1px 0 rgba(250, 250, 250, 0.04);
+  transition: border-color 140ms ease-out;
 }
 .composer:focus-within {
-  border-color: var(--text-dim);
+  border-color: rgba(250, 250, 250, 0.32);
 }
 .composer--disabled {
   border-color: var(--border);
 }
-.composer-input {
-  width: 100%;
-  min-height: 3.25rem;
-  padding: 0.875rem 1rem 0.5rem;
+.composer .composer-input {
+  min-height: 3.5rem;
+  padding: 0.9375rem 1.125rem 0.5rem;
   border: 0;
+  border-radius: var(--composer-radius) var(--composer-radius) 0 0;
   background: none;
+  box-shadow: none;
   resize: none;
   overflow-y: auto;
   font-family: inherit;
-  font-size: var(--fs-md);
-  line-height: 1.55;
+  font-size: var(--fs-lg);
+  line-height: 1.5;
   color: var(--text);
+  field-sizing: fixed;
 }
-.composer-input::placeholder {
+.composer .composer-input::placeholder {
   color: var(--text-faint);
 }
-.composer-input:focus-visible {
+.composer .composer-input:focus-visible {
   outline: none;
+  box-shadow: none;
+  border: 0;
 }
-.composer-input:disabled {
+.composer .composer-input:disabled {
   color: var(--text-faint);
   cursor: not-allowed;
+  opacity: 1;
 }
 
 .composer-bar {
@@ -60,26 +71,24 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.375rem 0.5rem 0.5rem 0.625rem;
+  padding: 0.25rem 0.625rem 0.625rem 0.75rem;
 }
 .composer-context,
 .composer-actions {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.25rem;
   min-width: 0;
 }
 .composer-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.3125rem;
-  height: 1.625rem;
-  padding: 0 0.5rem;
-  border: 0;
-  border-radius: var(--radius-control);
+  gap: 0.375rem;
+  height: 1.75rem;
+  padding: 0 0.625rem;
+  border-radius: 999px;
   background: none;
-  font-family: var(--font-mono);
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-xs);
   color: var(--text-dim);
   white-space: nowrap;
   overflow: hidden;
@@ -90,21 +99,29 @@
   flex: none;
   color: var(--text-faint);
 }
-button.composer-chip {
-  cursor: pointer;
-  transition: color 120ms ease-out, background-color 120ms ease-out;
-}
-button.composer-chip:hover {
-  color: var(--text);
-  background: var(--surface-3);
+.composer-chip--model {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
 }
 .composer-offline {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   min-width: 0;
+  padding-left: 0.375rem;
   font-size: var(--fs-xs);
   color: var(--state-error);
+}
+.composer-offline--quiet {
+  color: var(--accent);
+}
+.composer-reconnect-dot {
+  color: var(--accent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .composer-reconnect-dot {
+    animation: status-pulse 1.4s ease-in-out infinite;
+  }
 }
 .composer-offline .cmd {
   margin: 0;
@@ -112,90 +129,54 @@ button.composer-chip:hover {
   height: 1.625rem;
   font-size: var(--fs-2xs);
 }
-.composer-hint {
-  font-family: var(--font-mono);
-  font-size: var(--fs-2xs);
-  color: var(--text-faint);
-  white-space: nowrap;
-  user-select: none;
-}
-.composer-hint kbd {
-  font: inherit;
-}
 .composer-queued {
   display: inline-flex;
   align-items: center;
   height: 1.625rem;
-  padding: 0 0.5rem;
-  border: 1px solid var(--accent-edge);
-  border-radius: var(--radius-control);
+  padding: 0 0.625rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
   font-family: var(--font-mono);
   font-size: var(--fs-2xs);
   color: var(--accent);
   white-space: nowrap;
 }
 .composer-sent {
-  font-family: var(--font-mono);
-  font-size: var(--fs-2xs);
+  padding-right: 0.25rem;
+  font-size: var(--fs-xs);
   color: var(--state-ok);
   white-space: nowrap;
 }
 
-/* The primary. An icon square when the word would add nothing ("send"), a
-   labelled button when it carries meaning the icon can't ("Queue", "Suggest"). */
-.composer-send {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.375rem;
-  height: 1.75rem;
-  min-width: 1.75rem;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-control);
+/* The primary: a filled circle, lit when there is something to send. */
+.composer .composer-send {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
   background: var(--text);
   color: var(--bg);
-  font-family: var(--font-sans);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 120ms ease-out, color 120ms ease-out;
+  transition: background-color 120ms ease-out, color 120ms ease-out, opacity 120ms ease-out;
 }
-.composer-send--label {
-  padding: 0 0.625rem 0 0.75rem;
-}
-.composer-send:hover:not(:disabled) {
+.composer .composer-send:hover:not(:disabled) {
   background: #fff;
 }
-.composer-send:disabled {
+.composer .composer-send:disabled {
   background: var(--surface-3);
   color: var(--text-faint);
-  cursor: default;
-}
-.composer-send kbd {
-  font: inherit;
-  opacity: 0.65;
+  opacity: 1;
 }
 
-/* Stop is quieter than the primary — an outlined icon button in the error
-   tone, never a second filled button competing on every keystroke. */
-.composer-stop {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
+/* Stop is quieter than the primary: a ghost button in the error tone. */
+.composer .composer-stop {
   height: 1.75rem;
   padding: 0 0.625rem;
-  border: 1px solid var(--error-edge);
-  border-radius: var(--radius-control);
-  background: none;
-  font-size: var(--fs-sm);
+  border-radius: 999px;
   color: var(--state-error);
-  cursor: pointer;
-  transition: background-color 120ms ease-out, border-color 120ms ease-out;
+  font-size: var(--fs-xs);
 }
-.composer-stop:hover {
+.composer .composer-stop:hover {
   background: var(--error-soft);
-  border-color: var(--state-error);
+  color: var(--state-error);
 }
 
 /* --- Suggestions — the watcher's verb -------------------------------- */
@@ -280,7 +261,6 @@ button.composer-chip:hover {
   .dock {
     padding: 0 0.5rem 0.5rem;
   }
-  .composer-hint,
   .composer-chip--model {
     display: none;
   }
