@@ -51,7 +51,7 @@ export function SharePopover({ sessionId }: { sessionId: string }) {
         Open a second viewer <ExternalLink size={12} />
       </button>
       <p className="popover-note">
-        The second viewer is you again, in another window — the quickest way to
+        The second viewer is you again, in another window. It is the quickest way to
         watch the driver lock change hands.
       </p>
     </Popover>

@@ -274,7 +274,7 @@ function ReplayView({
           />
           <div className="dock">
             <div className="ended" role="status">
-              <span>This session has ended — its transcript was recovered from the server.</span>
+              <span>This session has ended. Its transcript was recovered from the server.</span>
               <Link href="/">Start a new one</Link>
             </div>
           </div>

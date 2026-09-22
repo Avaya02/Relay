@@ -40,7 +40,7 @@ export const STATUS_LABEL: Record<FileStatus, string> = {
   added: "added",
   modified: "modified",
   deleted: "deleted",
-  pending: "written — not yet measured",
+  pending: "written, not yet measured",
 };
 
 export function changedFiles(events: Event[], changes: SessionChanges | null): ChangedFile[] {

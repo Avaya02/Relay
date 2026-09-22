@@ -14,8 +14,9 @@ only the *blue* toward the page ground and leaves everything else alone.
 "Blue" is decided per pixel from hue and saturation, feathered at both edges so
 the cyan band where sky meets cloud-glow darkens gradually rather than along a
 seam. Stars survive because they are bright and unsaturated; clouds because they
-are warm; the silhouette because it is already black. The valley haze is blue
-too and goes dark with the sky, which reads as night rather than as a mistake.
+are warm; the silhouette because it is already black. The valley and the
+mountains are blue too, so the darkening is also gated on height: it fades out
+above the horizon and leaves the landscape as painted.
 
 The black point is lifted to exactly --bg so the dark sky IS the page and the
 panel needs no edge treatment — the same trick prepare-hero-image.py uses.
@@ -38,6 +39,10 @@ HUE_LO, HUE_HI, HUE_FEATHER = 188.0, 262.0, 14.0
 SAT_LO, SAT_HI = 0.30, 0.66
 # How far a fully-blue pixel is pushed toward black.
 DARKEN = 0.9
+# Only the sky darkens. Below this fraction of the height the blue is valley
+# haze and mountains, which the scene needs to keep; the band between is a
+# feather so the horizon doesn't get a hard line.
+SKY_BOTTOM, SKY_FEATHER = 0.60, 0.16
 # Rendered at 2x on a ~720px-wide panel; the source is 1024. Upscaling adds no
 # detail, but it does keep the GPU's bilinear filter from turning the painting
 # into visible blocks at retina density.
@@ -62,10 +67,11 @@ def grade(im: Image.Image) -> Image.Image:
     op = out.load()
     scale = (255 - GROUND) / 255.0
     for y in range(h):
+        sky = 1.0 - smoothstep(SKY_BOTTOM, SKY_BOTTOM + SKY_FEATHER, y / h)
         for x in range(w):
             r, g, b = px[x, y]
             hh, ss, vv = colorsys.rgb_to_hsv(r / 255.0, g / 255.0, b / 255.0)
-            weight = hue_weight(hh * 360.0) * smoothstep(SAT_LO, SAT_HI, ss)
+            weight = sky * hue_weight(hh * 360.0) * smoothstep(SAT_LO, SAT_HI, ss)
             if weight > 0.0:
                 # Darken, and pull the little remaining colour toward neutral so
                 # the black sky isn't faintly navy.

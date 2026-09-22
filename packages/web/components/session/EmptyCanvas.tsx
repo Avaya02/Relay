@@ -42,7 +42,7 @@ export function EmptyCanvas({
   const others = participants.filter((p) => p.id !== selfId);
 
   const lede = isDriver
-    ? "Everyone with the link watches the same run, live. You're driving — what you send below runs on the host's machine and streams here step by step."
+    ? "Everyone with the link watches the same run, live. You're driving. What you send below runs on the host's machine and streams here step by step."
     : driver
       ? `${driver.displayName} is driving. Everything the agent does will appear here as it happens; you can suggest an instruction below, or ask for the wheel.`
       : "Nobody's driving yet. Take control below to send the first instruction, or watch when someone else does.";
@@ -63,7 +63,7 @@ export function EmptyCanvas({
             {offline ? (
               <>
                 <span className="empty-fact-error">No agent connected</span>
-                <span className="empty-fact-dim"> — whoever owns the repository starts it:</span>
+                <span className="empty-fact-dim">. Whoever owns the repository starts it:</span>
                 <RunnerCommand />
               </>
             ) : agent.mode === "real" ? (
@@ -77,7 +77,7 @@ export function EmptyCanvas({
               </>
             ) : (
               <>
-                Demo <span className="empty-fact-dim">— a scripted run; nothing is billed</span>
+                Demo <span className="empty-fact-dim">(a scripted run, nothing is billed)</span>
               </>
             )}
           </dd>

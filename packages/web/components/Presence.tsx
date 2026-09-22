@@ -69,7 +69,7 @@ export function Presence({
               participant={p}
               driving={p.id === driverId}
               requesting={requesting.has(p.id)}
-              title={`${nameOf(p)} — ${roleOf(p)}`}
+              title={`${nameOf(p)}, ${roleOf(p)}`}
             />
             <span className="sr-only">
               {nameOf(p)}, {roleOf(p)}

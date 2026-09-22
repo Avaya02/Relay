@@ -88,7 +88,7 @@ export function ChangesRail({
           className="icon-btn"
           onClick={() => setCollapsed(false)}
           title="Show changes"
-          aria-label={`Show changes — ${n} ${n === 1 ? "file" : "files"}`}
+          aria-label={`Show changes, ${n} ${n === 1 ? "file" : "files"}`}
         >
           <PanelRight size={15} />
         </button>
@@ -169,7 +169,7 @@ export function ChangesRail({
               type="button"
               className="changes-publish"
               disabled={publishing}
-              onClick={() => onPublish(`Relay session — ${measured} files changed`)}
+              onClick={() => onPublish(`Relay session: ${measured} files changed`)}
             >
               {publishing ? "Publishing…" : "Publish branch"}
             </button>
@@ -265,10 +265,10 @@ function PublishNote({ state }: { state: PublishState }) {
           </a>
         </>
       ) : state.pushed ? (
-        <> · pushed{state.note ? ` — ${state.note}` : ""}</>
+        <> · pushed{state.note ? ` (${state.note})` : ""}</>
       ) : (
         <>
-          {" · "}saved to the local mirror — set RELAY_GITHUB_REPO and RELAY_GITHUB_TOKEN to open a
+          {" · "}saved to the local mirror. Set RELAY_GITHUB_REPO and RELAY_GITHUB_TOKEN to open a
           pull request
         </>
       )}

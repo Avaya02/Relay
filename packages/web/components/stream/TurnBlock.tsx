@@ -87,7 +87,7 @@ export function TurnBlock({
           hint={
             runnerConnected
               ? "Send another instruction to continue."
-              : "The runner is no longer connected — start it again with npx relayrun."
+              : "The runner is no longer connected. Start it again with npx relayrun."
           }
         />
       )}

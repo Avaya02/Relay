@@ -7,11 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { JoinSceneChromatic, JoinScenePhoto } from "./JoinScene";
+import { JoinScenePhoto, JoinSceneSky } from "./JoinScene";
 
-// Which left half to show. "photo" is the full-bleed photograph kept as the
-// backup for when the chromatic card doesn't earn its keep.
-const JOIN_SCENE: "chromatic" | "photo" = "chromatic";
+// Which left half to show. "photo" is the full-bleed ridge photograph, kept
+// as the backup.
+const JOIN_SCENE: "sky" | "photo" = "sky";
 
 /**
  * The door into a session. Split evenly like a sign-in page: the scene on one
@@ -45,7 +45,7 @@ export function JoinGate({
 
   return (
     <div className="join">
-      {JOIN_SCENE === "chromatic" ? <JoinSceneChromatic /> : <JoinScenePhoto />}
+      {JOIN_SCENE === "sky" ? <JoinSceneSky /> : <JoinScenePhoto />}
 
       <main className="join-main">
         <Card className="join-card">

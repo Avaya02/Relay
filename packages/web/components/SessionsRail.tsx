@@ -27,7 +27,7 @@ export function SessionsRail({ currentId }: { currentId?: string }) {
           className="icon-btn"
           onClick={() => setCollapsed(false)}
           title="Show sessions"
-          aria-label={`Show sessions — ${sessions.length} remembered`}
+          aria-label={`Show sessions, ${sessions.length} remembered`}
         >
           <PanelLeft size={15} />
         </button>

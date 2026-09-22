@@ -68,8 +68,8 @@ export function SessionDetails({
           className={`topbar-repo${offline ? " topbar-repo--offline" : ""}`}
           title={
             offline
-              ? `${repo ?? "This session"} — no agent connected`
-              : `${repo ?? "This session"} — ${live ? (agent.model ?? "real agent") : "demo agent"}, $${totalCostUsd.toFixed(2)} so far`
+              ? `${repo ?? "This session"}: no agent connected`
+              : `${repo ?? "This session"}: ${live ? (agent.model ?? "real agent") : "demo agent"}, $${totalCostUsd.toFixed(2)} so far`
           }
           {...props}
         >
@@ -110,7 +110,7 @@ export function SessionDetails({
           </p>
           <p className="popover-note">
             No credential reaches this server or your browser. The repository
-            stays on their machine — what travels is the transcript and the
+            stays on their machine. What travels is the transcript and the
             diff of every file it changed.
           </p>
         </>
@@ -118,7 +118,7 @@ export function SessionDetails({
         <>
           <p className="popover-title">Demo agent</p>
           <p className="popover-body">
-            A scripted run — plan updates, a failing test, a fix, real file
+            A scripted run: plan updates, a failing test, a fix, real file
             writes. Nothing is sent to a model and nothing is billed. The lock,
             the ordering and the diff are real.
           </p>

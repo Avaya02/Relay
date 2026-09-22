@@ -791,23 +791,34 @@
   flex: none;
   color: var(--text);
 }
-/* The chromatic variant: the canvas is the panel's own background. It sits
-   under the copy at z -1 like the photograph does, oversized slightly so the
-   tilt never shows an edge, with the same fade to --bg at the foot. */
-.join-scene--chromatic {
+/* The sky variant. The image is wider than the panel by a little and sits
+   low, so the figure lands near the panel's centre line; the sky above is
+   the page ground, and a short fade at the foot returns the hill to it. */
+.join-scene--sky {
   background: var(--bg);
+  justify-content: flex-start;
+  gap: 1.75rem;
 }
-.join-chromatic {
-  position: absolute !important;
-  inset: -3%;
-  z-index: -1;
-  width: auto;
-  background: var(--bg) !important;
-  mask-image: linear-gradient(to bottom, #000 0%, #000 55%, rgba(0, 0, 0, 0.35) 100%);
+.join-scene--sky::after {
+  display: none;
 }
-.join-scene--chromatic .join-scene-top,
-.join-scene--chromatic .join-scene-copy {
+.join-scene-copy--top {
+  position: relative;
+  z-index: 1;
+}
+.join-sky {
+  position: absolute;
+  left: 0;
+  bottom: 14%;
+  z-index: 0;
+  width: 115%;
+  max-width: none;
+  height: auto;
   pointer-events: none;
+  user-select: none;
+  /* The top of the painting is black sky, so the copy can overlap it on a
+     short viewport without a fight; the foot fades the hill back to the page. */
+  mask-image: linear-gradient(to bottom, #000 0%, #000 82%, transparent 100%);
 }
 .join-main {
   display: flex;

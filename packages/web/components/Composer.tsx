@@ -161,7 +161,7 @@ export function Composer({
           ) : block?.kind === "reconnecting" ? (
             <span className="composer-offline composer-offline--quiet">
               <span className="live-dot composer-reconnect-dot" aria-hidden />
-              Reconnecting — your seat is held for 30s
+              Reconnecting. Your seat is held for 30 seconds
             </span>
           ) : (
             <>

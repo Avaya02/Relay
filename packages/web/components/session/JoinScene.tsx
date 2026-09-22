@@ -1,7 +1,6 @@
 "use client";
 
 import { Eye, Hand, Link2 } from "lucide-react";
-import { ChromaticImage } from "@/components/ui/chromatic-image";
 
 // The picture the join page stands on. Same-origin so WebGL can read it as a
 // texture. Produced by scripts/prepare-join-sky.py from
@@ -23,32 +22,25 @@ function Facts() {
       </li>
       <li>
         <Link2 size={14} />
-        No account — the link is the invitation
+        No account. The link is the invitation
       </li>
     </ul>
   );
 }
 
 /**
- * The scene fills the whole half: the chromatic canvas is the panel's
- * background, and the wordmark and copy sit on top of it. A gradient to --bg
- * at the foot keeps the copy legible whatever the picture does there.
+ * The painting, whole. Its sky is graded onto the page ground, so the panel
+ * above and beside it is simply more sky: the image can sit low, uncropped
+ * across its width, with the figure near the middle of the panel and the
+ * copy on the black above it. No effects, no hover; just the landscape.
  */
-export function JoinSceneChromatic() {
+export function JoinSceneSky() {
   return (
-    <aside className="join-scene join-scene--chromatic">
-      <ChromaticImage
-        src={JOIN_SCENE_IMAGE}
-        alt=""
-        backgroundColor="#0a0a0a"
-        tilt={0.12}
-        zoom={0.12}
-        className="join-chromatic"
-      />
+    <aside className="join-scene join-scene--sky">
       <div className="join-scene-top">
         <span className="join-wordmark">relay</span>
       </div>
-      <div className="join-scene-copy">
+      <div className="join-scene-copy join-scene-copy--top">
         <h2 className="join-scene-title">
           Watch an agent work.
           <br />
@@ -56,6 +48,8 @@ export function JoinSceneChromatic() {
         </h2>
         <Facts />
       </div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="join-sky" src={JOIN_SCENE_IMAGE} alt="" aria-hidden />
     </aside>
   );
 }
