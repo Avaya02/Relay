@@ -718,7 +718,7 @@
    so the dark half of the frame *is* the page and no edge needs hiding. */
 .join {
   display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   min-height: 100dvh;
   background: var(--bg);
 }
@@ -791,6 +791,40 @@
   flex: none;
   color: var(--text);
 }
+/* The chromatic variant: black panel, the image as a tilting card in the
+   middle, the copy beneath it. */
+.join-scene--chromatic {
+  background: var(--bg);
+}
+.join-scene--chromatic::after {
+  display: none;
+}
+.join-scene-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+  padding: 1.5rem 0;
+}
+.join-chromatic {
+  width: 100%;
+  max-width: 22rem;
+  aspect-ratio: 4 / 5;
+  border-radius: min(1.5vw, 18px);
+  outline: 1px solid var(--border-lit);
+  outline-offset: -1px;
+  background: var(--bg) !important;
+}
+.join-scene-copy--centered {
+  max-width: 26rem;
+  margin: 0 auto;
+  text-align: left;
+}
+.join-scene-copy--centered .join-scene-title {
+  font-size: clamp(1.375rem, 2.2vw, 1.75rem);
+  margin-bottom: 0.875rem;
+}
 .join-main {
   display: flex;
   align-items: center;
@@ -857,6 +891,12 @@
   }
   .join-scene-facts {
     display: none;
+  }
+  .join-scene-stage {
+    padding: 1rem 0;
+  }
+  .join-chromatic {
+    max-width: 12rem;
   }
 }
 

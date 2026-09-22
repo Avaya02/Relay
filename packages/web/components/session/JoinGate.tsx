@@ -1,18 +1,22 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ArrowRight, Eye, Hand, Link2, LoaderCircle } from "lucide-react";
+import { ArrowRight, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { JoinSceneChromatic, JoinScenePhoto } from "./JoinScene";
+
+// Which left half to show. "photo" is the full-bleed photograph kept as the
+// backup for when the chromatic card doesn't earn its keep.
+const JOIN_SCENE: "chromatic" | "photo" = "chromatic";
 
 /**
- * The door into a session. Split like a sign-in page: the product's own
- * photograph on one side — the same graded ridge the landing page stands its
- * demo on, so an invited stranger meets one brand — and the one question we
- * need answered on the other.
+ * The door into a session. Split evenly like a sign-in page: the scene on one
+ * side — the product's own ridge photograph, so an invited stranger meets one
+ * brand — and the one question we need answered on the other.
  */
 export function JoinGate({
   sessionId,
@@ -41,33 +45,7 @@ export function JoinGate({
 
   return (
     <div className="join">
-      <aside className="join-scene">
-        <div className="join-scene-photo" aria-hidden />
-        <div className="join-scene-top">
-          <span className="join-wordmark">relay</span>
-        </div>
-        <div className="join-scene-copy">
-          <h2 className="join-scene-title">
-            Watch an agent work.
-            <br />
-            Together.
-          </h2>
-          <ul className="join-scene-facts">
-            <li>
-              <Eye size={14} />
-              Everyone with the link sees the same run, live
-            </li>
-            <li>
-              <Hand size={14} />
-              One person drives; the wheel hands over mid-task
-            </li>
-            <li>
-              <Link2 size={14} />
-              No account — the link is the invitation
-            </li>
-          </ul>
-        </div>
-      </aside>
+      {JOIN_SCENE === "chromatic" ? <JoinSceneChromatic /> : <JoinScenePhoto />}
 
       <main className="join-main">
         <Card className="join-card">
