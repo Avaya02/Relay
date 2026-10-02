@@ -19,8 +19,8 @@ export type SessionParticipant = Participant & {
   // the socket closes.
   socket: WebSocket | null;
   // Lets a reconnecting client reattach to this exact identity instead of
-  // minting a new participant (spec C2/C1). Only meaningful for the lifetime
-  // of the process — never written to Postgres.
+  // minting a new participant. Only meaningful for the lifetime of the
+  // process — never written to Postgres.
   token: string;
   graceTimer: NodeJS.Timeout | null;
 };
@@ -48,9 +48,9 @@ export type Session = {
   // repo and runs the agent; without it nothing can execute an instruction.
   runnerSocket: WebSocket | null;
   // Proves a socket is allowed to be this session's runner. Minted here,
-  // returned once by POST /sessions, and never written to Postgres — the same
-  // treatment the API key used to get. Durable for the session's lifetime, so
-  // a restarted CLI can reattach rather than being locked out.
+  // returned once by POST /sessions, and never written to Postgres. Durable
+  // for the session's lifetime, so a restarted CLI can reattach rather than
+  // being locked out.
   runnerToken: string;
   // Reported by the runner at hello. All four are display-only: the room needs
   // to know which codebase it's watching and whose credentials are paying.
@@ -140,8 +140,7 @@ export function findParticipantByToken(
 
 // Centralizes driver changes the way setStatus already centralizes status —
 // both are Session fields that need to reach Postgres (persist.ts) on every
-// change, not just be assigned inline at each of the half-dozen call sites
-// that used to set `session.driverId` directly.
+// change, so nothing should assign `session.driverId` directly.
 export function setDriver(session: Session, driverId: string | null): void {
   session.driverId = driverId;
   mirrorSessionMeta(session);

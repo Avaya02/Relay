@@ -64,9 +64,9 @@ function planStep(
   ];
 }
 
-// Real agents answer "what's in here?" with a wall of markdown — the case that
-// used to push the whole ledger off screen, so the mock has to produce one or
-// the clamp is untestable offline.
+// Real agents answer "what's in here?" with a wall of markdown, long enough
+// to push the ledger off screen. The mock has to produce one too, or the
+// clamp that handles it is untestable offline.
 const MOCK_LONG_REPLY = [
   "Here's what changed, with the surrounding structure for context:",
   "",

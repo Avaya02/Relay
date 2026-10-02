@@ -165,10 +165,11 @@ function clearIdentity(sessionId: string): void {
 
 // Connects once per mount, sends `join`, and reduces every incoming
 // ServerMessage into local state. Rendering strictly follows the server's
-// `seq` order (spec: "Never trust client timing") — events arrive already
-// ordered (history replay, then live agent_events) and we only ever append.
+// `seq` order — never the client's own sense of timing — since events
+// arrive already ordered (history replay, then live agent_events) and we
+// only ever append.
 //
-// Reconnect (spec C1/C2): a dropped socket retries with backoff and rejoins
+// Reconnect: a dropped socket retries with backoff and rejoins
 // automatically. The server's own grace window (sessions.ts) is what makes
 // this transparent rather than just fast — a `resumeToken` carried across
 // the reconnect reattaches to the same participant identity (still driving,

@@ -8,13 +8,10 @@ import {
 } from "@/lib/recentSessions";
 
 // The landing page's half of the sessions list. Same store as the rail
-// (lib/recentSessions.ts), deliberately a different shape: this is a short
-// "pick up where you left off" strip under the call to action, not a
-// navigator. Four at most — past that it competes with the thing the page is
-// actually for.
+// (lib/recentSessions.ts), but a short "pick up where you left off" strip
+// under the call to action, not a navigator — four at most.
 //
-// Renders nothing at all when empty. An empty-state box on a landing page is
-// a promise of content the visitor has no way to produce yet.
+// Renders nothing when empty, rather than showing an empty-state box.
 
 const MAX = 4;
 

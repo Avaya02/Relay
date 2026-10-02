@@ -234,9 +234,9 @@ export function attachWs(wss: WebSocketServer): void {
 
     switch (msg.type) {
       case "runner_event": {
-        // Straight into the same function the in-process agent used to call:
-        // seq assignment, broadcast and the Postgres mirror are unchanged.
-        // Text is scrubbed on the way in — see validate.redactKeys.
+        // Same path regardless of transport: seq assignment, broadcast and
+        // the Postgres mirror all happen here. Text is scrubbed on the way
+        // in — see validate.redactKeys.
         appendEvent(session, { kind: msg.kind, data: redactEventData(msg.data) });
         break;
       }

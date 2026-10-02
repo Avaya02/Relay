@@ -12,9 +12,8 @@ import {
 } from "@/lib/recentSessions";
 
 // The way back. See lib/recentSessions.ts for why this is localStorage and
-// not an account. A flat, reverse-chronological list in three date buckets:
-// the question is "what was I just in?", and a calendar answers a question
-// nobody asked.
+// not an account. A flat, reverse-chronological list in three date buckets —
+// answers "what was I just in?", not a calendar.
 export function SessionsRail({ currentId }: { currentId?: string }) {
   const { sessions, now } = useRecentSessions();
   const [collapsed, setCollapsed] = useState(false);
