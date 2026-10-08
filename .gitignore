@@ -30,7 +30,7 @@ coverage/
 .DS_Store
 *.pem
 
-# demo repo working checkouts (server-managed, not source)
+# working checkouts left behind by the old server-side agent; safe to delete
 packages/server/.demo-repo/
 packages/server/.sessions/
 
@@ -45,12 +45,14 @@ packages/server/src/generated/
 resume/
 interview+fundamentals/
 
-# internal planning logs, kept locally — SCOPE_REVIEW.md, PRODUCT.md and
-# DESIGN.md stay tracked; these are process notes, not reference material
-docs/internal/RELAY_BUILD_SPEC.md
-docs/internal/RELAY_PRODUCTION_PLAN.md
-docs/internal/REDESIGN_PLAN.md
-docs/internal/RELAY_STATUS.md
-docs/internal/RESEARCH_BRIEF.md
-docs/internal/LANDING_REFERENCE_MATCH.md
-docs/internal/DEPLOY.md
+# local agent context: the index Claude Code loads, and the search re-include
+# that lets agents find the local-only folders above
+CLAUDE.local.md
+.ignore
+
+# internal planning notes, kept locally
+docs/internal/
+
+# design-tool working files and pasted references, kept locally
+packages/web/.impeccable/
+docs/chromaticref.md

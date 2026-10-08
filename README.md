@@ -1,120 +1,153 @@
 # Relay
 
-Watch a Claude agent work on a real codebase, live, with one person in control and everyone
-else watching in real time.
+Live, shared sessions for AI coding agents. Everyone with the link watches the same
+[Claude Agent SDK](https://docs.claude.com/en/api/agent-sdk/overview) run as it happens, one
+person drives, and control can be handed over mid-task.
+
+[relayrun.in](https://relayrun.in) · [`relayrun` on npm](https://www.npmjs.com/package/relayrun)
+
+![A live Relay session: the agent's steps streaming in the middle, its plan above them, the files it changed on the right, and two people in the room](docs/session.png)
 
 A normal agent session is single-player. If someone else wants to see what the agent did,
-they get a transcript afterward, or a screen share. Relay turns a session into something
-closer to a shared terminal: everyone with the link watches the same event stream as it
-happens, and control can be handed to someone else without restarting anything.
+they get a transcript afterwards or a screen share. Relay turns the session into something
+closer to a shared terminal: the agent runs on the host's machine, and everyone else follows
+the same event stream in their browser.
 
-The agent itself is the [Claude Agent SDK](https://docs.claude.com/en/api/agent-sdk/overview),
-the same engine Claude Code runs on. Relay is the layer around it: multi-viewer streaming,
-catch-up for people who join late, and a driver lock enforced by the server, not the UI.
+## Quick start
 
-![A Relay session: sessions on the left, the plan strip and action ledger in the middle, the workspace rail on the right, with a second participant watching](docs/session.png)
+Run it in the repository you want the agent to work on:
+
+```bash
+cd your-project
+npx relayrun
+```
+
+The CLI prints a link. Anyone who opens it watches the run live and can ask for control.
+
+You need Node 20.9 or later, `git`, and either a Claude Code login on the machine or an
+Anthropic API key (`--api-key sk-ant-...`). A claude.ai browser session or the Claude Desktop
+app is a separate login and won't work. If no credential is found, the CLI says so before it
+opens a session.
+
+`npx relayrun --mock` runs a scripted agent instead. It costs nothing, but it ignores what you
+type and replays a fixed run, so it's for UI work and demos rather than real answers.
+
+## How it works
+
+```
+  relayrun (host machine)     events up, instructions down      server          browsers
+  repo, shell, credentials                                   no repo, no shell, no keys
+```
+
+- **The agent runs on the host's machine.** `relayrun` keeps a base clone of the repository
+  in the OS temp directory and gives each session its own clone of it, so the agent never
+  touches your working tree. The session clone is deleted when the CLI exits.
+- **The server only coordinates.** It handles sessions, event ordering, the driver lock and
+  presence. It never receives your repository, never runs a shell and never sees a
+  credential. Browsers get a JSON event stream: the agent's actions, its replies, and the
+  diff of every file it changes.
+- **The connection is outbound.** The CLI dials out to the server, so there are no ports to
+  open.
+- **Changes come back as a branch.** The driver can publish the session's changes to a
+  branch in the host's repository, and optionally open a pull request.
+
+The clone is a clean starting point, not a sandbox. The agent runs with
+`permissionMode: "bypassPermissions"` and no OS-level isolation, which is the same trust model
+as running Claude Code directly on your own machine.
+
+An earlier version ran the agent on the server. That meant anyone using Relay had to give a
+shared machine shell access to their code, so the agent moved into the CLI and the server was
+reduced to coordination.
 
 ## Concurrency
 
-Multiplayer plus an agent that writes files is a concurrency problem. Two rules keep it
-safe:
+Multiplayer plus an agent that writes files is a concurrency problem. Two rules keep it safe.
 
-**Only one participant can send input at a time.** This is enforced on the server, not just
-hidden in the UI. A non-driver's `instruct` message is rejected server-side, so a
-hand-crafted WebSocket frame can't get around a disabled button. Control changes by explicit
-hand-over or release. If the driver disconnects, control is freed instead of getting stuck.
+**One person drives.** Only the driver can send instructions, and the check runs on the
+server, so a hand-crafted WebSocket frame can't get around a disabled button. Control moves by
+explicit hand-over or release. Everyone else can suggest an instruction, and the driver
+decides whether to send it.
 
-**The server assigns order to every event.** `seq` is set in exactly one place
-([`transcript.ts`](packages/server/src/transcript.ts)), and clients only ever append in that
-order. They don't sort or merge locally. That's what keeps two browsers agreeing on what
-happened and when.
+**The server orders every event.** `seq` is assigned in exactly one place
+([`transcript.ts`](packages/server/src/transcript.ts)), and clients append in that order
+without sorting or merging. That is what keeps every browser in agreement about what happened
+and when.
 
-Relay doesn't support multiple people sending instructions at once. That would need a
-defined ordering for competing instructions and a defined meaning for interrupting the agent
-mid tool call, and it's out of scope by design.
+A dropped connection or a page refresh rejoins under the same identity, still driving, as long
+as it comes back within 30 seconds. After that, a departed driver's control is released rather
+than left stuck. A second instruction sent while the agent is working is queued; it never
+starts a second agent against the same working directory.
+
+Relay doesn't support several people instructing the agent at once. That would need an
+ordering for competing instructions and a meaning for interrupting the agent mid tool call,
+and it is out of scope by design.
 
 ## Interface
 
-Three panels:
+- **Turns.** Each turn shows the prompt, the agent's reply and its steps. Steps stream live
+  while the agent works, then fold into a single summary line when the turn finishes, with
+  the full list a click away.
+- **Plan.** The agent's own `TodoWrite` checklist sits above the conversation. It is built
+  from the transcript rather than stored separately, so it is correct for someone who joins
+  mid-run.
+- **Changes.** The files the session changed, with line counts. A file's diff opens in a
+  drawer, and the driver can publish everything to a branch from here.
+- **Sessions.** The sessions you've joined, kept in the browser's `localStorage`. There are no
+  accounts, so the list is per browser; session links work from anywhere.
 
-- **Action ledger.** One row per action. A tool call shows up immediately in a pending
-  state, and its result fills the same row when it arrives, so a run with 32 raw events
-  reads as roughly 13 rows. Diffs and long output sit behind a toggle instead of getting
-  truncated.
-- **Plan strip.** The agent's own `TodoWrite` checklist, shown live above the ledger. It's
-  built from the transcript rather than stored separately, so it's still correct for someone
-  who joins in the middle of a run.
-- **Workspace rail.** Which files changed, by how much, and their diffs. It isn't a file
-  tree: it only lists what the current session touched, and it's empty until the agent
-  writes something. The driver can commit from here to a branch.
+The composer shows what is answering: the model name for the real agent, `Demo` for the
+scripted one. Each finished turn shows what it cost, and the repository button in the top bar
+opens the session's running total.
 
-![The plan strip expanded into its full checklist, with a file's diff open in the workspace rail on the right](docs/plan.png)
+The screenshot above is from the scripted agent, so the file names in it are synthetic. The
+interface is the real one.
 
-On the left, a list of sessions you've joined, kept in the browser's `localStorage`. There
-are no accounts, so the list is per browser. A different browser shows an empty list, and
-the session links still work from it.
+## Developing
 
-The header shows what's actually running: `Demo` for the scripted agent, `Live` for the real
-one, and `Live ··4f2a` when someone in the room supplied their own API key, so it's visible
-whose account is paying for the run.
-
-## Running it
-
-Node 22.x and pnpm, to work in this repo (see `engines` in the root `package.json`).
-Postgres is optional.
+Working on this repository needs Node 22.x and pnpm. Postgres is optional.
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-This starts the coordination server, the web app, and a `relayrun` instance in mock mode
-together. The CLI prints a session link. Open it in two windows to see a driver and a
-viewer at once.
+This starts the coordination server on `:4000`, the web app on `:3000`, and a `relayrun`
+instance in mock mode against this repository. The CLI prints a session link; open it in two
+windows to see a driver and a watcher at once.
 
-To point an agent at a real repository, run the CLI directly:
+To point the local stack at a real repository with the real agent:
 
 ```bash
-cd /path/to/your/repo
-pnpm --filter @relay/agent start              # real agent, uses the Agent SDK
-pnpm --filter @relay/agent start -- --mock    # scripted, offline, no real answers
+pnpm --filter relayrun build
+node packages/agent/dist/cli.js --repo /path/to/repo \
+  --server http://localhost:4000 --web http://localhost:3000
 ```
 
-The real agent is the default. If the machine already has Claude Code set up, the SDK uses
-those credentials automatically. Pass `--api-key sk-ant-...` to bill a specific key instead;
-it's checked before the session starts and never leaves the machine.
-
-`--mock` runs a scripted agent against a disposable clone: plan updates, a failing test, a
-fix, real file writes, no cost. It's how most of the UI was built. It ignores anything you
-type, so it stays opt-in instead of the default.
-
-Once published to npm, `relayrun` only needs Node `>=20.9.0` to run (see
-`packages/agent/package.json`); the 22.x requirement above is for developing this repo, not
-for using the published CLI.
+Without `--server` and `--web`, the CLI connects to the hosted service at relayrun.in.
 
 ### CLI flags
 
 | Flag | Default | What it does |
 |---|---|---|
 | `--repo <path>` | current directory | Repository to work in |
-| `--mock` | off | Scripted offline agent, ignores input |
+| `--mock` | off | Scripted offline agent; ignores input |
 | `--api-key <key>` | none | Bill this key instead of the local Claude Code login |
-| `--server <url>` | `http://localhost:4000` | Coordination server to connect to |
-| `--web <url>` | `http://localhost:3000` | Web app, used for the printed link |
-| `--session <id>` + `--token` | none | Reattach to an existing session |
-| `--github-repo` / `--github-token` | none | Open a PR on publish |
+| `--model <id>` | `claude-sonnet-5` | Model to run (also `RELAY_MODEL`) |
+| `--server <url>` | `https://api.relayrun.in` | Coordination server (also `RELAY_SERVER`) |
+| `--web <url>` | `https://relayrun.in` | Web app, used for the printed link (also `RELAY_WEB`) |
+| `--session <id>` + `--token <token>` | none | Reattach to an existing session |
+| `--github-repo` + `--github-token` | none | Push the branch to GitHub and open a pull request on publish |
 
-`--model` (or `RELAY_MODEL`) sets the model. Default is `claude-sonnet-5`.
-
-### Server config
+### Server configuration
 
 | Variable | Default | What it does |
 |---|---|---|
-| `DATABASE_URL` | none | Postgres connection for the transcript mirror. Omit to disable it |
 | `PORT` | `4000` | Server port |
-
-That's the full configuration. The server holds no repository, runs no shell commands, and
-stores no credentials.
+| `RELAY_ALLOWED_ORIGINS` | none | Comma-separated web origins allowed to connect. Required in production: with `NODE_ENV=production` and no list, browsers are refused |
+| `DATABASE_URL` | none | Postgres for the transcript mirror. Omit to disable it |
+| `RELAY_MAX_SESSIONS_PER_MINUTE` | `10` | Session creation limit per client IP |
+| `RELAY_MAX_LIVE_SESSIONS` | `500` | Cap on sessions held in memory |
+| `RELAY_REAP_MS` | `600000` | How long an empty session is kept before it is dropped |
 
 With Postgres:
 
@@ -124,97 +157,58 @@ createdb relay_dev
 pnpm --filter @relay/server exec prisma migrate deploy
 ```
 
-## Architecture
+### Packages
 
 ```
-packages/shared   WebSocket protocol types shared by both sides
-packages/agent    relayrun CLI. Holds the repo, runs the Agent SDK, streams events up
-packages/server   Node http + ws. Sessions, ordering, the lock, presence, Postgres mirror
+packages/shared   WebSocket protocol types both sides compile against
+packages/agent    relayrun CLI: holds the repo, runs the Agent SDK, streams events up
+packages/server   Node http + ws: sessions, ordering, the driver lock, presence, Postgres mirror
 packages/web      Next.js App Router, Tailwind v4, shadcn/ui
 ```
 
-```
-  relayrun (your machine)   events up / instructions down    server        browsers
-  the repo, the shell, the keys                          no repo, no shell, no keys
-```
-
-The agent runs on whichever machine already has the repository. The server only
-coordinates: it never receives your code, and there's no per-deployment repository to
-configure. Browsers receive a JSON event stream and render it; nobody is given direct
-access to the repository.
-
-Each session runs against a fresh `git clone` of the repo, deleted once the run ends. That's
-a clean starting point, not a sandbox: the agent has unrestricted shell access
-(`permissionMode: "bypassPermissions"`) with no OS-level isolation, so it can still reach
-the rest of the filesystem. This is the same trust model as running Claude Code directly,
-just on your own machine instead of a shared server.
-
-A few details:
-
-- **Reconnects keep your seat.** A dropped socket retries and rejoins under the same
-  participant identity. The server holds that identity for 30 seconds, so a brief
-  disconnect doesn't drop you from the session or release the driver lock.
-- **Instructions queue instead of racing.** A second instruction sent mid-run is added to
-  the transcript immediately but doesn't start a second agent against the same working
-  directory.
-- **Postgres mirrors the transcript, not the live session.** See below.
-
 ## Deploying
 
-The server needs a host with long-lived WebSocket support (Railway, Render, Fly; not
-Vercel), plus Postgres if transcripts should survive a restart. Because it holds no
-repository, shell, or credentials, deploying it publicly doesn't carry the same risk a
-typical hosted dev tool would.
+The server needs a host with long-lived WebSocket support (Railway, Render or Fly; not
+Vercel), plus Postgres if transcripts should survive a restart. Set `RELAY_ALLOWED_ORIGINS` to
+the web app's origin. Because the server holds no repository, shell or credentials, running it
+publicly doesn't carry the risk a typical hosted dev tool would.
 
-Nobody deploys the agent. Each person runs `relayrun` against their own repository to host
-a session. The CLI dials out to the server, so there are no inbound ports to open.
+Nobody deploys the agent. Each person runs `relayrun` against their own repository to host a
+session.
 
-### Credentials
+## Credentials
 
-Anthropic's [terms](https://code.claude.com/docs/en/legal-and-compliance) restrict
-OAuth-based Claude Code login to the subscriber's own use, and don't permit routing other
-people's requests through it. Running `relayrun` locally fits inside that: it's your own
-credentials, on your own machine, used the same way Claude Code itself would use them. The
-server never sees a credential at all. Whoever starts the agent pays for the run, and the
-running cost is shown in the header so the room can see it.
+Anthropic's [terms](https://code.claude.com/docs/en/legal-and-compliance) restrict OAuth-based
+Claude Code login to the subscriber's own use and don't permit routing other people's requests
+through it. Running `relayrun` locally fits inside that: it's your own credentials, on your
+own machine, used the way Claude Code itself uses them. The server never sees a credential,
+and whoever starts the agent pays for the run.
 
-One implementation note: passing `ANTHROPIC_API_KEY` through the SDK's `env` does not work
-on a machine that already has a Claude Code login. It's silently ignored, and the subprocess
-authenticates with the stored OAuth token instead, so the wrong account pays and nothing
-looks wrong. Confirmed by pointing `ANTHROPIC_BASE_URL` at a local server and inspecting the
-request headers. The mechanism that actually works is `apiKeyHelper`; see
+One implementation note: passing `ANTHROPIC_API_KEY` through the SDK's `env` does not work on
+a machine that already has a Claude Code login. It is silently ignored and the subprocess
+authenticates with the stored OAuth token instead, so the wrong account pays and nothing looks
+wrong. This was confirmed by pointing `ANTHROPIC_BASE_URL` at a local server and reading the
+request headers. The mechanism that works is `apiKeyHelper`; see
 [`sessionKey.ts`](packages/agent/src/sessionKey.ts).
 
 ## Known limitations
 
-- **No authentication.** A session link is the access control, the same as a video call
-  link. Anyone with it can join and request control. Input is still validated and bounded
-  server-side ([`validate.ts`](packages/server/src/validate.ts)); "no accounts" and "no
-  validation" are separate decisions, and only the first is intentional. Attaching an agent
-  to a session does require a secret: a runner token, generated per session and held only
-  by the CLI that started it.
-- **No accounts, so no sync.** The joined-sessions list is per browser. Links still work
-  from anywhere; the list doesn't follow you.
-- **Sessions don't survive a server restart.** Live state (sockets, the lock, the agent
-  process, the working directory) is in memory. Postgres stores the transcript, so a dead
-  session renders as a read-only replay instead of an error, but there's no live resume.
-- **Single process.** No horizontal scaling. Sessions live in one server's memory.
-- **Not an IDE.** No file tree, no editor, no tabs. It's for watching and steering a run,
-  not browsing a codebase.
-- **The GitHub PR path is untested against live GitHub.** Committing and pushing to a
-  branch is tested against a local remote. Opening the PR itself is implemented but has
-  never run against the real API.
-
-## Further reading
-
-[`docs/internal/SCOPE_REVIEW.md`](docs/internal/SCOPE_REVIEW.md) is the design review that
-led to the current architecture: it names the original trust problem (the server used to
-hold the repository and run the agent's shell) and the decision to move the agent onto the
-host's own machine instead. `PRODUCT.md` and `DESIGN.md` in the same folder cover product
-intent and the visual system.
-
-The screenshots above are from the mock agent, so the repository and file names in them are
-synthetic. The interface itself is the real one.
+- **No authentication.** A session link is the access control, like a video call link. Anyone
+  with it can join and request control. Input is still validated and bounded server-side
+  ([`validate.ts`](packages/server/src/validate.ts)). Attaching an agent to a session does
+  require a secret: a runner token generated per session and held only by the CLI that
+  started it.
+- **No accounts, so no sync.** The sessions list is per browser.
+- **Sessions don't survive a server restart.** Live state (sockets, the driver lock, presence,
+  queued instructions) is in memory. Postgres keeps the transcript, so an ended session
+  renders as a read-only replay instead of an error, but there is no live resume.
+- **Single process.** There is no horizontal scaling; sessions live in one server's memory.
+- **Reattaching restores the room, not the work.** `relayrun --session <id> --token <token>`
+  rejoins the session, but the agent starts again on a fresh clone. Publish anything you want
+  to keep before stopping the CLI; Ctrl-C warns first if there are unpublished changes.
+- **The GitHub pull request path is untested against live GitHub.** Publishing a branch into
+  the host's own repository works. Opening the pull request is implemented but has never run
+  against the real API.
 
 ## License
 

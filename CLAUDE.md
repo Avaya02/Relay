@@ -12,9 +12,10 @@ one person drives, and control hands over mid-task.
 
 ## Architecture
 
-Migrated to `docs/internal/SCOPE_REVIEW.md` Option C: the agent runs **on the host's own
-machine**, not the server. `packages/server` never touches a repo, a shell, or a credential
-— verify that invariant before adding anything to it.
+The agent runs **on the host's own machine**, not the server. An earlier design ran it
+server-side and was replaced because it meant handing a shared machine shell access to users'
+code. `packages/server` never touches a repo, a shell, or a credential; verify that invariant
+before adding anything to it.
 
 ## Code conventions
 

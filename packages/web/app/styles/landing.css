@@ -79,10 +79,39 @@
 }
 
 /* An <a> carrying a button shape needs the centring a <button> gets free. */
-.landing-nav-cta {
+/* Both actions share the grid's last column; a fourth grid child would wrap
+   onto a new row and break the centring of the links. Pinned to column 3
+   explicitly: once the links hide below 900px, auto-placement would drop this
+   into the middle track and leave it floating mid-header. */
+.landing-nav-actions {
+  grid-column: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-self: end;
+}
+.landing-nav-cta,
+.landing-nav-gh {
   display: inline-flex;
   align-items: center;
-  justify-self: end;
+  /* A button label that wraps spills out of its fixed 2.25rem height. */
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.landing-nav-gh {
+  gap: 0.5rem;
+}
+.landing-nav-gh:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (max-width: 480px) {
+  .landing-nav-gh {
+    padding-inline: 0.625rem;
+  }
+  .landing-nav-gh-label {
+    display: none;
+  }
 }
 
 /* --- Shared section furniture --- */
@@ -112,9 +141,17 @@
 }
 
 @media (max-width: 900px) {
-  /* The nav's middle links are the first thing to go — the mark and the one
-     action are what a narrow screen actually needs. */
+  /* The nav's middle links are the first thing to go — the mark and the
+     actions are what a narrow screen actually needs. */
   .landing-nav-links {
     display: none;
+  }
+  /* With the middle track empty, equal 1fr halves squeezed the actions into
+     half the row; the mark only needs its own width. */
+  .landing-nav {
+    grid-template-columns: auto 1fr;
+  }
+  .landing-nav-actions {
+    grid-column: 2;
   }
 }
