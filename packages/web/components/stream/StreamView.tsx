@@ -21,6 +21,7 @@ export function StreamView({
   status,
   runnerConnected,
   showSteps,
+  demo = false,
   empty,
 }: {
   /** Identifies the transcript, so "already seen" survives a remount. */
@@ -31,6 +32,7 @@ export function StreamView({
   status: SessionStatus;
   runnerConnected: boolean;
   showSteps: boolean;
+  demo?: boolean;
   /** What to show before the first instruction — the caller knows the role. */
   empty: ReactNode;
 }) {
@@ -61,24 +63,43 @@ export function StreamView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events.length]);
 
-  // While a run streams, content also grows without a new event — the
-  // activity window measures itself a frame later, a code block finishes
-  // highlighting — and pinned has to hold through that too. Only while
-  // working: when idle, growth is someone opening a record, and it should
-  // open downward from where they clicked rather than drag the page.
+  // Content also grows without a new event — the activity window measures
+  // itself a frame later, a code block finishes highlighting — and pinned has
+  // to hold through that. It holds while a run streams, and on arrival until
+  // the viewer first touches the stream: after that, growth while idle is
+  // someone opening a record, which should open downward from where they
+  // clicked rather than drag the page.
   const pinnedRef = useRef(false);
+  const workingRef = useRef(false);
+  const touchedRef = useRef(false);
   useEffect(() => {
-    pinnedRef.current = pinnedToBottom && status === "working";
+    pinnedRef.current = pinnedToBottom;
+    workingRef.current = status === "working";
   });
   useEffect(() => {
     const el = scrollerRef.current;
     const content = el?.firstElementChild;
     if (!el || !content || typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(() => {
-      if (pinnedRef.current) el.scrollTop = el.scrollHeight;
+      if (pinnedRef.current && (workingRef.current || !touchedRef.current)) {
+        el.scrollTop = el.scrollHeight;
+      }
     });
+    const touch = () => {
+      touchedRef.current = true;
+    };
     observer.observe(content);
-    return () => observer.disconnect();
+    // The viewport shrinks too, when the dock or the plan above it grows.
+    observer.observe(el);
+    el.addEventListener("pointerdown", touch);
+    el.addEventListener("wheel", touch, { passive: true });
+    el.addEventListener("keydown", touch);
+    return () => {
+      observer.disconnect();
+      el.removeEventListener("pointerdown", touch);
+      el.removeEventListener("wheel", touch);
+      el.removeEventListener("keydown", touch);
+    };
   }, []);
 
   useEffect(() => {
@@ -148,6 +169,7 @@ export function StreamView({
                     status={status}
                     runnerConnected={runnerConnected}
                     showSteps={showSteps}
+                    demo={demo}
                   />
                 </div>
               ))}
@@ -157,9 +179,18 @@ export function StreamView({
       </main>
 
       {missed > 0 && (
-        <button type="button" onClick={jumpToLatest} className="jump">
-          <ArrowDown size={13} />
-          {missed} new
+        <button type="button" onClick={jumpToLatest} className="room-jump">
+          {status === "working" ? (
+            <>
+              <span className="rstatus-dot" aria-hidden />
+              Jump to live
+            </>
+          ) : (
+            <>
+              <ArrowDown size={13} aria-hidden />
+              {missed} new
+            </>
+          )}
         </button>
       )}
     </div>

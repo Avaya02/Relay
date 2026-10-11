@@ -22,6 +22,7 @@ export function TurnBlock({
   status,
   runnerConnected,
   showSteps,
+  demo = false,
 }: {
   turn: Turn;
   participants: Participant[];
@@ -29,6 +30,8 @@ export function TurnBlock({
   status: SessionStatus;
   runnerConnected: boolean;
   showSteps: boolean;
+  /** The scripted agent reports a made-up cost; nothing was billed. */
+  demo?: boolean;
 }) {
   const actions = actionsOf(turn);
   const done = doneOf(turn);
@@ -47,7 +50,7 @@ export function TurnBlock({
           <span className="turn-foot-sep">·</span>
         </>
       )}
-      {typeof done.costUsd === "number" && (
+      {typeof done.costUsd === "number" && !demo && (
         <>
           <span>${done.costUsd.toFixed(4)}</span>
           <span className="turn-foot-sep">·</span>

@@ -1,19 +1,41 @@
-const PRESENCE_COLORS = [
-  "var(--presence-1)",
-  "var(--presence-2)",
-  "var(--presence-3)",
-  "var(--presence-4)",
-];
+import type { Participant } from "@relay/shared";
 
-// Stable per participant regardless of join/leave order — hashing the id
-// rather than the array index means nobody's colour changes because someone
-// else disconnected.
-export function colorFor(participantId: string): string {
+const HUES = 6;
+
+function preferredHue(participantId: string): number {
   let hash = 0;
   for (let i = 0; i < participantId.length; i++) {
     hash = (hash * 31 + participantId.charCodeAt(i)) | 0;
   }
-  return PRESENCE_COLORS[Math.abs(hash) % PRESENCE_COLORS.length];
+  return Math.abs(hash) % HUES;
+}
+
+/** A colour for someone who may have left the room, so no longer in its list. */
+export function hueOf(participantId: string): string {
+  return `var(--hue-${preferredHue(participantId) + 1})`;
+}
+
+/**
+ * Everyone in the room gets their own colour. Hashing alone collides often
+ * (three people across six hues share one 44% of the time), so each person
+ * takes their hashed hue unless someone who joined earlier holds it. The
+ * list arrives in join order from the server, so every screen assigns the
+ * same colours. When the earlier holder leaves, the person they displaced
+ * moves to their own hue — on every screen at once, which is the property
+ * that matters: "I'm the pink one" has to be true for everybody.
+ */
+export function assignHues(participants: Participant[]): Map<string, string> {
+  const taken = new Set<number>();
+  const out = new Map<string, string>();
+  for (const p of participants) {
+    let hue = preferredHue(p.id);
+    if (taken.size < HUES) {
+      while (taken.has(hue)) hue = (hue + 1) % HUES;
+    }
+    taken.add(hue);
+    out.set(p.id, `var(--hue-${hue + 1})`);
+  }
+  return out;
 }
 
 /** "Avaya Sharma" → "AS", "noor" → "N", "" → "?" */

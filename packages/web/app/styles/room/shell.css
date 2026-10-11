@@ -1,0 +1,164 @@
+.room-col {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.room-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.room-main {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* --- Header ------------------------------------------------------------ */
+.room-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 10px 0 12px;
+  border-bottom: 1px solid var(--room-line);
+  background: var(--room-panel);
+}
+.room-head-left {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.room-head-right {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+}
+.room-wordmark {
+  padding: 0 8px 0 4px;
+  color: var(--room-ink);
+  font: 17px/1 var(--font-wordmark);
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+.room-crumb {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  max-width: 18rem;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--room-r-md);
+  background: none;
+  color: var(--room-ink);
+  font: 500 13px/1 var(--font-sans);
+  cursor: pointer;
+  transition: background-color 140ms ease-out;
+}
+.room-crumb:hover,
+.room-crumb[data-state="open"] {
+  background: var(--room-raised-2);
+}
+.room-crumb[data-static] {
+  cursor: default;
+}
+.room-crumb[data-static]:hover {
+  background: none;
+}
+.room-crumb > svg {
+  flex: none;
+  color: var(--room-ink-3);
+}
+.room-crumb-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.room-head-sep {
+  flex: none;
+  color: var(--room-ink-3);
+  font-size: 15px;
+  font-weight: 300;
+}
+.room-title {
+  min-width: 0;
+  padding: 0 6px;
+  overflow: hidden;
+  color: var(--room-ink-2);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.room-head-left .rstatus {
+  margin-left: 4px;
+}
+.room-panel-toggle {
+  position: relative;
+  gap: 6px;
+  width: auto;
+  padding: 0 7px;
+}
+
+/* A panel that has to float over the stream on a narrow screen gets a scrim
+   to close it with; on a wide one it sits in the flow and has none. */
+.room-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  border: 0;
+  background: rgb(0 0 0 / 0.5);
+  animation: room-fade-in 160ms ease-out;
+}
+@keyframes room-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  /* The sessions button already leads the header; the wordmark would only
+     squeeze the repository, which is what tells you where you are. */
+  .room-title,
+  .room-head-sep,
+  .room-head .room-wordmark {
+    display: none;
+  }
+  .room-crumb {
+    max-width: 11rem;
+  }
+  .room-head {
+    gap: 6px;
+    padding: 0 6px 0 8px;
+  }
+}
+@media (max-width: 640px) {
+  .share-label {
+    display: none;
+  }
+  .room-head-right .rbtn--secondary {
+    width: 30px;
+    padding: 0;
+  }
+}
+@media (max-width: 480px) {
+  .room-head-left .rstatus-label {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .room-scrim {
+    animation: none;
+  }
+}

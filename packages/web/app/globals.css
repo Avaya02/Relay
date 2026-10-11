@@ -21,8 +21,13 @@
 @import "./styles/footer.css";
 @import "./styles/recent-sessions.css";
 @import "./styles/chrome.css";
-@import "./styles/plan.css";
 @import "./styles/stream.css";
 @import "./styles/markdown.css";
-@import "./styles/composer.css";
-@import "./styles/rails.css";
+@import "./styles/room/tokens.css";
+@import "./styles/room/controls.css";
+@import "./styles/room/shell.css";
+@import "./styles/room/presence.css";
+@import "./styles/room/dock.css";
+@import "./styles/room/panels.css";
+@import "./styles/room/intro.css";
+@import "./styles/room/stream.css";

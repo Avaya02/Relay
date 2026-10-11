@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { PanelRight, PanelRightClose } from "lucide-react";
+import { ArrowUpRight, FileDiff, GitPullRequest, PanelRightClose } from "lucide-react";
 import type { PublishState } from "@/lib/useSession";
 import { CHANGES_WIDTH, useChangesWidth } from "@/lib/prefs";
+import { Tip } from "@/components/room/pop";
 import { STATUS_LABEL, STATUS_MARK, splitPath, type ChangedFile } from "./derive";
 
 /**
@@ -22,6 +23,7 @@ export function ChangesRail({
   publishState,
   publishing,
   onPublish,
+  onClose,
 }: {
   files: ChangedFile[];
   /** How many rows carry real numbers. Zero means every row is a live guess. */
@@ -34,8 +36,8 @@ export function ChangesRail({
   publishState: PublishState | null;
   publishing: boolean;
   onPublish: (title: string) => void;
+  onClose: () => void;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
   const [savedWidth, saveWidth] = useChangesWidth();
   // Live width while dragging, committed to storage on release so a drag
   // doesn't write localStorage on every pointer move.
@@ -80,75 +82,59 @@ export function ChangesRail({
     e.preventDefault();
   }
 
-  if (collapsed) {
-    return (
-      <aside className="changes changes--collapsed">
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={() => setCollapsed(false)}
-          title="Show changes"
-          aria-label={`Show changes, ${n} ${n === 1 ? "file" : "files"}`}
-        >
-          <PanelRight size={15} />
-        </button>
-        {n > 0 && <span className="rail-count">{n}</span>}
-      </aside>
-    );
-  }
-
   return (
     <aside
-      className={`changes${dragWidth !== null ? " changes--dragging" : ""}`}
+      className="crail"
+      data-dragging={dragWidth !== null || undefined}
       style={{ width }}
+      aria-label="Changes"
     >
       <button
         type="button"
-        className="changes-resizer"
+        className="crail-resizer"
         onPointerDown={startDrag}
         onKeyDown={nudge}
-        data-dragging={dragWidth !== null || undefined}
         aria-label="Resize changes panel"
         aria-valuenow={width}
         aria-valuemin={CHANGES_WIDTH.min}
         aria-valuemax={CHANGES_WIDTH.max}
         role="separator"
         aria-orientation="vertical"
-        title="Drag to resize"
       />
-      <div className="rail-head">
-        <span className="rail-title">
-          Changes
-          {n > 0 && (
-            <span className="rail-title-meta">
-              {n} {n === 1 ? "file" : "files"}
-              {/* Never claim a number that hasn't been measured: "+0 −0"
-                  mid-run reads as "no changes", the opposite of the truth. */}
-              {measured > 0 && (
-                <>
-                  {" · "}
-                  <Stat kind="add" value={insertions} /> <Stat kind="del" value={deletions} />
-                </>
-              )}
-            </span>
-          )}
-        </span>
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={() => setCollapsed(true)}
-          title="Hide changes"
-          aria-label="Hide changes"
-        >
-          <PanelRightClose size={15} />
-        </button>
+      <div className="crail-head">
+        <h2 className="crail-title">Changes</h2>
+        {n > 0 && <span className="count">{n}</span>}
+        {/* Never claim a number that hasn't been measured: "+0 −0" mid-run
+            reads as "no changes", the opposite of the truth. */}
+        {measured > 0 && (
+          <span className="crail-sum">
+            <Stat kind="add" value={insertions} />
+            <Stat kind="del" value={deletions} />
+          </span>
+        )}
+        <Tip label="Hide changes">
+          <button
+            type="button"
+            className="rbtn rbtn--icon rbtn--sm crail-close"
+            onClick={onClose}
+            aria-label="Hide changes"
+          >
+            <PanelRightClose size={15} />
+          </button>
+        </Tip>
       </div>
 
-      <div className="rail-body">
+      <div className="crail-body">
         {n === 0 ? (
-          <p className="rail-empty">Nothing touched yet. Files the agent writes appear here as it works.</p>
+          <div className="crail-empty">
+            <FileDiff size={18} aria-hidden />
+            <p>
+              <b>No changes yet</b>
+              Files the agent writes appear here as it works, each with its diff.
+            </p>
+          </div>
         ) : (
-          <ul className="changes-list">
+          <ul className="crail-list">
             {files.map((file) => (
               <FileRow
                 key={file.path}
@@ -162,15 +148,16 @@ export function ChangesRail({
       </div>
 
       {(publishState || canPublish) && (
-        <div className="changes-foot">
+        <div className="crail-foot">
           {publishState && <PublishNote state={publishState} />}
           {canPublish && (
             <button
               type="button"
-              className="changes-publish"
+              className="rbtn rbtn--primary crail-publish"
               disabled={publishing}
               onClick={() => onPublish(`Relay session: ${measured} files changed`)}
             >
+              <GitPullRequest size={14} aria-hidden />
               {publishing ? "Publishing…" : "Publish branch"}
             </button>
           )}
@@ -195,24 +182,18 @@ function FileRow({
 
   const label = (
     <>
-      <span
-        className={`changes-mark changes-mark--${file.status}`}
-        title={STATUS_LABEL[file.status]}
-        aria-hidden
-      >
-        {STATUS_MARK[file.status]}
-      </span>
-      <span className="changes-path" title={`${file.path}${turn ? ` · ${turn}` : ""}`}>
-        {dir && <span className="changes-dir">{dir}</span>}
-        <span className="changes-base">{base}</span>
+      <FileMark status={file.status} />
+      <span className="crail-path" title={`${file.path}${turn ? ` · ${turn}` : ""}`}>
+        {dir && <span className="crail-dir">{dir}</span>}
+        <span className="crail-base">{base}</span>
       </span>
       {measured ? (
-        <span className="changes-stats">
+        <span className="crail-stats">
           <Stat kind="add" value={file.insertions} />
           <Stat kind="del" value={file.deletions} />
         </span>
       ) : (
-        <span className="changes-pending" title={STATUS_LABEL.pending}>
+        <span className="crail-pending" title={STATUS_LABEL.pending}>
           written
         </span>
       )}
@@ -224,7 +205,7 @@ function FileRow({
       {file.patch ? (
         <button
           type="button"
-          className="changes-row"
+          className="crail-row"
           onClick={onToggle}
           aria-pressed={selected}
           aria-label={`${STATUS_LABEL[file.status]} ${file.path}, +${file.insertions} −${file.deletions}. ${selected ? "Close" : "Open"} diff.`}
@@ -232,18 +213,25 @@ function FileRow({
           {label}
         </button>
       ) : (
-        <div className="changes-row">{label}</div>
+        <div className="crail-row">{label}</div>
       )}
     </li>
   );
 }
 
-function Stat({ kind, value }: { kind: "add" | "del"; value: number }) {
+export function FileMark({ status }: { status: ChangedFile["status"] }) {
+  return (
+    <span className="fmark" data-status={status} title={STATUS_LABEL[status]} aria-hidden>
+      {STATUS_MARK[status]}
+    </span>
+  );
+}
+
+export function Stat({ kind, value }: { kind: "add" | "del"; value: number }) {
   // A zero is not a deletion — colouring "−0" like one puts signal colour on
   // the absence of the thing it signals.
-  const tone = value === 0 ? "stat--zero" : `stat--${kind}`;
   return (
-    <span className={`stat ${tone}`}>
+    <span className="stat" data-kind={value === 0 ? "zero" : kind}>
       {kind === "add" ? "+" : "−"}
       {value}
     </span>
@@ -252,16 +240,16 @@ function Stat({ kind, value }: { kind: "add" | "del"; value: number }) {
 
 function PublishNote({ state }: { state: PublishState }) {
   if (!state.ok) {
-    return <p className="changes-note changes-note--error">{state.error}</p>;
+    return <p className="crail-note crail-note--error">{state.error}</p>;
   }
   return (
-    <p className="changes-note">
+    <p className="crail-note">
       Committed to <code>{state.branch}</code>
       {state.prUrl ? (
         <>
           {" · "}
           <a href={state.prUrl} target="_blank" rel="noreferrer">
-            view pull request ↗
+            View pull request <ArrowUpRight size={12} aria-hidden />
           </a>
         </>
       ) : state.pushed ? (

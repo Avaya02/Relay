@@ -5,9 +5,9 @@ import { ChevronDown, Hand } from "lucide-react";
 import type { Participant } from "@relay/shared";
 
 /**
- * Who holds the wheel, and the one-click answers to it. Renders the driver's
- * controls or the viewer's from the same props, which is what lets the
- * landing page's lock section drop the real thing into both of its screens.
+ * Who holds the wheel, and the one-click answers to it, as the landing page's
+ * lock section shows it in both of its screens: the driver's controls or the
+ * viewer's from the same props. The live session uses room/DriverStrip.
  */
 export function ControlBar({
   participants,

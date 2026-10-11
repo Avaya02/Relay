@@ -1,0 +1,203 @@
+/* A person is their colour: a solid disc with dark initials, the way a
+   multiplayer canvas marks whose cursor is whose. */
+.pa {
+  --size: 24px;
+
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: var(--hue);
+  color: var(--room-on-light);
+  font: 600 calc(var(--size) * 0.42) / 1 var(--font-sans);
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  user-select: none;
+}
+.pa--xs {
+  --size: 18px;
+}
+.pa--sm {
+  --size: 20px;
+}
+.pa--lg {
+  --size: 30px;
+}
+
+/* The wheel: a ring in the driver's own colour, standing off the avatar by
+   a gap of ground so it reads as worn, not as a border. */
+.wheel {
+  position: relative;
+  display: inline-grid;
+  flex: none;
+}
+.wheel-ring {
+  position: absolute;
+  inset: -4px;
+  border: 2px solid var(--hue);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* --- Roster (header) ------------------------------------------------------ */
+.roster {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 12px 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--room-ink-2);
+  font: 13px/1 var(--font-sans);
+  cursor: pointer;
+  transition: background-color 140ms ease-out;
+}
+.roster:hover,
+.roster[data-state="open"] {
+  background: var(--room-raised-2);
+}
+.roster-stack {
+  display: flex;
+  align-items: center;
+  padding-inline: 1px;
+}
+.roster-slot {
+  position: relative;
+  display: inline-grid;
+}
+/* Enough overlap to read as a group, not so much that it eats a second initial. */
+.roster-slot + .roster-slot {
+  margin-left: -2px;
+}
+.roster-slot .pa {
+  box-shadow: 0 0 0 2px var(--room-panel);
+  transition: box-shadow 140ms ease-out;
+}
+.roster:is(:hover, [data-state="open"]) .roster-slot .pa {
+  box-shadow: 0 0 0 2px var(--room-raised-2);
+}
+/* The ring stands 4px proud of its avatar, so the driver gets that room on
+   both sides instead of covering a neighbour's initials. Animated so the
+   spacing travels with the ring on a handover. */
+.roster-slot {
+  transition: margin 280ms var(--room-ease);
+}
+.roster-slot:has(.wheel-ring) {
+  z-index: 1;
+  margin-inline: 3px;
+}
+.roster-slot:has(.wheel-ring) + :is(.roster-slot, .roster-more) {
+  margin-left: 3px;
+}
+.roster-asking {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--room-ink);
+  color: var(--room-on-light);
+  box-shadow: 0 0 0 2px var(--room-panel);
+}
+.roster-more {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  margin-left: -2px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--room-raised-3);
+  box-shadow: 0 0 0 2px var(--room-panel);
+  color: var(--room-ink);
+  font: 600 11px/1 var(--font-sans);
+}
+.roster-label {
+  white-space: nowrap;
+}
+.roster-label b {
+  color: var(--hue);
+  font-weight: 500;
+}
+
+/* --- People list ------------------------------------------------------------ */
+.people-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--room-ink-3);
+}
+.people {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.person {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 8px;
+  border-radius: var(--room-r-md);
+}
+.person:hover {
+  background: var(--room-raised-2);
+}
+.person-name {
+  display: block;
+  overflow: hidden;
+  color: var(--room-ink);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.person-you {
+  margin-left: 6px;
+  color: var(--room-ink-3);
+  font-size: 12px;
+}
+.person-role {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+  color: var(--room-ink-3);
+  font-size: 12px;
+}
+.person-role[data-role="driving"] {
+  color: var(--hue);
+}
+.person-role[data-role="asking"] {
+  color: var(--room-ink-2);
+}
+.people-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 8px 4px 2px 8px;
+  border-top: 1px solid var(--room-line);
+  color: var(--room-ink-3);
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .roster-label {
+    display: none;
+  }
+  .roster {
+    padding: 0 8px;
+  }
+}

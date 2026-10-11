@@ -1,0 +1,74 @@
+/* The transcript was built on the landing's tokens. Inside the room they
+   resolve to the room's palette, and "live" means whoever is driving. */
+.room {
+  --bg: var(--room-bg);
+  --surface: var(--room-raised);
+  --surface-2: var(--room-raised-2);
+  --surface-3: var(--room-raised-3);
+  --border: var(--room-line-2);
+  --border-lit: var(--room-line-3);
+  --text: var(--room-ink);
+  --text-dim: var(--room-ink-2);
+  --text-faint: var(--room-ink-3);
+  --accent: var(--driver);
+  --radius-card: var(--room-r-lg);
+}
+
+/* A prompt is signed: the author's colour on the card edge and their name. */
+.room .prompt {
+  padding: 10px 14px 12px;
+  border-color: color-mix(in oklch, var(--hue) 22%, var(--room-line-2));
+  background: var(--room-raised);
+}
+.room .prompt-meta {
+  gap: 8px;
+  margin-bottom: 6px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+}
+.room .prompt-who {
+  color: var(--hue);
+  font-weight: 500;
+}
+.room :is(.prompt-time, .prompt-turn) {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+.room .prompt-tag {
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--room-raised-3);
+  color: var(--room-ink-2);
+  font-size: 11.5px;
+}
+.room .prompt-text {
+  font-size: 15px;
+}
+
+/* Preflight strips list markers; a listing of files without them reads as a
+   pile of chips. Code inside a list is quiet: the bullet already sets it off. */
+.room .markdown-body ul {
+  list-style: disc;
+}
+.room .markdown-body ol {
+  list-style: decimal;
+}
+.room .markdown-body li::marker {
+  color: var(--room-ink-3);
+}
+.room .markdown-body li > code {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+/* Rows scroll out under the plan bar and header; fade them rather than
+   slicing a card's border flush. */
+.room .stream {
+  mask-image: linear-gradient(to bottom, transparent, #000 18px);
+}
+
+.room .answer-toggle {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+}

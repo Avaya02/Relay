@@ -1,7 +1,9 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import type { Event, Participant } from "@relay/shared";
-import { Avatar } from "@/components/Presence";
+import { PresenceAvatar } from "@/components/room/PresenceAvatar";
+import { useHue } from "@/components/room/hues";
 import { timeOf } from "./rows";
 import { useIsNew } from "./newRows";
 
@@ -22,22 +24,25 @@ export function PromptBlock({
   dropped: boolean;
 }) {
   const isNew = useIsNew(event.seq);
+  const hue = useHue();
+  const by = event.by ?? "";
   const author = participants.find((p) => p.id === event.by) ?? null;
-  const name = event.by === selfId ? "you" : (author?.displayName ?? "someone");
+  // The transcript outlives the room: whoever sent this may have left.
+  const name = event.by === selfId ? "You" : (author?.displayName ?? "Someone");
 
   return (
-    <div className="prompt" data-new={isNew || undefined}>
+    <div
+      className="prompt"
+      data-new={isNew || undefined}
+      style={{ "--hue": hue(by) } as CSSProperties}
+    >
       <div className="prompt-meta">
-        {author ? (
-          <Avatar participant={author} />
-        ) : (
-          <Avatar participant={{ id: event.by ?? "?", displayName: name }} />
-        )}
+        <PresenceAvatar participant={{ displayName: author?.displayName ?? "?" }} hue={hue(by)} size="xs" />
         <span className="prompt-who">{name}</span>
-        <span>{timeOf(event)}</span>
-        {queued && <span className="prompt-queued">queued</span>}
-        {dropped && <span>not run</span>}
-        <span className="prompt-turn">turn {number}</span>
+        <span className="prompt-time">{timeOf(event)}</span>
+        {queued && <span className="prompt-tag">Queued</span>}
+        {dropped && <span className="prompt-tag">Not run</span>}
+        <span className="prompt-turn">Turn {number}</span>
       </div>
       <p className="prompt-text">{String(event.data.text ?? "")}</p>
     </div>

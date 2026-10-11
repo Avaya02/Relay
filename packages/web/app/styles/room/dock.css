@@ -1,0 +1,369 @@
+.dock {
+  flex: none;
+  padding: 0 16px 14px;
+}
+.dock-card {
+  position: relative;
+  width: 100%;
+  max-width: calc(var(--measure-conversation) + 2rem);
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklch, var(--driver) 60%, var(--room-line-2));
+  border-radius: var(--room-r-xl);
+  background: var(--room-raised);
+  box-shadow: var(--room-shadow-dock);
+  transition:
+    border-color 200ms ease-out,
+    box-shadow 200ms ease-out;
+}
+.dock-card:has(.composer-input:focus-visible) {
+  border-color: var(--driver);
+  box-shadow:
+    var(--room-shadow-dock),
+    0 0 0 3px color-mix(in oklch, var(--driver) 13%, transparent);
+}
+
+/* --- The wheel ----------------------------------------------------------- */
+.request {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  border-bottom: 1px solid var(--room-line);
+  background: color-mix(in oklch, var(--hue) 9%, var(--room-raised));
+  font-size: 13px;
+}
+.request-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--room-ink-2);
+}
+.request-text b {
+  color: var(--hue);
+  font-weight: 500;
+}
+
+.strip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 7px 8px 7px 14px;
+  border-bottom: 1px solid var(--room-line);
+}
+.strip-who {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--room-ink-2);
+}
+.strip-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.strip-text b {
+  color: var(--hue);
+  font-weight: 500;
+}
+.strip-meta {
+  color: var(--room-ink-3);
+}
+.strip-nowheel {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px dashed var(--room-line-3);
+  border-radius: 50%;
+  color: var(--room-ink-3);
+}
+.strip-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+.strip-waiting {
+  padding-right: 4px;
+  color: var(--room-ink-3);
+  font-size: 12.5px;
+}
+
+/* --- Suggestions ------------------------------------------------------------ */
+.sugg {
+  overflow: hidden;
+  border-bottom: 1px solid var(--room-line);
+}
+.sugg-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px 4px;
+  color: var(--room-ink-3);
+  font-size: 12px;
+  font-weight: 500;
+}
+.sugg-hint {
+  margin-left: auto;
+  font-weight: 400;
+}
+.sugg-list {
+  max-height: 10.5rem;
+  margin: 0;
+  padding: 0 6px 6px;
+  overflow-y: auto;
+  list-style: none;
+}
+.sugg-item {
+  overflow: hidden;
+}
+.sugg-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: var(--room-r-md);
+}
+.sugg-row:hover {
+  background: var(--room-raised-2);
+}
+.sugg-row .pa {
+  margin-top: 1px;
+}
+.sugg-by {
+  color: var(--hue);
+  font-size: 12px;
+  font-weight: 500;
+}
+.sugg-text {
+  display: -webkit-box;
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--room-ink);
+  font-size: 13.5px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.sugg-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.rbtn--icon.rbtn--xs {
+  width: 22px;
+  padding: 0;
+}
+
+/* --- Field -------------------------------------------------------------------- */
+.composer {
+  display: flex;
+  flex-direction: column;
+}
+.composer-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 10px 0;
+  padding: 8px 10px;
+  border-radius: var(--room-r-md);
+  background: var(--room-raised-2);
+  color: var(--room-ink-2);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.composer-notice > svg {
+  flex: none;
+  color: var(--room-ink-3);
+}
+.composer-input {
+  display: block;
+  width: 100%;
+  min-height: 50px;
+  padding: 14px 16px 6px;
+  border: 0;
+  background: transparent;
+  color: var(--room-ink);
+  font: 15px/1.55 var(--font-sans);
+  resize: none;
+  outline: none;
+}
+.composer-input::placeholder {
+  color: var(--room-ink-3);
+}
+.composer-input:disabled {
+  cursor: not-allowed;
+}
+.composer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px 8px 10px;
+}
+.composer-context {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.composer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 26px;
+  padding: 0 7px;
+  border-radius: var(--room-r-sm);
+  color: var(--room-ink-3);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.composer-chip > svg {
+  flex: none;
+}
+.composer-chip-text {
+  max-width: 13rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.agent-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--room-ink-3);
+}
+.composer-chip[data-agent="live"] .agent-dot {
+  background: var(--room-ok);
+}
+.composer-chip[data-agent="offline"] {
+  color: var(--room-ink-2);
+}
+.composer-chip[data-agent="offline"] .agent-dot {
+  background: var(--room-error);
+}
+.composer-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+}
+.composer-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--room-ink-3);
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 160ms ease-out;
+}
+.dock-card:focus-within .composer-hint {
+  opacity: 1;
+}
+.composer-hint kbd {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--room-line-2);
+  border-radius: 4px;
+  background: var(--room-raised-2);
+  color: var(--room-ink-2);
+}
+.composer-sent {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--room-ink-2);
+  font-size: 12.5px;
+}
+.composer-sent svg {
+  color: var(--room-ok);
+}
+.composer-queued {
+  color: var(--room-ink-3);
+  font: 12px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.composer-stop:hover:not(:disabled) {
+  color: var(--room-error);
+}
+.composer-send {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--room-ink);
+  color: var(--room-on-light);
+  cursor: pointer;
+  transition:
+    background-color 140ms ease-out,
+    transform 160ms var(--room-ease);
+}
+.composer-send:hover:not(:disabled) {
+  background: #fff;
+}
+.composer-send:active:not(:disabled) {
+  transform: scale(0.94);
+}
+.composer-send:disabled {
+  background: var(--room-raised-3);
+  color: var(--room-ink-3);
+  cursor: not-allowed;
+}
+.composer-suggest {
+  height: 30px;
+  border-radius: 999px;
+  padding: 0 10px 0 13px;
+}
+.composer-spin {
+  animation: room-spin 1s linear infinite;
+}
+@keyframes room-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- Ended -------------------------------------------------------------------- */
+.dock-ended {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 12px 12px 16px;
+  color: var(--room-ink-2);
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .dock {
+    padding: 0 8px 8px;
+  }
+  .composer-hint,
+  .sugg-hint,
+  .strip-meta {
+    display: none;
+  }
+  .composer-chip-text {
+    max-width: 7rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .composer-spin {
+    animation: none;
+  }
+}

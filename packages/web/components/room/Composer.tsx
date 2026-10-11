@@ -1,29 +1,29 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { ArrowUp, CircleAlert, GitBranch, Square } from "lucide-react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
+import { ArrowUp, Check, CornerDownLeft, GitBranch, LoaderCircle, Square, Unplug } from "lucide-react";
 import type { AgentInfo, SessionStatus } from "@relay/shared";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { RunnerCommand, agentLabel } from "@/components/session/SessionDetails";
+import { RunnerCommand, agentLabel, agentState } from "./agent";
+import { Tip } from "./pop";
 
 // Grows to this many rows, then scrolls: tall enough for a pasted stack trace
 // to be readable while writing, short enough that the stream above it isn't
 // squeezed out of the viewport.
 const MAX_ROWS = 10;
 
-export type ComposerMode = "send" | "suggest";
-
-export type ComposerBlock =
-  | { kind: "offline" }
-  | { kind: "reconnecting" }
-  | { kind: "ended" }
-  | null;
+export type ComposerBlock = { kind: "offline" } | { kind: "reconnecting" } | null;
 
 /**
- * One card for every role. The driver sends; a watcher suggests; the
- * difference is the placeholder and the primary control, not a second
- * component with its own tokens — so nothing jumps when the wheel moves.
+ * One field for every role. The driver instructs the agent; a watcher
+ * suggests to the driver. The difference is the words and the button, not a
+ * second component, so nothing jumps when the wheel moves.
  */
 export function Composer({
   mode,
@@ -39,7 +39,7 @@ export function Composer({
   driverName,
   recall,
 }: {
-  mode: ComposerMode;
+  mode: "send" | "suggest";
   value: string;
   onChange: (next: string) => void;
   onSend: (text: string) => void;
@@ -59,16 +59,16 @@ export function Composer({
   const working = status === "working";
   const disabled = block !== null;
 
-  // Height is driven off scrollHeight rather than a row count: a single
-  // logical line wraps into several visual ones in a narrow column, and
-  // counting "\n" would under-measure exactly the paste this exists for.
+  // Height is driven off scrollHeight rather than a row count: one logical
+  // line wraps into several in a narrow column, and counting "\n" would
+  // under-measure exactly the paste this exists for.
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.style.height = "auto";
     const cs = getComputedStyle(el);
     const chrome = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-    const line = parseFloat(cs.lineHeight) || 22;
+    const line = parseFloat(cs.lineHeight) || 23;
     el.style.height = `${Math.min(el.scrollHeight, line * MAX_ROWS + chrome)}px`;
   }, [value]);
 
@@ -97,31 +97,29 @@ export function Composer({
       return;
     }
     // ↑ on an empty field brings back what you last asked, the way a shell
-    // does — the most common edit is "the same thing, slightly different".
+    // does: the most common edit is "the same thing, slightly different".
     if (e.key === "ArrowUp" && !value && recall) {
       e.preventDefault();
       onChange(recall);
       return;
     }
-    if (e.key !== "Enter") return;
-    // An IME composing a character uses Enter to commit it; sending there
-    // would truncate the word being typed.
+    if (e.key !== "Enter" || e.shiftKey) return;
+    // An IME uses Enter to commit a character; sending there would truncate
+    // the word being typed.
     if (e.nativeEvent.isComposing) return;
-    // Enter sends, Shift+Enter breaks the line.
-    if (e.shiftKey) return;
     e.preventDefault();
     submit();
   }
 
   const placeholder =
     block?.kind === "offline"
-      ? "Start the runner to send instructions"
+      ? "Start the agent to send instructions"
       : block?.kind === "reconnecting"
         ? "Reconnecting…"
         : mode === "suggest"
           ? driverName
             ? `Suggest something to ${driverName}…`
-            : "Suggest an instruction…"
+            : "Suggest an instruction for whoever takes the wheel…"
           : working
             ? "Queue the next instruction…"
             : repo
@@ -129,15 +127,30 @@ export function Composer({
               : "Ask the agent to do something…";
 
   const canSubmit = !disabled && value.trim().length > 0;
-  const sendLabel = mode === "suggest" ? "Suggest" : working ? "Queue" : "Send";
+  const state = agentState(agent);
 
   return (
     <form
       onSubmit={handleSubmit}
-      className={`composer${disabled ? " composer--disabled" : ""}`}
+      className="composer"
+      data-disabled={disabled || undefined}
       aria-label={mode === "suggest" ? "Suggest an instruction" : "Instruction for the agent"}
     >
-      <Textarea
+      {block?.kind === "offline" && (
+        <div className="composer-notice" role="status">
+          <Unplug size={14} aria-hidden />
+          <span>No agent is connected. Whoever owns the repository starts it with</span>
+          <RunnerCommand />
+        </div>
+      )}
+      {block?.kind === "reconnecting" && (
+        <div className="composer-notice" role="status">
+          <LoaderCircle size={14} className="composer-spin" aria-hidden />
+          <span>Reconnecting. Your seat is held for 30 seconds.</span>
+        </div>
+      )}
+
+      <textarea
         ref={ref}
         rows={1}
         value={value}
@@ -152,42 +165,37 @@ export function Composer({
 
       <div className="composer-bar">
         <div className="composer-context">
-          {block?.kind === "offline" ? (
-            <span className="composer-offline">
-              <CircleAlert size={14} />
-              No agent connected
-              <RunnerCommand />
+          {repo && (
+            <span className="composer-chip" title={`Working in ${repo}`}>
+              <GitBranch size={13} aria-hidden />
+              <span className="composer-chip-text">{repo}</span>
             </span>
-          ) : block?.kind === "reconnecting" ? (
-            <span className="composer-offline composer-offline--quiet">
-              <span className="live-dot composer-reconnect-dot" aria-hidden />
-              Reconnecting. Your seat is held for 30 seconds
-            </span>
-          ) : (
-            <>
-              {repo && (
-                <span className="composer-chip" title={`Working on ${repo}`}>
-                  <GitBranch size={13} />
-                  {repo}
-                </span>
-              )}
-              {agent && (
-                <span
-                  className="composer-chip composer-chip--model"
-                  title={agent.runnerConnected ? "The agent that will run this" : "No agent connected"}
-                >
-                  {agentLabel(agent)}
-                </span>
-              )}
-            </>
           )}
+          <span
+            className="composer-chip"
+            data-agent={state}
+            title={state === "offline" ? "No agent connected" : "The agent that will run this"}
+          >
+            <span className="agent-dot" aria-hidden />
+            {agentLabel(agent)}
+          </span>
         </div>
 
         <div className="composer-actions">
-          {sent && (
+          {sent ? (
             <span className="composer-sent" role="status">
+              <Check size={13} aria-hidden />
               Sent{driverName ? ` to ${driverName}` : ""}
             </span>
+          ) : (
+            !disabled && (
+              <span className="composer-hint" aria-hidden>
+                <kbd>
+                  <CornerDownLeft size={11} />
+                </kbd>
+                {mode === "suggest" ? "to suggest" : working ? "to queue" : "to send"}
+              </span>
+            )
           )}
           {mode === "send" && working && !disabled && (
             <>
@@ -196,28 +204,33 @@ export function Composer({
                   {queued} queued
                 </span>
               )}
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="composer-stop"
-                onClick={onStop}
-              >
-                <Square size={11} strokeWidth={2.5} />
+              <button type="button" className="rbtn rbtn--ghost rbtn--sm composer-stop" onClick={onStop}>
+                <Square size={9} fill="currentColor" aria-hidden />
                 Stop
-              </Button>
+              </button>
             </>
           )}
-          <Button
-            type="submit"
-            size="icon"
-            className="composer-send"
-            disabled={!canSubmit}
-            aria-label={sendLabel}
-            title={sendLabel}
-          >
-            <ArrowUp size={16} strokeWidth={2.25} />
-          </Button>
+          {mode === "suggest" ? (
+            <button
+              type="submit"
+              className="rbtn rbtn--primary rbtn--sm composer-suggest"
+              disabled={!canSubmit}
+            >
+              Suggest
+              <ArrowUp size={14} aria-hidden />
+            </button>
+          ) : (
+            <Tip label={working ? "Queue" : "Send"}>
+              <button
+                type="submit"
+                className="composer-send"
+                disabled={!canSubmit}
+                aria-label={working ? "Queue" : "Send"}
+              >
+                <ArrowUp size={17} strokeWidth={2.25} />
+              </button>
+            </Tip>
+          )}
         </div>
       </div>
     </form>

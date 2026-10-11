@@ -122,3 +122,30 @@ export function useChangesWidth(): [number, (px: number) => void] {
   }, []);
   return [value, set];
 }
+
+const panelKey = (name: string) => `relay.prefs.panel.${name}`;
+
+function readPanel(name: string): boolean {
+  try {
+    return window.localStorage.getItem(panelKey(name)) !== "0";
+  } catch {
+    return true;
+  }
+}
+
+/** Whether a side panel is open on a wide screen, remembered per browser. */
+export function usePanel(name: "sessions" | "changes"): [boolean, (open: boolean) => void] {
+  const value = useSyncExternalStore(subscribe, () => readPanel(name), () => true);
+  const set = useCallback(
+    (open: boolean) => {
+      try {
+        window.localStorage.setItem(panelKey(name), open ? "1" : "0");
+      } catch {
+        return;
+      }
+      notify();
+    },
+    [name],
+  );
+  return [value, set];
+}

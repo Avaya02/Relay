@@ -1,0 +1,93 @@
+/* ==================================================================
+   ROOM — the live session. Everyone in it is a colour, and whoever
+   holds the wheel lends theirs to the run. Graphite and hairlines
+   carry the structure so those colours, and a step's green or red,
+   are the only colour on the page.
+   ================================================================== */
+
+/* Registered so a handover fades the room's colour instead of snapping
+   it: an unregistered custom property can't be interpolated. */
+@property --driver {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #8a8d96;
+}
+
+/* On :root, not .room: Radix portals popovers to <body>, outside it. */
+:root {
+  --room-bg: #0b0b0d;
+  --room-panel: #0f1012;
+  --room-raised: #151619;
+  --room-raised-2: #1c1d21;
+  --room-raised-3: #25262b;
+  --room-line: rgb(255 255 255 / 0.065);
+  --room-line-2: rgb(255 255 255 / 0.1);
+  --room-line-3: rgb(255 255 255 / 0.16);
+  --room-ink: #f3f4f6;
+  --room-ink-2: #a5a8b0;
+  --room-ink-3: #8a8d96;
+  --room-on-light: #0b0b0d;
+  --room-ok: #4cc38a;
+  --room-error: #f07a74;
+
+  /* Six, roughly evenly spaced around the wheel and all light enough to
+     carry dark initials and to set a name in on the darkest ground. */
+  --hue-1: #8ab4ff;
+  --hue-2: #f5a3c7;
+  --hue-3: #7fdcb0;
+  --hue-4: #f2c86e;
+  --hue-5: #f99b7d;
+  --hue-6: #c3b1ff;
+
+  --room-r-sm: 6px;
+  --room-r-md: 8px;
+  --room-r-lg: 12px;
+  --room-r-xl: 16px;
+  --room-shadow-pop: 0 18px 40px -16px rgb(0 0 0 / 0.8), 0 4px 10px -4px rgb(0 0 0 / 0.5);
+  --room-shadow-dock: 0 16px 36px -18px rgb(0 0 0 / 0.9), 0 2px 6px -2px rgb(0 0 0 / 0.4);
+  --room-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.room {
+  --driver: var(--room-ink-3);
+
+  display: flex;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--room-bg);
+  color: var(--room-ink);
+  font-size: 14px;
+  transition: --driver 700ms var(--room-ease);
+}
+.room ::selection {
+  background: color-mix(in oklch, var(--driver) 30%, transparent);
+  color: var(--room-ink);
+}
+.room :is(textarea, input) {
+  caret-color: var(--driver);
+}
+.room * {
+  scrollbar-color: var(--room-line-3) transparent;
+}
+.room :is(button, a, select, [tabindex]):focus-visible,
+.rpop :is(button, a, input, [tabindex]):focus-visible,
+.rmenu :is(button, a, [tabindex]):focus-visible {
+  outline: 2px solid var(--room-ink-2);
+  outline-offset: 2px;
+}
+.room :is(textarea, input):focus-visible {
+  outline: none;
+}
+
+@keyframes room-breathe {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room {
+    transition: none;
+  }
+}
