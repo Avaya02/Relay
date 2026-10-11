@@ -61,6 +61,26 @@ export function StreamView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events.length]);
 
+  // While a run streams, content also grows without a new event — the
+  // activity window measures itself a frame later, a code block finishes
+  // highlighting — and pinned has to hold through that too. Only while
+  // working: when idle, growth is someone opening a record, and it should
+  // open downward from where they clicked rather than drag the page.
+  const pinnedRef = useRef(false);
+  useEffect(() => {
+    pinnedRef.current = pinnedToBottom && status === "working";
+  });
+  useEffect(() => {
+    const el = scrollerRef.current;
+    const content = el?.firstElementChild;
+    if (!el || !content || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      if (pinnedRef.current) el.scrollTop = el.scrollHeight;
+    });
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;

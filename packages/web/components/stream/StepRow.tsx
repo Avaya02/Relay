@@ -1,23 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { Check, ChevronRight, X } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { EASE_OUT } from "@/lib/ease";
 import { VerbIcon } from "./verbIcon";
 import { StepDetail } from "./StepDetail";
-import { useIsNew } from "./newRows";
-import {
-  detailOf,
-  durationOf,
-  isPlanUpdate,
-  verbOf,
-  type ActionRow,
-  type StepEntry,
-} from "./rows";
+import { detailOf, durationOf, isPlanUpdate, verbOf, type ActionRow } from "./rows";
+
+// While a run is live the activity window glides to keep the newest step in
+// view. An opened detail would glide straight out of it, so the card stops
+// capping for as long as any detail inside it is open.
+export const DetailOpenCtx = createContext<(delta: 1 | -1) => void>(() => {});
+
+function useReportOpen(open: boolean) {
+  const report = useContext(DetailOpenCtx);
+  useEffect(() => {
+    if (!open) return;
+    report(1);
+    return () => report(-1);
+  }, [open, report]);
+}
+
+function Reveal({ open, children }: { open: boolean; children: ReactNode }) {
+  const reduce = useReducedMotion() ?? false;
+  return (
+    <AnimatePresence initial={false}>
+      {open && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: reduce ? 0 : 0.2, ease: EASE_OUT }}
+          style={{ overflow: "hidden" }}
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
 
 /** One action: the call, and the result folded into the same row. */
 export function StepRow({ row }: { row: ActionRow }) {
   const [open, setOpen] = useState(false);
-  const isNew = useIsNew(row.call.seq);
+  useReportOpen(open);
   const verb = verbOf(row.call);
   const target = String(row.call.data.target ?? "");
   const ok = row.result ? row.result.data.ok !== false : null;
@@ -51,14 +78,14 @@ export function StepRow({ row }: { row: ActionRow }) {
 
   if (!detail) {
     return (
-      <li className={cls} data-new={isNew || undefined}>
+      <div className={cls}>
         <div className="step-row">{body}</div>
-      </li>
+      </div>
     );
   }
 
   return (
-    <li className={cls} data-new={isNew || undefined}>
+    <div className={cls}>
       <button
         type="button"
         className="step-row"
@@ -68,21 +95,24 @@ export function StepRow({ row }: { row: ActionRow }) {
       >
         {body}
       </button>
-      {open && <StepDetail detail={detail} />}
-    </li>
+      <Reveal open={open}>
+        <StepDetail detail={detail} />
+      </Reveal>
+    </div>
   );
 }
 
 /** A run of identical verbs, folded to one line with the rows behind it. */
 export function FoldedSteps({ verb, rows }: { verb: string; rows: ActionRow[] }) {
   const [open, setOpen] = useState(false);
+  useReportOpen(open);
   const last = rows[rows.length - 1];
   const settled = rows.every((r) => r.result);
   const first = rows[0].call;
   const duration = settled ? durationOf(first, last.result) : null;
 
   return (
-    <li className={`step step--${settled ? "ok" : "pending"}`}>
+    <div className={`step step--${settled ? "ok" : "pending"}`}>
       <button
         type="button"
         className="step-row"
@@ -101,27 +131,15 @@ export function FoldedSteps({ verb, rows }: { verb: string; rows: ActionRow[] })
           {settled ? <Check size={12} strokeWidth={2.25} /> : <span className="live-dot" />}
         </span>
       </button>
-      {open && (
+      <Reveal open={open}>
         <ol className="step-fold">
           {rows.map((r) => (
-            <StepRow key={r.call.seq} row={r} />
+            <li key={r.call.seq}>
+              <StepRow row={r} />
+            </li>
           ))}
         </ol>
-      )}
-    </li>
-  );
-}
-
-export function StepEntries({ entries }: { entries: StepEntry[] }) {
-  return (
-    <>
-      {entries.map((entry) =>
-        entry.kind === "single" ? (
-          <StepRow key={entry.row.call.seq} row={entry.row} />
-        ) : (
-          <FoldedSteps key={`fold-${entry.rows[0].call.seq}`} verb={entry.verb} rows={entry.rows} />
-        ),
-      )}
-    </>
+      </Reveal>
+    </div>
   );
 }

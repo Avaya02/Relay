@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy } from "lucide-react";
+import { CodeBlock as HighlightedCode } from "@/components/agents/code-block";
 import { PlanMark } from "./PlanMark";
 import type { DiffLine, ToolDetail } from "@relay/shared";
 import { useCopy } from "@/components/session/useCopy";
@@ -45,26 +45,19 @@ export function StepDetail({ detail }: { detail: ToolDetail }) {
 }
 
 function TextDetail({ text }: { text: string }) {
-  const { copied, copy } = useCopy();
+  const { copy } = useCopy();
   const lines = text.split("\n").length;
   return (
-    <div className="step-detail">
-      <div className="step-detail-head">
-        <span>
-          output · {lines} {lines === 1 ? "line" : "lines"}
-        </span>
-        <button
-          type="button"
-          className="icon-btn icon-btn--sm"
-          onClick={() => copy(text)}
-          data-copied={copied || undefined}
-          aria-label={copied ? "Copied" : "Copy output"}
-        >
-          {copied ? <Check size={12} /> : <Copy size={12} />}
-        </button>
-      </div>
-      <pre className="step-output">{text}</pre>
-    </div>
+    <HighlightedCode
+      className="codeblock step-code"
+      code={text}
+      language="text"
+      filename={`output · ${lines} ${lines === 1 ? "line" : "lines"}`}
+      showLineNumbers={lines > 1}
+      wrap
+      maxHeight={352}
+      onCopy={() => copy(text)}
+    />
   );
 }
 

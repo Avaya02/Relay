@@ -132,46 +132,10 @@
   white-space: nowrap;
 }
 
-/* Code blocks carry a header: the language, and a copy that takes just
-   this block rather than the whole answer. */
-.codeblock {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  background: var(--surface-2);
-  overflow: hidden;
-}
-.codeblock-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  height: 1.875rem;
-  padding: 0 0.25rem 0 0.75rem;
-  border-bottom: 1px solid var(--border);
-  font-family: var(--font-mono);
-  font-size: var(--fs-2xs);
-  color: var(--text-faint);
-}
-.codeblock-head .icon-btn {
-  color: var(--text-faint);
-}
-.codeblock-head .icon-btn[data-copied] {
-  color: var(--state-ok);
-}
+/* Code blocks are beUI's (components/agents/code-block): header with the
+   language and a per-block copy, shiki tokens, a gutter past three lines. */
 .codeblock pre {
-  margin: 0;
-  padding: 0.75rem;
-  overflow-x: auto;
-  font-family: var(--font-mono);
   font-size: 0.8125rem;
-  line-height: 1.55;
-  color: var(--text);
   font-variant-ligatures: none;
   font-feature-settings: "liga" 0, "calt" 0;
-}
-.codeblock code {
-  font: inherit;
-  background: none;
-  border: 0;
-  padding: 0;
 }

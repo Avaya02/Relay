@@ -3,16 +3,17 @@
 import type { Participant, SessionStatus } from "@relay/shared";
 import { PromptBlock } from "./PromptBlock";
 import { StepsCard } from "./StepsCard";
-import { Answer } from "./Answer";
+import { Reply } from "./Reply";
 import { ErrorCard } from "./ErrorCard";
-import { actionsOf, doneOf, timeOf, type Turn } from "./rows";
+import { actionsOf, doneOf, splitTurn, timeOf, type Turn } from "./rows";
 
 /**
- * One turn: what was asked, the steps, what came back.
+ * One turn: what was asked, the work, what came back.
  *
- * Row order is kept — an answer the agent gave *between* tool calls stays
- * between them — but all actions render inside one steps card, so the turn
- * reads as prompt → work → answer rather than as a log with prose in it.
+ * The work is one activity record, with whatever the agent said mid-run kept
+ * inside it at the point it was said. Which message is the reply is only
+ * known once the run settles, so the reply leaves the record then, in the
+ * same moment the record folds — the one move the layout makes.
  */
 export function TurnBlock({
   turn,
@@ -33,18 +34,28 @@ export function TurnBlock({
   const done = doneOf(turn);
   const live = turn.live && !turn.queued && status === "working";
   const dropped = turn.queued && status !== "working";
-  const pendingAction = actions.some((a) => !a.result);
-  const texts = turn.rows.filter((r) => r.type === "text");
   const error = turn.rows.find((r) => r.type === "error");
+  const { trace, reply } = splitTurn(turn, live);
 
-  // Text that arrived after the last action is the reply; text before it is
-  // the agent narrating mid-run. Both are answers, but only the tail should
-  // sit below the steps card.
-  const lastActionSeq = actions.length ? actions[actions.length - 1].call.seq : -1;
-  const narration = texts.filter((t) => t.event.seq < lastActionSeq);
-  const reply = texts.filter((t) => t.event.seq >= lastActionSeq);
-
-  const showCard = actions.length > 0 || live;
+  const showCard = trace.length > 0 || live;
+  const doneEvent = turn.rows.find((r) => r.type === "done")?.event;
+  const meta = done && doneEvent && (
+    <span className="turn-foot">
+      {typeof done.durationMs === "number" && (
+        <>
+          <span>{(done.durationMs / 1000).toFixed(1)}s</span>
+          <span className="turn-foot-sep">·</span>
+        </>
+      )}
+      {typeof done.costUsd === "number" && (
+        <>
+          <span>${done.costUsd.toFixed(4)}</span>
+          <span className="turn-foot-sep">·</span>
+        </>
+      )}
+      <span>{timeOf(doneEvent)}</span>
+    </span>
+  );
 
   return (
     <section
@@ -62,23 +73,17 @@ export function TurnBlock({
         />
       )}
 
-      {narration.map((t) => (
-        <Answer key={t.event.seq} seq={t.event.seq} text={String(t.event.data.text ?? "")} />
-      ))}
-
       {showCard && (
         <StepsCard
+          trace={trace}
           actions={actions}
           live={live}
-          working={live && !pendingAction}
           durationMs={done?.durationMs ?? null}
           defaultOpen={showSteps}
         />
       )}
 
-      {reply.map((t) => (
-        <Answer key={t.event.seq} seq={t.event.seq} text={String(t.event.data.text ?? "")} />
-      ))}
+      {reply.length > 0 && <Reply events={reply} aside={meta} />}
 
       {error && (
         <ErrorCard
@@ -92,31 +97,7 @@ export function TurnBlock({
         />
       )}
 
-      {done && (
-        <footer className="turn-foot">
-          {typeof done.steps === "number" && (
-            <>
-              <span>
-                {done.steps} {done.steps === 1 ? "step" : "steps"}
-              </span>
-              <span className="turn-foot-sep">·</span>
-            </>
-          )}
-          {typeof done.durationMs === "number" && (
-            <>
-              <span>{(done.durationMs / 1000).toFixed(1)}s</span>
-              <span className="turn-foot-sep">·</span>
-            </>
-          )}
-          {typeof done.costUsd === "number" && (
-            <>
-              <span>${done.costUsd.toFixed(4)}</span>
-              <span className="turn-foot-sep">·</span>
-            </>
-          )}
-          <span>{timeOf(turn.rows.find((r) => r.type === "done")!.event)}</span>
-        </footer>
-      )}
+      {meta && reply.length === 0 && <footer>{meta}</footer>}
     </section>
   );
 }

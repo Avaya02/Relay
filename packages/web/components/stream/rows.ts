@@ -212,6 +212,62 @@ export function foldSteps(actions: ActionRow[]): StepEntry[] {
   return out;
 }
 
+export type TraceEntry = StepEntry | { kind: "note"; event: Event };
+
+/**
+ * A turn's work in the order it happened: steps, and what the agent said
+ * between them. While the run is live every message stays in the trace,
+ * because which one is the reply can't be known until the run settles; after
+ * that, text past the last step is the reply and leaves it.
+ */
+export function splitTurn(turn: Turn, live: boolean): { trace: TraceEntry[]; reply: Event[] } {
+  const actions = actionsOf(turn);
+  const lastActionSeq = actions.length ? actions[actions.length - 1].call.seq : -1;
+  const trace: TraceEntry[] = [];
+  const reply: Event[] = [];
+  let run: ActionRow[] = [];
+  const flush = () => {
+    trace.push(...foldSteps(run));
+    run = [];
+  };
+  for (const row of turn.rows) {
+    if (row.type === "action") {
+      run.push(row);
+    } else if (row.type === "text") {
+      if (!live && row.event.seq >= lastActionSeq) {
+        reply.push(row.event);
+      } else {
+        flush();
+        trace.push({ kind: "note", event: row.event });
+      }
+    }
+  }
+  flush();
+  return { trace, reply };
+}
+
+const PRESENT: Record<string, string> = {
+  read: "Reading",
+  wrote: "Writing",
+  edited: "Editing",
+  ran: "Running",
+  grepped: "Searching",
+  globbed: "Searching",
+  searched: "Searching",
+  fetched: "Fetching",
+  delegated: "Delegating",
+};
+
+/** "Running npm test" for the live line; "Thinking" between steps. */
+export function activeLabel(actions: ActionRow[]): string {
+  const pending = [...actions].reverse().find((a) => !a.result);
+  if (!pending) return "Thinking";
+  if (isPlanUpdate(pending.call)) return "Updating the plan";
+  const verb = PRESENT[verbOf(pending.call)] ?? "Working on";
+  const target = String(pending.call.data.target ?? "");
+  return target ? `${verb} ${target}` : verb;
+}
+
 export function timeOf(event: Event): string {
   return new Date(event.ts).toLocaleTimeString([], {
     hour12: false,

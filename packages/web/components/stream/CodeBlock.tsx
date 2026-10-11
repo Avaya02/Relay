@@ -1,7 +1,7 @@
 "use client";
 
-import { Children, isValidElement, type ReactNode } from "react";
-import { Check, Copy } from "lucide-react";
+import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
+import { CodeBlock as HighlightedCode } from "@/components/agents/code-block";
 import { useCopy } from "@/components/session/useCopy";
 
 function textOf(node: ReactNode): string {
@@ -11,35 +11,31 @@ function textOf(node: ReactNode): string {
   return "";
 }
 
+// A two-line snippet with a gutter reads as a form, not code.
+const NUMBER_FROM = 4;
+
 /**
- * react-markdown's `pre`, with a header: the language, and a copy that takes
- * just this block. The copy is of the source text, not the rendered DOM, so
- * what lands in the clipboard is exactly what the agent wrote.
+ * react-markdown's `pre`, as beUI's highlighted code block. The copy takes
+ * the source text, not the rendered DOM, so the clipboard gets exactly what
+ * the agent wrote.
  */
 export function CodeBlock({ children }: { children?: ReactNode }) {
-  const { copied, copy } = useCopy();
+  const { copy } = useCopy();
   const code = Children.toArray(children).find(isValidElement) as
-    | React.ReactElement<{ className?: string; children?: ReactNode }>
+    | ReactElement<{ className?: string; children?: ReactNode }>
     | undefined;
   const lang = /language-([\w+-]+)/.exec(code?.props.className ?? "")?.[1] ?? "text";
   const text = textOf(children).replace(/\n$/, "");
 
   return (
-    <div className="codeblock">
-      <div className="codeblock-head">
-        <span>{lang}</span>
-        <button
-          type="button"
-          className="icon-btn icon-btn--sm"
-          onClick={() => copy(text)}
-          data-copied={copied || undefined}
-          aria-label={copied ? "Copied" : "Copy code"}
-        >
-          {copied ? <Check size={12} /> : <Copy size={12} />}
-        </button>
-      </div>
-      <pre>{children}</pre>
-    </div>
+    <HighlightedCode
+      className="codeblock"
+      code={text}
+      language={lang}
+      showLineNumbers={text.split("\n").length >= NUMBER_FROM}
+      maxHeight={420}
+      onCopy={() => copy(text)}
+    />
   );
 }
 

@@ -1,0 +1,185 @@
+"use client";
+
+import {
+  type CSSProperties,
+  Fragment,
+  useEffect,
+  useState,
+} from "react";
+import type { BundledLanguage, Highlighter, SpecialLanguage } from "shiki";
+import { cn } from "@/lib/utils";
+
+/** Any language shiki bundles, by id or alias ("ts", "sh", "py"); anything else renders plain. */
+export type AgentCodeLanguage = string;
+
+export interface AgentCodeToken {
+  content: string;
+  offset: number;
+  light?: string;
+  dark?: string;
+}
+
+export type AgentCodeTokenLines = AgentCodeToken[][];
+
+export interface AgentCodeProps {
+  code: string;
+  language?: AgentCodeLanguage;
+  className?: string;
+}
+
+export interface AgentCodeLineProps {
+  code: string;
+  tokens?: AgentCodeToken[];
+  className?: string;
+}
+
+const LIGHT_THEME = "github-light-high-contrast";
+const DARK_THEME = "github-dark-high-contrast";
+let agentCodeHighlighter: Promise<Highlighter> | null = null;
+const tokenCache = new Map<string, AgentCodeTokenLines>();
+
+// Imported on first use, not at module load: a session page renders long
+// before its first code block, and shiki is the heaviest thing it would
+// otherwise ship up front. Grammars load per language for the same reason.
+const loadShiki = () => import("shiki");
+
+function getAgentCodeHighlighter() {
+  if (!agentCodeHighlighter) {
+    agentCodeHighlighter = loadShiki().then(({ createHighlighter }) =>
+      createHighlighter({ themes: [LIGHT_THEME, DARK_THEME], langs: [] }),
+    );
+  }
+  return agentCodeHighlighter;
+}
+
+async function highlighterFor(language: AgentCodeLanguage) {
+  const [{ bundledLanguages }, highlighter] = await Promise.all([
+    loadShiki(),
+    getAgentCodeHighlighter(),
+  ]);
+  const id = language.toLowerCase();
+  if (!(id in bundledLanguages)) return { highlighter, lang: "text" as SpecialLanguage };
+  const lang = id as BundledLanguage;
+  if (!highlighter.getLoadedLanguages().includes(lang)) await highlighter.loadLanguage(lang);
+  return { highlighter, lang };
+}
+
+/** Each line with its offset into `code`, the stable key a streaming line keeps. */
+export function lineOffsets(code: string) {
+  const lines: { content: string; offset: number }[] = [];
+  let offset = 0;
+  for (const content of code.split("\n")) {
+    lines.push({ content, offset });
+    offset += content.length + 1;
+  }
+  return lines;
+}
+
+function tokenCacheKey(code: string, language: AgentCodeLanguage) {
+  return `${language}\u0000${code}`;
+}
+
+export function useAgentCodeTokens(
+  code: string,
+  language: AgentCodeLanguage,
+) {
+  const key = tokenCacheKey(code, language);
+  const cached = tokenCache.get(key);
+  const [result, setResult] = useState<{
+    key: string;
+    code: string;
+    language: AgentCodeLanguage;
+    lines: AgentCodeTokenLines;
+  } | null>(cached ? { key, code, language, lines: cached } : null);
+
+  useEffect(() => {
+    if (tokenCache.has(key)) return;
+
+    let cancelled = false;
+    highlighterFor(language).then(({ highlighter, lang }) => {
+      if (cancelled) return;
+      const lines = highlighter
+        .codeToTokensWithThemes(code, {
+          lang,
+          themes: {
+            light: LIGHT_THEME,
+            dark: DARK_THEME,
+          },
+        })
+        .map((line) =>
+          line.map((token) => ({
+            content: token.content,
+            offset: token.offset,
+            light: token.variants.light?.color,
+            dark: token.variants.dark?.color,
+          })),
+      );
+      tokenCache.set(key, lines);
+      setResult({ key, code, language, lines });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [code, key, language]);
+
+  if (cached) return cached;
+  if (result?.key === key) return result.lines;
+  if (result?.language === language && code.startsWith(result.code)) {
+    return result.lines;
+  }
+  return null;
+}
+
+export function AgentCodeLine({
+  code,
+  tokens,
+  className,
+}: AgentCodeLineProps) {
+  return (
+    <span className={className}>
+      {tokens
+        ? tokens.map((token) => (
+            <span
+              key={`${token.offset}-${token.content}`}
+              style={
+                {
+                  "--agent-code-light": token.light ?? "currentColor",
+                  "--agent-code-dark": token.dark ?? token.light ?? "currentColor",
+                } as CSSProperties
+              }
+              className="text-[var(--agent-code-light)] dark:text-[var(--agent-code-dark)]"
+            >
+              {token.content}
+            </span>
+          ))
+        : code}
+    </span>
+  );
+}
+
+export function AgentCode({
+  code,
+  language = "bash",
+  className,
+}: AgentCodeProps) {
+  const tokens = useAgentCodeTokens(code, language);
+  const lines = lineOffsets(code);
+
+  return (
+    <pre
+      className={cn(
+        "m-0 overflow-x-auto whitespace-pre font-mono text-xs leading-5 text-foreground/85",
+        className,
+      )}
+    >
+      <code>
+        {lines.map((line, index) => (
+          <Fragment key={line.offset}>
+            <AgentCodeLine code={line.content} tokens={tokens?.[index]} />
+            {index < lines.length - 1 ? "\n" : null}
+          </Fragment>
+        ))}
+      </code>
+    </pre>
+  );
+}
