@@ -6,12 +6,6 @@ import { Composer } from "./Composer";
 import { DriverStrip } from "./DriverStrip";
 import { SuggestionTray } from "./SuggestionTray";
 
-/**
- * Everything you can do in the room, in one place under the transcript:
- * who has the wheel, what the watchers are suggesting, and the field. It
- * used to be three strips stacked over the stream; as one card it reads as
- * one instrument, edged in the colour of whoever is driving.
- */
 export function Dock({
   online,
   participants,
@@ -46,9 +40,7 @@ export function Dock({
   return (
     <div className="dock">
       <div className="dock-card">
-        {/* Wheel and suggestion actions would silently do nothing while the
-            socket is down, so they wait for it; the field stays and says why
-            it's paused. */}
+        {/* Wheel and suggestion actions do nothing while the socket is down, so they wait. */}
         {online && (
           <>
             <DriverStrip

@@ -15,14 +15,7 @@ import {
 
 const run = promisify(execFile);
 
-/**
- * Where a published build points when given no `--server`/`--web`.
- *
- * These are the two values to change after deploying, and the only ones — the
- * CLI is installed on other people's machines, so "it works if you also run the
- * server locally" is not a default anyone else can use. Env vars override them
- * so a contributor can point at a scratch deployment without editing source.
- */
+// Published defaults: the CLI runs on other people's machines, so localhost won't do.
 const DEFAULT_SERVER = process.env.RELAY_SERVER ?? "https://api.relayrun.in";
 const DEFAULT_WEB = process.env.RELAY_WEB ?? "https://relayrun.in";
 const DEFAULT_MODEL = process.env.RELAY_MODEL ?? "claude-sonnet-5";
@@ -58,7 +51,6 @@ function parseArgs(argv: string[]): Args {
     }
     const key = arg.slice(2);
     const next = argv[i + 1];
-    // A flag is boolean unless the next token is a value rather than a flag.
     if (next && !next.startsWith("--")) {
       args[key] = next;
       i++;
@@ -81,16 +73,8 @@ function wsUrlFor(serverUrl: string, sessionId: string): string {
   return url.toString();
 }
 
-/**
- * The root of the repository containing `dir`.
- *
- * Resolved rather than used as given: `git rev-parse` succeeds from anywhere
- * inside a repo, but `git clone` needs the root. Running the CLI from a
- * subdirectory therefore passed the check and then failed at clone time — and
- * a subdirectory is the normal case, since people run this from wherever they
- * happen to be. Taking the root also means the session gets the whole
- * repository, which is what someone naming their project means.
- */
+// `git clone` needs the root; from a subdirectory the rev-parse check passed
+// and the clone failed later.
 async function repoRoot(dir: string): Promise<string> {
   try {
     const { stdout } = await run("git", ["rev-parse", "--show-toplevel"], { cwd: dir });
@@ -100,12 +84,8 @@ async function repoRoot(dir: string): Promise<string> {
   }
 }
 
-/**
- * Mints a session and the token that proves this process owns it.
- *
- * Retried: `pnpm dev` starts every package at once, so the server is routinely
- * still binding its port when this runs.
- */
+// Retried because `pnpm dev` starts every package at once, so the server is
+// often still binding its port.
 async function createSession(
   serverUrl: string,
 ): Promise<{ id: string; runnerToken: string }> {
@@ -136,26 +116,14 @@ type Credentials = {
   apiKeyHelper?: string;
 };
 
-/**
- * Resolves what the run will be billed to, before connecting — a key that turns
- * out to be bad should fail here, not three minutes into someone's session.
- */
 async function resolveCredentials(args: Args): Promise<Credentials> {
-  // Real is the default. The scripted agent ignores whatever you type and
-  // replays a fixed script, so getting it by accident means watching a
-  // convincing answer to a question you never asked. That failure is worse
-  // than the pennies an unwanted real run costs — ask for the mock by name.
+  // The mock ignores instructions and replays a fixed script, so getting it by
+  // accident is worse than a stray real run; it must be asked for by name.
   if (args.mock) return { mode: "mock", keySource: "mock", keyHint: null };
 
   const key = str(args, "api-key") ?? process.env.RELAY_API_KEY;
   if (!key) {
-    // No explicit key: the SDK uses whatever this machine is already logged in
-    // with, exactly as Claude Code does.
-    //
-    // Checked now rather than left to fail on the first instruction. By then a
-    // link has been printed and shared, so the failure lands in front of
-    // whoever was invited — and reads as "this tool is broken" rather than
-    // "you need to log in".
+    // Fail before the link is printed and shared, not on the first instruction.
     if ((await findClaudeLogin()) === "missing") {
       throw new Error(noLoginGuidance(await hasClaudeCli()));
     }
@@ -170,8 +138,7 @@ async function resolveCredentials(args: Args): Promise<Credentials> {
 
   const helper = apiKeyHelperPath();
   if (!helper) {
-    // Falling back to the operator's own login would bill the wrong account
-    // behind a UI saying otherwise — refuse instead.
+    // Falling back to the host's login would bill the wrong account.
     throw new Error("could not create the API key helper, so --api-key can't be honoured");
   }
   process.env[SESSION_KEY_ENV] = key;

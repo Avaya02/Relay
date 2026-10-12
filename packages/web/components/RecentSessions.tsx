@@ -7,17 +7,10 @@ import {
   type RecentSession,
 } from "@/lib/recentSessions";
 
-// The landing page's half of the sessions list. Same store as the rail
-// (lib/recentSessions.ts), but a short "pick up where you left off" strip
-// under the call to action, not a navigator — four at most.
-//
-// Renders nothing when empty, rather than showing an empty-state box.
-
 const MAX = 4;
 
-// repo, else the name you joined as, else nothing — never the raw session
-// id. An id is internal plumbing; it tells a visitor nothing they can decide
-// to click on, so a session with neither is dropped rather than shown.
+// Never the raw id: it tells a visitor nothing to click on, so sessions with
+// neither repo nor name are dropped.
 function labelFor(s: RecentSession): string {
   return s.repo || s.name;
 }
@@ -25,11 +18,8 @@ function labelFor(s: RecentSession): string {
 export function RecentSessions() {
   const { sessions, now } = useRecentSessions();
 
-  // Dedupe on the label, not the repo: two rows a visitor can't tell apart
-  // are useless to them even when the sessions behind them genuinely differ.
-  // Scans the full history (capped at 30 in the store) rather than the first
-  // MAX raw entries, so a run of same-repo sessions doesn't crowd out the
-  // rest of the list down to one row.
+  // Dedupe on the label, since identical-looking rows are useless. Scan the full
+  // history, not the first MAX, so same-repo runs don't crowd out the rest.
   const seen = new Set<string>();
   const shown: RecentSession[] = [];
   for (const s of sessions) {

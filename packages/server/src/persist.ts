@@ -3,17 +3,8 @@ import { getPrisma } from "./db.js";
 import type { Prisma } from "./generated/prisma/client.js";
 import type { Session } from "./sessions.js";
 
-// The Postgres mirror (spec §6.5). Two write paths, both fire-and-forget —
-// a DB hiccup must never block or crash the live broadcast, which is why
-// every call here is a .catch(), never an await, from the caller's side.
-// One read path (loadPersistedSession), which IS awaited — it's the whole
-// point of the read-only replay feature, not a side effect of it.
-
-// Session.status / .driverId / .agentSessionId, mirrored on every change.
-// Called far more often than strictly necessary (every setStatus, every
-// setDriver) rather than tracked precisely — an upsert is cheap, and this
-// guarantees the row always reflects reality without hunting down every
-// mutation site by hand.
+// Writes are fire-and-forget: a DB failure must never block the live broadcast,
+// and correctness never depends on Postgres. Called on every change; an upsert is cheap.
 export function mirrorSessionMeta(session: Session): void {
   const prisma = getPrisma();
   if (!prisma) return;
@@ -35,9 +26,6 @@ export function mirrorSessionMeta(session: Session): void {
     .catch((err) => console.error("persist: session upsert failed:", err));
 }
 
-// One row per transcript event. The Session row is always upserted before
-// any event can exist for it (mirrorSessionMeta runs at session creation),
-// so the FK is never a race in practice.
 export function mirrorEvent(session: Session, event: Event): void {
   const prisma = getPrisma();
   if (!prisma) return;
@@ -61,11 +49,7 @@ export type PersistedSession = {
   events: Event[];
 };
 
-// The dead-link path: a session that isn't live in memory (process
-// restarted, or it was reaped after sitting empty — see sessions.ts) might
-// still have a transcript worth reading. Returns null on anything short of
-// "the row exists" — missing config, a down database, and "never existed"
-// all look the same to the caller (spec's honest fallback: no session).
+// Null for a missing row, a down database or no config alike: all mean "no session".
 export async function loadPersistedSession(
   id: string,
 ): Promise<PersistedSession | null> {

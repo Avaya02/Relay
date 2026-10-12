@@ -1,17 +1,5 @@
-/* ------------------------------------------------------------------
-   THE LEDGER ROW VOCABULARY, as the landing page renders it.
-
-   The hero replay (DemoLedger) and the lock section (TwoScreens) both
-   compose these classes to show the product with its own parts. The
-   live session view moved to its own vocabulary in stream.css — a
-   turn-centric layout with a prompt block, a steps card and an answer —
-   so this file is now the marketing register's copy of the record:
-   one row per action, one continuous rule, mono, ligatures off.
-   ------------------------------------------------------------------ */
-
-/* ONE continuous rule down the whole ledger, with rows hanging off it.
-   Not a per-row border-left — that renders as a dashed ladder of stubs
-   and breaks the flight-recorder read. */
+/* The landing's ledger vocabulary (DemoLedger, TwoScreens); the session uses stream.css. */
+/* One continuous rule; a per-row border-left renders as a dashed ladder of stubs. */
 .ledger-rail {
   position: relative;
   padding-left: 0.875rem;
@@ -30,20 +18,15 @@
   padding-block: 0.1875rem;
 }
 
-/* No ligatures anywhere in the ledger: this surface is a record of what the
-   agent actually did, and a diff showing characters the file doesn't contain
-   is editorializing (PRODUCT.md principle 2). Geist Mono forms none of these
-   to begin with, so this is a no-op kept deliberately — the guarantee belongs
-   to the surface, not to whichever mono face is mounted on it. */
+/* No ligatures: a diff must not show characters the file doesn't contain. Geist
+   Mono forms none, so this is a deliberate no-op guarding against a face swap. */
 .ledger-action,
 .ledger-done {
   font-variant-ligatures: none;
   font-feature-settings: "liga" 0, "calt" 0;
 }
 
-/* Enter animation: conveys that this is happening NOW. Applied via CSS
-   animation (not a transition gated on a class) so content is visible by
-   default and never depends on JS to appear. */
+/* A CSS animation, not a class-gated transition, so content never depends on JS to appear. */
 @media (prefers-reduced-motion: no-preference) {
   .ledger-item {
     animation: ledger-enter 140ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -60,8 +43,7 @@
   }
 }
 
-/* Action rows: fixed columns so the eye scans a column instead of parsing
-   each line. verb | target | result | time | chevron */
+/* verb | target | result | time | chevron, in fixed columns. */
 .ledger-action {
   display: grid;
   grid-template-columns: 1rem 4.25rem minmax(7rem, 1fr) minmax(0, auto) 4.5rem 0.75rem;
@@ -99,8 +81,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* The prompt sets the scene rather than competing with the answer: indented
-   and dimmed, so the asymmetry alone says "this side is the asking". */
 .ledger-instruction {
   position: relative;
   padding-left: 0.875rem;

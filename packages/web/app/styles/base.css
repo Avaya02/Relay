@@ -11,10 +11,8 @@ body {
   }
 }
 
-/* The surfaces nobody draws still carry the design: selection, caret,
-   scrollbars and the numerals in data all ship as browser defaults that
-   belong to no system. Achromatic on purpose — a coloured selection would be
-   the brightest thing on a page whose only colour is meant to mean "live". */
+/* Achromatic on purpose: a coloured selection would be the brightest thing on a
+   page whose only colour means "live". */
 ::selection {
   background: rgba(250, 250, 250, 0.18);
   color: var(--text);

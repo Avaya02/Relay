@@ -4,11 +4,7 @@ import { useState } from "react";
 import { ChevronDown, Hand } from "lucide-react";
 import type { Participant } from "@relay/shared";
 
-/**
- * Who holds the wheel, and the one-click answers to it, as the landing page's
- * lock section shows it in both of its screens: the driver's controls or the
- * viewer's from the same props. The live session uses room/DriverStrip.
- */
+// Used by the landing page's demo; the live session uses room/DriverStrip.
 export function ControlBar({
   participants,
   driverId,
@@ -32,8 +28,7 @@ export function ControlBar({
 
   if (isDriver) {
     const others = participants.filter((p) => p.id !== selfId);
-    // Driving alone: nobody to hand to and nothing to release to, so the
-    // strip would be chrome around a dead control.
+    // Driving alone: nobody to hand to, so the controls would be dead.
     if (others.length === 0) return null;
 
     return (
@@ -75,8 +70,7 @@ export function ControlBar({
 
   const driver = participants.find((p) => p.id === driverId) ?? null;
   return (
-    // Keyed on driverId so "requested — waiting" resets by remounting when
-    // the lock actually moves, instead of syncing local state in an effect.
+    // Keyed on driverId so "requested — waiting" resets by remounting, not an effect.
     <RequestBar
       key={driverId ?? "none"}
       driver={driver}
@@ -86,8 +80,7 @@ export function ControlBar({
   );
 }
 
-// A themed native <select>: its popup can never be clipped by the scrolling
-// stream above it, and it is keyboard- and screen-reader-complete for free.
+// Native <select>: its popup can't be clipped by the scrolling stream, and a11y is free.
 function HandOverMenu({
   others,
   onHandOver,

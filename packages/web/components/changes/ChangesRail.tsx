@@ -7,11 +7,7 @@ import { CHANGES_WIDTH, useChangesWidth } from "@/lib/prefs";
 import { Tip } from "@/components/room/pop";
 import { STATUS_LABEL, STATUS_MARK, splitPath, type ChangedFile } from "./derive";
 
-/**
- * What the session did to the repo, standing rather than summoned. Rows are
- * plain until the runner has measured them — a button that opens nothing is
- * worse than no button — and a measured row opens its patch in the drawer.
- */
+// Rows stay plain until measured: a button that opens nothing is worse than none.
 export function ChangesRail({
   files,
   measured,
@@ -26,7 +22,7 @@ export function ChangesRail({
   onClose,
 }: {
   files: ChangedFile[];
-  /** How many rows carry real numbers. Zero means every row is a live guess. */
+  // Rows with real numbers; zero means every row is a live guess.
   measured: number;
   insertions: number;
   deletions: number;
@@ -39,8 +35,7 @@ export function ChangesRail({
   onClose: () => void;
 }) {
   const [savedWidth, saveWidth] = useChangesWidth();
-  // Live width while dragging, committed to storage on release so a drag
-  // doesn't write localStorage on every pointer move.
+  // Committed to storage on release, not on every pointer move.
   const [dragWidth, setDragWidth] = useState<number | null>(null);
   const width = dragWidth ?? savedWidth;
   const drag = useRef<{ startX: number; startWidth: number } | null>(null);
@@ -50,7 +45,7 @@ export function ChangesRail({
     if (!drag.current) return;
     const onMove = (e: PointerEvent) => {
       if (!drag.current) return;
-      // The rail hangs off the right edge, so dragging left makes it wider.
+      // Anchored to the right edge, so dragging left widens it.
       const next = drag.current.startWidth + (drag.current.startX - e.clientX);
       setDragWidth(Math.min(CHANGES_WIDTH.max, Math.max(CHANGES_WIDTH.min, next)));
     };
@@ -104,8 +99,7 @@ export function ChangesRail({
       <div className="crail-head">
         <h2 className="crail-title">Changes</h2>
         {n > 0 && <span className="count">{n}</span>}
-        {/* Never claim a number that hasn't been measured: "+0 −0" mid-run
-            reads as "no changes", the opposite of the truth. */}
+        {/* Unmeasured "+0 −0" would read as "no changes". */}
         {measured > 0 && (
           <span className="crail-sum">
             <Stat kind="add" value={insertions} />
@@ -228,8 +222,7 @@ export function FileMark({ status }: { status: ChangedFile["status"] }) {
 }
 
 export function Stat({ kind, value }: { kind: "add" | "del"; value: number }) {
-  // A zero is not a deletion — colouring "−0" like one puts signal colour on
-  // the absence of the thing it signals.
+  // Zero isn't a deletion; don't give "−0" the signal colour.
   return (
     <span className="stat" data-kind={value === 0 ? "zero" : kind}>
       {kind === "add" ? "+" : "−"}

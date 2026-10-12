@@ -120,8 +120,7 @@ export function CodeBlock({
             {language}
           </span>
         )}
-        {/* Relay keeps colour for live state, so only the in-progress state
-            gets a chip; a finished block needs no badge to say so. */}
+        {/* Colour is reserved for live state, so only in-progress gets a chip. */}
         <span className="ml-auto inline-flex shrink-0 items-center gap-1 text-[length:var(--fs-2xs)] font-medium text-accent">
           {streaming ? (
             <>

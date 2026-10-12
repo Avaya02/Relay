@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 
-// The session page itself is a client component, so it cannot export metadata.
-// This layer exists only to give session links a name in the tab and a sane
-// preview when one is pasted into a chat.
-
+// The page is a client component and can't export metadata, hence this layer.
 export async function generateMetadata({
   params,
 }: {
@@ -14,9 +11,7 @@ export async function generateMetadata({
     title: `Session ${id}`,
     description:
       "A live Relay session — watch the agent work in real time, and ask for the wheel.",
-    // A session link is a capability handed to specific people, the way a
-    // video-call link is. Indexing one would publish an invitation that was
-    // only ever sent to a few.
+    // The link is the capability; indexing it would publish the invitation.
     robots: { index: false, follow: false },
     openGraph: {
       title: "Join a live Relay session",

@@ -7,14 +7,7 @@ import { Reply } from "./Reply";
 import { ErrorCard } from "./ErrorCard";
 import { actionsOf, doneOf, splitTurn, timeOf, type Turn } from "./rows";
 
-/**
- * One turn: what was asked, the work, what came back.
- *
- * The work is one activity record, with whatever the agent said mid-run kept
- * inside it at the point it was said. Which message is the reply is only
- * known once the run settles, so the reply leaves the record then, in the
- * same moment the record folds — the one move the layout makes.
- */
+// The reply is only known once the run settles, so it leaves the record then, as the record folds.
 export function TurnBlock({
   turn,
   participants,
@@ -30,7 +23,7 @@ export function TurnBlock({
   status: SessionStatus;
   runnerConnected: boolean;
   showSteps: boolean;
-  /** The scripted agent reports a made-up cost; nothing was billed. */
+  // The mock reports a made-up cost; nothing was billed.
   demo?: boolean;
 }) {
   const actions = actionsOf(turn);

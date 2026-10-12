@@ -8,33 +8,20 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-// Load-bearing, not stylistic: the ledger, timestamps, and diffs all live in
-// this face, and it's what makes the agent's actions read as a machine record
-// rather than as prose (RELAY_BUILD_SPEC.md §7 names it explicitly).
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
-// Display resolves to the same family as body, which is the reference's own
-// system: the contrast axis is sans-against-mono, not sans-against-sans. Kept
-// as a distinct token so the display face can change later without touching
-// every call site — and because Geist is already loaded for body, this costs
-// no extra download. It replaced Archivo, so the redesign is one font lighter.
+// Same family as body but a distinct token, so the display face can change
+// without touching call sites; no extra download since Geist is already loaded.
 const geistDisplay = Geist({
   variable: "--font-display",
   subsets: ["latin"],
 });
 
-// The wordmark, and nothing else. Geist is deliberately characterless — that is
-// what makes it a good UI face and a poor brand: set in it, "relay" reads as a
-// label rather than a name. A mono carries the CLI-first premise, and this one
-// has letterforms with enough personality to stand without a symbol beside it.
-//
-// One weight, one subset: it renders five characters on two surfaces, so
-// anything more is download nobody sees.
-// 400, not 500: reversed type looks heavier than it measures, so the weight
-// that reads as light on a white page reads as chunky on this one.
+// Wordmark only: five characters on two surfaces, so one weight and subset.
+// 400, not 500: reversed type looks heavier than it measures.
 const dmMono = DM_Mono({
   variable: "--font-wordmark",
   weight: "400",
@@ -44,9 +31,8 @@ const dmMono = DM_Mono({
 const DESCRIPTION =
   "Everyone with the link watches the same AI coding session, live. One person drives — and can hand over the wheel mid-task.";
 
-// Absolute URLs are required for og:image, and Next can only build them from a
-// base it is told. Vercel injects VERCEL_URL; NEXT_PUBLIC_SITE_URL wins so a
-// custom domain doesn't advertise the deployment hostname instead.
+// og:image needs absolute URLs. NEXT_PUBLIC_SITE_URL wins over VERCEL_URL so a
+// custom domain isn't replaced by the deployment hostname.
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
@@ -55,8 +41,6 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
     default: "Relay — watch an AI agent work, together",
-    // Session pages set only their own name; this keeps the product on the tab
-    // without every page having to remember to append it.
     template: "%s · Relay",
   },
   description: DESCRIPTION,

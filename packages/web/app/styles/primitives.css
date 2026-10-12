@@ -1,18 +1,3 @@
-/* ==================================================================
-   PRIMITIVES — the five pieces the whole visual language rests on.
-   Everything in the landing page and the session chrome composes
-   these rather than restating them.
-
-   The look is an instrument faceplate: pure black ground, structure
-   carried by hairlines rather than fills or shadows, chrome set in
-   mono, corners effectively square. Depth comes from a lit border
-   edge, never from a drop shadow.
-   ================================================================== */
-
-/* --- The frame -----------------------------------------------------
-   Content sits inside visible vertical rails, with every section
-   separated by a full-width hairline. This is what reads as technical
-   drawing rather than web page. */
 .frame {
   --corner: 9px;
 
@@ -20,10 +5,7 @@
   max-width: var(--measure, 75rem);
   margin-inline: auto;
   width: 100%;
-  /* A closed box, not two rails. The nav used to run off the top of the
-     viewport, which read as a page that starts mid-scroll; ruled above and
-     below, the whole thing reads as one drawn sheet. `.landing` supplies the
-     breathing room outside it. */
+  /* A closed box, not two rails: an open top read as a page starting mid-scroll. */
   border: 1px solid var(--border);
 }
 .frame > section {
@@ -33,23 +15,8 @@
   border-bottom: 0;
 }
 
-/* --- Corner marks --------------------------------------------------
-   A right-angle bracket on every crossing where a section rule meets a
-   frame rail: one short stroke along the rule, one up the rail, lit
-   brighter than the line they sit on. Registration marks, the way a
-   technical drawing ends a corner rather than letting two lines simply
-   cross.
-
-   This first shipped as a small filled plate over the joint, which read
-   as a dot rather than as a corner — the bracket traces the corner, so
-   it belongs to the box instead of interrupting it.
-
-   One pseudo-element per rule, not four: `.close` already owns its
-   `::before` for the dot field, so only `::after` is free. Four
-   background layers — stroke along, stroke up, twice — anchored left and
-   right, so it never has to know how wide the frame is. Offset -1px on
-   both axes so the strokes land ON the 1px borders rather than beside
-   them. */
+/* Corner brackets where a rule meets a rail. Only `::after` is free (`.close` owns
+   `::before`); -1px offsets land the strokes on the 1px borders. */
 .frame > .landing-nav,
 .frame > .hatch,
 .frame > section {
@@ -78,7 +45,6 @@
     1px var(--corner);
   background-repeat: no-repeat;
 }
-/* Brackets open upward, into the box the rule closes. */
 .frame::after,
 .frame > .landing-nav::after,
 .frame > .hatch::after,
@@ -86,15 +52,12 @@
   bottom: -1px;
   background-position: left bottom, left bottom, right bottom, right bottom;
 }
-/* The frame's own top rule has no box above it, so its pair opens downward. */
+/* No box above the top rule, so its brackets open downward. */
 .frame::before {
   top: -1px;
   background-position: left top, left top, right top, right top;
 }
 
-/* --- The hatch band ------------------------------------------------
-   Diagonal-striped divider. Pure CSS: no asset to load, no image to
-   go stale, and it scales to any width for free. */
 .hatch {
   height: 3.5rem;
   border-bottom: 1px solid var(--border);
@@ -105,17 +68,7 @@
   );
 }
 
-/* --- The mark ------------------------------------------------------
-   Inverted tile carrying the R. It rhymes with .btn-solid, so a nav
-   with the mark at one end and the button at the other reads as one
-   system rather than two unrelated elements sharing a row.
-
-   The tile is what carries the presence, which is why the glyph inside
-   can be the display face rather than a drawn letterform — and why the
-   favicon (app/icon.tsx) can reproduce it from the same two values.
-
-   Sized by --tile-size so the nav and the join screen can differ
-   without restating the rule. */
+/* Sized by --tile-size; the favicon (app/icon.tsx) reproduces it from the same values. */
 .mark-tile {
   display: grid;
   place-items: center;
@@ -130,14 +83,8 @@
   line-height: 1;
 }
 
-/* --- Badge ---------------------------------------------------------
-   Rectangular, mono, hairline-bordered. Colour is carried by the text
-   and border together — never a fill, which would compete with the
-   ledger for attention.
-
-   Every variant is measured against --surface: ok 7.30:1, error
-   5.31:1, live 9.84:1, neutral 7.43:1. There is no warn variant —
-   the reference has no pending colour, so pending reads neutral. */
+/* Colour on text and border, never a fill. Measured against --surface: ok 7.30:1,
+   error 5.31:1, live 9.84:1, neutral 7.43:1. No warn variant; pending reads neutral. */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -166,10 +113,8 @@
   border-color: color-mix(in oklch, var(--accent) 35%, transparent);
 }
 
-/* The one deliberate pulse. Shared by the hero eyebrow, the session status
-   pill, the plan strip's running pip and the reconnect dot, so none of them
-   can drift to a different rhythm. Every user of it gates on
-   prefers-reduced-motion at the call site. */
+/* Shared so no pulse drifts to a different rhythm; each user gates on
+   prefers-reduced-motion at its call site. */
 @keyframes status-pulse {
   0%,
   100% {
@@ -186,10 +131,7 @@
   }
 }
 
-/* --- Buttons -------------------------------------------------------
-   One primary button shape, shared by the landing page and the app's
-   composer. Square, mono, white-filled: the reference's most literal
-   move, and the one place the two registers should look identical. */
+/* Shared by the landing page and the composer, which should look identical. */
 .btn-solid {
   height: 2.25rem;
   padding-inline: 1rem;
@@ -211,9 +153,7 @@
   font-size: 0.8125rem;
 }
 
-/* The secondary shape. Outlined rather than filled, so it can sit beside a
-   solid button without the two competing — same rule that made Stop quieter
-   than Send in the composer. */
+/* Outlined so it can sit beside a solid button without competing. */
 .btn-quiet {
   height: 2.25rem;
   padding-inline: 1rem;
@@ -238,8 +178,6 @@
   cursor: not-allowed;
 }
 
-/* Visually hidden, still announced. For live-region text that would be
-   redundant on screen. */
 .sr-only {
   position: absolute;
   width: 1px;

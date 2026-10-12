@@ -8,9 +8,7 @@ import { VerbIcon } from "./verbIcon";
 import { StepDetail } from "./StepDetail";
 import { detailOf, durationOf, isPlanUpdate, verbOf, type ActionRow } from "./rows";
 
-// While a run is live the activity window glides to keep the newest step in
-// view. An opened detail would glide straight out of it, so the card stops
-// capping for as long as any detail inside it is open.
+// An opened detail would glide out of the live window, so the card stops capping while any is open.
 export const DetailOpenCtx = createContext<(delta: 1 | -1) => void>(() => {});
 
 function useReportOpen(open: boolean) {
@@ -41,7 +39,6 @@ function Reveal({ open, children }: { open: boolean; children: ReactNode }) {
   );
 }
 
-/** One action: the call, and the result folded into the same row. */
 export function StepRow({ row }: { row: ActionRow }) {
   const [open, setOpen] = useState(false);
   useReportOpen(open);
@@ -102,7 +99,6 @@ export function StepRow({ row }: { row: ActionRow }) {
   );
 }
 
-/** A run of identical verbs, folded to one line with the rows behind it. */
 export function FoldedSteps({ verb, rows }: { verb: string; rows: ActionRow[] }) {
   const [open, setOpen] = useState(false);
   useReportOpen(open);

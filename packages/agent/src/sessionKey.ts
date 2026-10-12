@@ -2,42 +2,18 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-/**
- * MAKING AN EXPLICITLY SUPPLIED KEY ACTUALLY BE THE ONE THAT'S USED.
- *
- * This exists because the obvious implementation is silently wrong. Passing
- * `env: { ANTHROPIC_API_KEY: key }` to the SDK looks like it supplies the key,
- * typechecks, and produces a successful run — but on any machine where the
- * operator has logged into Claude Code, the subprocess ignores the variable and
- * authenticates with their stored OAuth token instead. Verified by pointing
- * ANTHROPIC_BASE_URL at a local server and reading the headers: every request
- * carried `Authorization: Bearer sk-ant-oat...`, the operator's own credential,
- * with the supplied key nowhere.
- *
- * `apiKeyHelper` is the mechanism that does work. It's a script the CLI runs to
- * obtain a credential, and its output is sent as `x-api-key`, taking precedence
- * over the stored OAuth token.
- *
- * The script deliberately contains no secret. It echoes an environment
- * variable, and the key travels in the process environment exactly as before.
- */
-
-/** The env var the helper reads. Must match what the runner sets. */
+// apiKeyHelper rather than ANTHROPIC_API_KEY in env: the env var was ignored when a
+// Claude Code login existed, so the stored OAuth account got billed. The script holds no secret.
 export const SESSION_KEY_ENV = "RELAY_SESSION_API_KEY";
 
 const SCRIPT = `#!/bin/sh\nprintf %s "$${SESSION_KEY_ENV}"\n`;
 
 let helperPath: string | null = null;
 
-/**
- * Path to the helper script, created once per process on first use. Returns
- * null if it can't be created (read-only tmp, a platform without /bin/sh).
- */
 export function apiKeyHelperPath(): string | null {
   if (helperPath) return helperPath;
   try {
-    // 0700 on both the directory and the script: it's executed by a subprocess
-    // of this process and nothing else needs to read it.
+    // 0700: only this process's SDK subprocess should be able to run it.
     const dir = mkdtempSync(path.join(tmpdir(), "relay-key-"));
     chmodSync(dir, 0o700);
     const file = path.join(dir, "relay-api-key");
@@ -48,7 +24,7 @@ export function apiKeyHelperPath(): string | null {
       try {
         rmSync(dir, { recursive: true, force: true });
       } catch {
-        // Best effort — it holds no secret, and tmp is cleared on reboot.
+        // Best effort; the script holds no secret.
       }
     });
 
@@ -67,17 +43,8 @@ const VERIFY_TIMEOUT_MS = 10_000;
 
 export type KeyCheck = { ok: true } | { ok: false; error: string };
 
-/**
- * Checks a key at startup rather than on first use.
- *
- * Without this, a mistyped or revoked key is accepted silently and the operator
- * finds out only when an instruction arrives: the agent retries the 401 with
- * backoff for over three minutes, then reports the failure as its answer.
- * Measured — 191 seconds from instruction to "Failed to authenticate". One
- * request up front turns that into an immediate, accurate "no".
- *
- * `/v1/models` is the cheapest authenticated endpoint there is.
- */
+// Checked at startup because a bad key otherwise took ~191s of 401 retries to fail.
+// /v1/models is the cheapest authenticated endpoint.
 export async function verifyApiKey(key: string): Promise<KeyCheck> {
   const base = process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com";
 
@@ -92,8 +59,7 @@ export async function verifyApiKey(key: string): Promise<KeyCheck> {
       return { ok: false, error: "Anthropic rejected that key" };
     }
     if (res.status === 429) {
-      // The key is real — it's the account that's over its limit. Accepting it
-      // is right: the rate limit may well have cleared by the first run.
+      // The key is real; the account is just rate-limited.
       return { ok: true };
     }
     return {
@@ -101,9 +67,7 @@ export async function verifyApiKey(key: string): Promise<KeyCheck> {
       error: `could not verify that key (Anthropic returned ${res.status})`,
     };
   } catch {
-    // Offline, DNS failure, or the timeout above. Refuse rather than accept
-    // optimistically: if this machine can't reach Anthropic now, the agent
-    // can't either, and a key accepted here would fail confusingly later.
+    // If this machine can't reach Anthropic now, the agent can't either.
     return { ok: false, error: "could not reach Anthropic to check that key" };
   }
 }
@@ -111,7 +75,6 @@ export async function verifyApiKey(key: string): Promise<KeyCheck> {
 const KEY_SHAPE = /^[A-Za-z0-9_-]+$/;
 const MAX_KEY_LENGTH = 300;
 
-/** Shape-only check, so an obviously malformed key fails before a network call. */
 export function looksLikeApiKey(key: string): boolean {
   return (
     key.startsWith("sk-ant-") && key.length <= MAX_KEY_LENGTH && KEY_SHAPE.test(key)

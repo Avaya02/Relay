@@ -1,11 +1,7 @@
 import path from "node:path";
 import type { PlanItem } from "@relay/shared";
 
-/**
- * TodoWrite's payload, defensively parsed. It arrives as untyped tool input,
- * and a malformed one must degrade to "no plan" rather than throw inside the
- * message loop and kill the run.
- */
+// Untyped tool input: a malformed payload must mean "no plan", not kill the run.
 export function planItems(raw: unknown): PlanItem[] {
   if (!Array.isArray(raw)) return [];
   const out: PlanItem[] = [];
@@ -24,20 +20,12 @@ export function planItems(raw: unknown): PlanItem[] {
   return out;
 }
 
-/**
- * Split into (verb, target) rather than one string so the ledger can align them
- * as columns and the eye can scan down a column instead of parsing each line
- * (DESIGN.md, ledger rule 3). Raw tool args must never be dumped into the UI —
- * anything bulky goes in collapsed detail instead.
- */
 export function summarizeToolCall(
   tool: string,
   input: Record<string, unknown>,
   workingDir: string,
 ): { verb: string; target: string } {
-  // Paths render relative to the repo root. An agent that guesses a path
-  // outside the working dir would otherwise produce a "../../../.." chain, so
-  // fall back to the bare filename in that case.
+  // Outside the working dir would give a "../../.." chain; use the bare filename.
   const rel = (p: unknown) => {
     if (typeof p !== "string") return "";
     const relative = path.relative(workingDir, p);
@@ -71,8 +59,6 @@ export function summarizeToolCall(
     case "Task":
       return { verb: "delegated", target: clip(input.description, 70) };
     case "TodoWrite": {
-      // "updated its plan" said nothing. Name the step it just started, so the
-      // ledger row carries the same information the plan strip does.
       const todos = planItems(input.todos);
       const active = todos.find((t) => t.status === "in_progress");
       const done = todos.filter((t) => t.status === "completed").length;
@@ -102,18 +88,12 @@ export function resultText(content: unknown): string {
       : "";
 }
 
-// Phrasing the SDK writes for the model's benefit, not the watcher's. Left in,
-// it surfaces as "File created successfully at: REPORT.md (file state is
-// current in your…" — an internal aside truncated mid-sentence.
+// SDK text meant for the model; left in, it shows as a truncated aside in the ledger.
 const SDK_ASIDES = [
   /\s*\(file state is current in your context[^)]*\)/gi,
   /\s*<system-reminder>[\s\S]*?<\/system-reminder>/gi,
 ];
 
-/**
- * Per-tool result summaries. The generic "N lines" fallback told a watcher
- * nothing on 12 of 13 rows in a real run (RELAY_PRODUCTION_PLAN.md §A3).
- */
 export function summarizeToolResult(
   tool: string,
   content: unknown,
@@ -123,15 +103,13 @@ export function summarizeToolResult(
   let text = resultText(content);
   for (const aside of SDK_ASIDES) text = text.replace(aside, "");
 
-  // Absolute paths are noise in the ledger and leak the host's directory
-  // layout — show them relative to the repo root instead.
+  // Absolute paths would leak the host's directory layout.
   const cleaned = text.split(`${workingDir}/`).join("").trim();
   const oneLine = cleaned.replace(/\s+/g, " ").trim();
   const lines = cleaned ? cleaned.split("\n") : [];
   const clip = (s: string, n = 70) => (s.length > n ? `${s.slice(0, n)}…` : s);
 
-  // A failure's reason is the whole point of the row — never flatten it to a
-  // bare "failed" (DESIGN.md ledger rule 7).
+  // Keep the failure reason; a bare "failed" tells the watcher nothing.
   if (!ok) return oneLine ? clip(oneLine, 90) : "failed";
 
   switch (tool) {
@@ -144,8 +122,6 @@ export function summarizeToolResult(
       return "applied";
     case "Bash": {
       if (!oneLine) return "no output";
-      // One-line output is usually the answer itself; multi-line is bulk the
-      // watcher can expand into.
       return lines.length > 1 ? `${lines.length} lines` : clip(oneLine);
     }
     case "Glob":

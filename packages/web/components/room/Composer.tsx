@@ -13,18 +13,12 @@ import type { AgentInfo, SessionStatus } from "@relay/shared";
 import { RunnerCommand, agentLabel, agentState } from "./agent";
 import { Tip } from "./pop";
 
-// Grows to this many rows, then scrolls: tall enough for a pasted stack trace
-// to be readable while writing, short enough that the stream above it isn't
-// squeezed out of the viewport.
+// Tall enough for a pasted stack trace, short enough not to squeeze the stream.
 const MAX_ROWS = 10;
 
 export type ComposerBlock = { kind: "offline" } | { kind: "reconnecting" } | null;
 
-/**
- * One field for every role. The driver instructs the agent; a watcher
- * suggests to the driver. The difference is the words and the button, not a
- * second component, so nothing jumps when the wheel moves.
- */
+// One component for both roles so nothing jumps when the wheel moves.
 export function Composer({
   mode,
   value,
@@ -45,13 +39,11 @@ export function Composer({
   onSend: (text: string) => void;
   onStop: () => void;
   status: SessionStatus;
-  /** Instructions accepted by the server but waiting behind the current run. */
   queued: number;
   block: ComposerBlock;
   repo: string | null;
   agent: AgentInfo | null;
   driverName: string | null;
-  /** The viewer's own last instruction, for ↑ on an empty field. */
   recall: string | null;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -59,9 +51,7 @@ export function Composer({
   const working = status === "working";
   const disabled = block !== null;
 
-  // Height is driven off scrollHeight rather than a row count: one logical
-  // line wraps into several in a narrow column, and counting "\n" would
-  // under-measure exactly the paste this exists for.
+  // scrollHeight, not "\n" count: one logical line wraps into several in a narrow column.
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -96,16 +86,13 @@ export function Composer({
       e.currentTarget.blur();
       return;
     }
-    // ↑ on an empty field brings back what you last asked, the way a shell
-    // does: the most common edit is "the same thing, slightly different".
     if (e.key === "ArrowUp" && !value && recall) {
       e.preventDefault();
       onChange(recall);
       return;
     }
     if (e.key !== "Enter" || e.shiftKey) return;
-    // An IME uses Enter to commit a character; sending there would truncate
-    // the word being typed.
+    // An IME uses Enter to commit a character; sending would truncate the word.
     if (e.nativeEvent.isComposing) return;
     e.preventDefault();
     submit();

@@ -2,13 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// The landing page's primary action is a command, because sessions are created
-// by the CLI and the page has no repository to offer.
-//
-// The whole block is the button. A command line with a separate small copy
-// target makes people aim; making the surface itself the affordance means the
-// obvious gesture works.
-
 export function CommandBlock({ command }: { command: string }) {
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -21,9 +14,7 @@ export function CommandBlock({ command }: { command: string }) {
     try {
       await navigator.clipboard.writeText(command);
     } catch {
-      // Clipboard access can be refused (insecure origin, permissions). The
-      // text is selectable either way, so say nothing rather than raise an
-      // error about a convenience.
+      // Refused clipboard (insecure origin); the text is selectable regardless.
       return;
     }
     setCopied(true);
@@ -38,8 +29,7 @@ export function CommandBlock({ command }: { command: string }) {
       onClick={copy}
       aria-label={`Copy ${command} to the clipboard`}
     >
-      {/* Not selectable: dragging across the line to copy it by hand should
-          yield the command, never a shell prompt someone then pastes. */}
+      {/* Not selectable, so a hand copy never includes the prompt. */}
       <span className="cmd-prompt" aria-hidden>
         $
       </span>
@@ -47,7 +37,6 @@ export function CommandBlock({ command }: { command: string }) {
       <span className={`cmd-state ${copied ? "cmd-state--on" : ""}`} aria-hidden>
         {copied ? "Copied" : "Copy"}
       </span>
-      {/* Announced once, rather than on every render of the label above. */}
       <span className="sr-only" role="status" aria-live="polite">
         {copied ? "Copied to clipboard" : ""}
       </span>

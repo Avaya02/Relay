@@ -7,12 +7,6 @@ import { TurnBlock } from "./TurnBlock";
 import { NewRowsProvider } from "./newRows";
 import { groupTurns } from "./rows";
 
-/**
- * The scrolling conversation. Owns three things the turns can't: staying
- * pinned to the bottom while the viewer is there, offering the way back down
- * when they aren't, and saying which turn is under the top edge on a long
- * transcript.
- */
 export function StreamView({
   storeKey,
   events,
@@ -24,7 +18,7 @@ export function StreamView({
   demo = false,
   empty,
 }: {
-  /** Identifies the transcript, so "already seen" survives a remount. */
+  // Keeps "already seen" across remounts.
   storeKey: string;
   events: Event[];
   participants: Participant[];
@@ -33,13 +27,11 @@ export function StreamView({
   runnerConnected: boolean;
   showSteps: boolean;
   demo?: boolean;
-  /** What to show before the first instruction — the caller knows the role. */
   empty: ReactNode;
 }) {
   const scrollerRef = useRef<HTMLElement>(null);
   const [pinnedToBottom, setPinnedToBottom] = useState(true);
-  // Event count as of the last time the viewer was at the bottom. Only ever
-  // written from the scroll handler: while pinned, `missed` is 0 regardless.
+  // Event count when last at the bottom; written only by the scroll handler.
   const [seenAtBottom, setSeenAtBottom] = useState(0);
   const [topTurn, setTopTurn] = useState<number | null>(null);
 
@@ -52,23 +44,18 @@ export function StreamView({
     eventCountRef.current = events.length;
   });
 
-  // Only auto-scroll when the viewer was already at the bottom. Scrolling up
-  // to read back must not be yanked away by the next event.
+  // Only follow new events when already at the bottom.
   useLayoutEffect(() => {
     const el = scrollerRef.current;
     if (!el || !pinnedToBottom) return;
     el.scrollTop = el.scrollHeight;
-    // Keyed on event count only: re-running when `pinnedToBottom` flips would
-    // scroll the user back down the instant they scrolled up.
+    // Event count only: re-running when `pinnedToBottom` flips would yank the
+    // user back down the instant they scrolled up.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events.length]);
 
-  // Content also grows without a new event — the activity window measures
-  // itself a frame later, a code block finishes highlighting — and pinned has
-  // to hold through that. It holds while a run streams, and on arrival until
-  // the viewer first touches the stream: after that, growth while idle is
-  // someone opening a record, which should open downward from where they
-  // clicked rather than drag the page.
+  // Content grows without events (late measuring), so stay pinned while streaming
+  // and until first touch; later idle growth is a record opening, not a drag.
   const pinnedRef = useRef(false);
   const workingRef = useRef(false);
   const touchedRef = useRef(false);
@@ -89,7 +76,7 @@ export function StreamView({
       touchedRef.current = true;
     };
     observer.observe(content);
-    // The viewport shrinks too, when the dock or the plan above it grows.
+    // The viewport shrinks when the dock or plan grows.
     observer.observe(el);
     el.addEventListener("pointerdown", touch);
     el.addEventListener("wheel", touch, { passive: true });
@@ -107,14 +94,13 @@ export function StreamView({
     if (!el) return;
     let raf = 0;
     const onScroll = () => {
-      // 24px of slack so a resting position a hair off the bottom still counts.
+      // 24px slack so resting a hair off the bottom still counts.
       const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
       setPinnedToBottom(atBottom);
       if (atBottom) setSeenAtBottom(eventCountRef.current);
 
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        // The turn whose top has passed the top edge is the one being read.
         const sections = el.querySelectorAll<HTMLElement>("[data-turn]");
         let current: number | null = null;
         for (const s of sections) {

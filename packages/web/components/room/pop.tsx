@@ -3,11 +3,8 @@
 import type { ReactElement, ReactNode } from "react";
 import { Popover, Tooltip } from "radix-ui";
 
-/**
- * Radix underneath for what a hand-rolled panel can't do cheaply: portal to
- * <body> so nothing that scrolls can clip it, flip at the viewport edge, and
- * hand focus back to its trigger on close.
- */
+// Radix for what a hand-rolled panel can't do cheaply: portal (no clipping),
+// viewport flip, and focus return.
 export function RoomPopover({
   trigger,
   children,

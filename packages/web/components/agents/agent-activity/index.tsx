@@ -153,9 +153,8 @@ export function AgentActivity({
     ? getContentType(items)
     : (initialContentType ?? "mixed");
   const cappedHeight = Math.min(contentHeight, Math.max(0, maxHeight));
-  // Upstream reserves the full cap while working. Relay starts most runs with
-  // one or two steps, and a reserved 200px of nothing under them read as a
-  // broken layout, so the window grows to the cap and only then glides.
+  // Upstream reserves the full cap while working; that looked like a broken
+  // layout under one or two steps, so grow to the cap and only then glide.
   const viewportHeight = cappedHeight;
   const capped = contentHeight > maxHeight;
   const streamOffset = working
@@ -261,8 +260,7 @@ export function AgentActivity({
             transition={reduce ? { duration: 0 } : SPRING_LAYOUT}
             className={cn("space-y-0.5 py-2", contentClassName)}
           >
-            {/* initial={false}: rows present at mount are history (a late
-                joiner's replay, a reopened record) and must not all animate. */}
+            {/* initial={false}: rows present at mount are history and must not animate. */}
             <AnimatePresence initial={false} mode="popLayout">
               {items.map((item) => (
                 <motion.div

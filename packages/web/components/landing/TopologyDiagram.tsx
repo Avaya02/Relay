@@ -1,12 +1,3 @@
-// The trust section claims the repository never leaves your machine. That is
-// an architecture claim, and the right form for one is a diagram — not a
-// screenshot, which can only show a surface, and not a component, because
-// there is no Relay surface that renders its own topology.
-//
-// The whole point is the boundary: everything expensive stays left of it, and
-// what crosses is a description of what happened. So the boundary is the only
-// element drawn with any weight.
-
 export function TopologyDiagram() {
   return (
     <div className="on-photo on-photo--trust" aria-hidden>

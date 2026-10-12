@@ -2,14 +2,8 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 
-// Per-browser preferences and per-tab drafts, read through
-// useSyncExternalStore so the server snapshot is the empty default and the
-// client's value replaces it after hydration — no effect, no mismatch.
-//
-// Every storage access is wrapped: private windows, disabled site data and
-// iOS quota errors all throw on a plain read, and none of them should take
-// down the session view.
-
+// useSyncExternalStore: the server snapshot is the default, so hydration doesn't
+// mismatch. Every storage access is wrapped; private windows and iOS quota errors throw.
 const listeners = new Set<() => void>();
 
 function subscribe(cb: () => void): () => void {
@@ -35,18 +29,13 @@ function readShowSteps(): boolean {
   }
 }
 
-/**
- * Whether finished turns keep their steps open. Off by default — the answer
- * leads and the record folds beneath it — but someone who came to watch the
- * agent work rather than to read what it said can flip it once and keep it.
- */
 export function useShowSteps(): [boolean, (next: boolean) => void] {
   const value = useSyncExternalStore(subscribe, readShowSteps, () => false);
   const set = useCallback((next: boolean) => {
     try {
       window.localStorage.setItem(STEPS_KEY, next ? "1" : "0");
     } catch {
-      // Not persisted; nothing to notify either, since the read would miss it.
+      // Not persisted, so there is nothing to notify about.
       return;
     }
     notify();
@@ -56,8 +45,7 @@ export function useShowSteps(): [boolean, (next: boolean) => void] {
 
 const draftKey = (sessionId: string) => `relay:draft:${sessionId}`;
 
-// Storage can be blocked; the draft then lives here for as long as the tab
-// does, which is the same lifetime sessionStorage would have given it.
+// Used when storage is blocked; lives as long as the tab, like sessionStorage.
 const fallback = new Map<string, string>();
 
 function readDraft(sessionId: string): string {
@@ -68,11 +56,7 @@ function readDraft(sessionId: string): string {
   }
 }
 
-/**
- * The composer's text, kept per tab so a reconnect or an accidental reload
- * doesn't eat a half-written instruction. sessionStorage, like the identity:
- * a draft belongs to the tab that typed it.
- */
+// Per tab (sessionStorage), like the identity.
 export function useDraft(sessionId: string): [string, (next: string) => void] {
   const value = useSyncExternalStore(
     subscribe,
@@ -108,7 +92,6 @@ function readChangesWidth(): number {
   }
 }
 
-/** The changes rail's width, dragged by the reader and remembered per browser. */
 export function useChangesWidth(): [number, (px: number) => void] {
   const value = useSyncExternalStore(subscribe, readChangesWidth, () => CHANGES_WIDTH.initial);
   const set = useCallback((px: number) => {
@@ -133,7 +116,6 @@ function readPanel(name: string): boolean {
   }
 }
 
-/** Whether a side panel is open on a wide screen, remembered per browser. */
 export function usePanel(name: "sessions" | "changes"): [boolean, (open: boolean) => void] {
   const value = useSyncExternalStore(subscribe, () => readPanel(name), () => true);
   const set = useCallback(

@@ -3,23 +3,14 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Event } from "@relay/shared";
 
-// Which events are genuinely new to this viewer, so only those animate in.
-//
-// History replay for a late joiner lands as one batch and must render
-// instantly — watching two hundred rows animate would be a stutter, not a
-// signal. A row that unmounts and comes back (a folded turn reopened) has
-// already been seen and must not animate twice. So: everything present on
-// the first non-empty render is "seen"; from then on an event is new exactly
-// once, on the render where it first appears.
-
+// Only events new to this viewer animate: the first non-empty render (history
+// replay) counts as seen, and a remounted row must not animate twice.
 const Ctx = createContext<Set<number>>(new Set());
 
 type Tracker = { seen: Set<number>; primed: boolean };
 
-// Module-level rather than a ref: the render needs to *read* what has been
-// seen, and a ref can't be read during render. Keyed by session so two
-// sessions opened in one tab don't share a memory; written only from the
-// effect below.
+// Module-level because refs can't be read during render; keyed by session so
+// two sessions in one tab don't share memory.
 const trackers = new Map<string, Tracker>();
 
 function trackerFor(key: string): Tracker {
@@ -56,7 +47,6 @@ export function NewRowsProvider({
   return <Ctx.Provider value={fresh}>{children}</Ctx.Provider>;
 }
 
-/** True for the whole life of this mount if the event was new when it mounted. */
 export function useIsNew(seq: number): boolean {
   const fresh = useContext(Ctx);
   const [isNew] = useState(() => fresh.has(seq));

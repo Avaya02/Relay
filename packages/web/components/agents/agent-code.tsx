@@ -9,7 +9,7 @@ import {
 import type { BundledLanguage, Highlighter, SpecialLanguage } from "shiki";
 import { cn } from "@/lib/utils";
 
-/** Any language shiki bundles, by id or alias ("ts", "sh", "py"); anything else renders plain. */
+// Any language shiki bundles, by id or alias; anything else renders plain.
 export type AgentCodeLanguage = string;
 
 export interface AgentCodeToken {
@@ -38,9 +38,8 @@ const DARK_THEME = "github-dark-high-contrast";
 let agentCodeHighlighter: Promise<Highlighter> | null = null;
 const tokenCache = new Map<string, AgentCodeTokenLines>();
 
-// Imported on first use, not at module load: a session page renders long
-// before its first code block, and shiki is the heaviest thing it would
-// otherwise ship up front. Grammars load per language for the same reason.
+// Lazy: shiki is the heaviest dependency and a session renders long before its
+// first code block. Grammars load per language for the same reason.
 const loadShiki = () => import("shiki");
 
 function getAgentCodeHighlighter() {
@@ -64,7 +63,7 @@ async function highlighterFor(language: AgentCodeLanguage) {
   return { highlighter, lang };
 }
 
-/** Each line with its offset into `code`, the stable key a streaming line keeps. */
+// The offset is the stable key a streaming line keeps.
 export function lineOffsets(code: string) {
   const lines: { content: string; offset: number }[] = [];
   let offset = 0;

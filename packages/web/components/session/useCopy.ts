@@ -2,14 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/**
- * Copy-to-clipboard with a confirmation that clears itself. Returns the
- * `copied` flag for the control to render and a `copy(text)` to call.
- *
- * Falls back to a selection + execCommand on a non-secure origin, and stays
- * silent when even that fails: the text is still on screen to copy by hand,
- * and an error toast would cost more than the failure did.
- */
+// Falls back to execCommand on a non-secure origin; stays silent if that fails,
+// since the text is still on screen to copy by hand.
 export function useCopy(resetMs = 1600): {
   copied: boolean;
   copy: (text: string) => Promise<void>;

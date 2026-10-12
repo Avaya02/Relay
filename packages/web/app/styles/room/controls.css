@@ -1,6 +1,4 @@
-/* --- Buttons ---------------------------------------------------------
-   One shape everywhere in the room. White is spent on exactly one action
-   per surface: the thing you came to do. */
+/* White is reserved for one action per surface. */
 .rbtn {
   display: inline-flex;
   align-items: center;
@@ -103,7 +101,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* --- Status ---------------------------------------------------------- */
 .rstatus {
   display: inline-flex;
   flex: none;
@@ -143,7 +140,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* --- Floating panels -------------------------------------------------- */
 .rpop,
 .rmenu {
   z-index: 60;
@@ -293,7 +289,6 @@
   margin-left: -9px;
 }
 
-/* --- Small parts ------------------------------------------------------- */
 .cmdchip {
   display: inline-flex;
   align-items: center;

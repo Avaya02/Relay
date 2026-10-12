@@ -37,20 +37,12 @@ function send(socket: WebSocket, message: ServerMessage): void {
   socket.send(JSON.stringify(message));
 }
 
-// Separate from send() so a browser can never be handed a runner-bound message
-// by mistake — the two directions have different message sets.
 function sendRunner(socket: WebSocket, message: ServerToRunnerMessage): void {
   socket.send(JSON.stringify(message));
 }
 
-/**
- * Scrubs key-shaped text out of an event before it is stored and fanned out.
- *
- * Event data is a loose Record whose strings come from agent output — a failed
- * auth message, a command that echoed its environment. Walking it is cheap
- * next to the alternative, which is a key reaching the transcript, every
- * browser in the room and Postgres at once.
- */
+// Agent output can echo a key (failed auth, `env`); scrub before it reaches the
+// transcript, every browser and Postgres. The agent scrubs too (redact.ts).
 function redactEventData(data: Record<string, unknown>): Record<string, unknown> {
   const scrub = (value: unknown): unknown => {
     if (typeof value === "string") return validate.redactKeys(value);
@@ -65,25 +57,19 @@ function redactEventData(data: Record<string, unknown>): Record<string, unknown>
   return scrub(data) as Record<string, unknown>;
 }
 
-// Standard `ws` liveness pattern: a half-open TCP connection (laptop lid,
-// NAT timeout, a proxy that silently drops idle sockets) never fires 'close'
-// on its own — without this it leaves a phantom participant in presence
-// forever. A WeakMap instead of a socket property keeps the bookkeeping out
-// of the `ws` instance itself.
+// Half-open connections (laptop lid, NAT timeout) never fire 'close' and would
+// leave a phantom participant in presence forever.
 const HEARTBEAT_MS = 30_000;
 
 export function attachWs(wss: WebSocketServer): void {
-  // Tracks which session/participant a given socket belongs to, once joined.
   const connections = new Map<WebSocket, ConnectionState>();
   const alive = new WeakMap<WebSocket, boolean>();
-  // The same, for runner sockets. Kept separately because a runner is not a
-  // participant: it has no identity in the room, no seat, and no driver lock.
+  // Separate from connections: a runner has no seat, identity or driver lock.
   const runnerSockets = new Map<WebSocket, Session>();
-  // Browsers waiting on a changes request that is out at the runner.
   const pendingChanges = new Map<string, WebSocket>();
 
-  // A runner that never answers shouldn't leak an entry per request. Generous:
-  // `git add -A` on a large tree is genuinely slow.
+  // Generous because `git add -A` on a large tree is slow; the timeout only
+  // stops an unresponsive runner from leaking entries.
   const CHANGES_TIMEOUT_MS = 30_000;
 
   function dispatchInstruction(session: Session, text: string): void {
@@ -95,10 +81,7 @@ export function attachWs(wss: WebSocketServer): void {
     });
   }
 
-  // The single path by which text becomes a run. `instruct` and
-  // `promote_suggestion` are two doors into the same room — keeping the
-  // transcript append and the queue-vs-run-now branch here is what stops the
-  // two from drifting into subtly different behaviour.
+  // Shared by `instruct` and `promote_suggestion` so they can't drift apart.
   function commitInstruction(
     session: Session,
     text: string,
@@ -110,6 +93,7 @@ export function attachWs(wss: WebSocketServer): void {
       data: { text },
     });
 
+    // Queued so two agents never run against the same working dir.
     if (session.status === "working") {
       session.instructionQueue.push(text);
     } else {
@@ -125,7 +109,7 @@ export function attachWs(wss: WebSocketServer): void {
   const heartbeat = setInterval(() => {
     for (const socket of wss.clients) {
       if (alive.get(socket) === false) {
-        socket.terminate(); // no pong since the last tick — presumed dead
+        socket.terminate();
         continue;
       }
       alive.set(socket, false);
@@ -134,20 +118,14 @@ export function attachWs(wss: WebSocketServer): void {
   }, HEARTBEAT_MS);
   wss.on("close", () => clearInterval(heartbeat));
 
-  // Grace-window teardown, run once a disconnected participant's timer
-  // actually expires without a reconnect claiming it (see the `join` handler
-  // below and sessions.ts's scheduleParticipantGrace). Everything that used
-  // to run synchronously in the 'close' handler now runs here instead.
+  // Runs only if the grace timer expires without a reconnect.
   function finalizeDisconnect(
     session: Session,
     participant: SessionParticipant,
   ): void {
     session.participants.delete(participant.id);
 
-    // A disconnected driver can't be handed a lock back, so free it rather
-    // than leaving the session permanently stuck. No auto-reassignment to
-    // another participant — same "nobody drives until someone claims it"
-    // rule as an explicit release.
+    // Free the lock instead of reassigning: nobody drives until someone claims it.
     if (session.driverId === participant.id) {
       setDriver(session, null);
       broadcast(session, { type: "control_changed", driverId: null });
@@ -158,10 +136,7 @@ export function attachWs(wss: WebSocketServer): void {
       if (other.socket) send(other.socket, sessionStateMessage(session));
     }
 
-    // Nobody left watching: tell the runner to stop rather than let an
-    // abandoned session keep spending someone's API credit. The working dir is
-    // the runner's to clean up — it owns the repo now. The session row itself
-    // stays (briefly — see scheduleReap) so a quick refresh can still rejoin.
+    // Stop the run so an abandoned session doesn't keep spending the host's credit.
     if (liveParticipantCount(session) === 0) {
       session.instructionQueue.length = 0;
       if (session.runnerSocket) sendRunner(session.runnerSocket, { type: "stop_run" });
@@ -169,14 +144,10 @@ export function attachWs(wss: WebSocketServer): void {
     }
   }
 
-  // A runner attaching to its session. This is the only message that can turn
-  // an anonymous socket into the one allowed to execute instructions, so the
-  // token check is the whole security boundary for that privilege.
+  // The token check is the only thing letting a socket execute instructions.
   function handleRunnerHello(socket: WebSocket, msg: RunnerHelloMessage): void {
     const session = getSession(msg.sessionId);
     if (!session) {
-      // Distinguished from a bad token because the remedy differs: this one is
-      // "start a new session", not "check what you pasted".
       sendRunner(socket, {
         type: "runner_rejected",
         reason: `session "${msg.sessionId}" no longer exists — start a new one`,
@@ -195,9 +166,7 @@ export function attachWs(wss: WebSocketServer): void {
       return;
     }
 
-    // A second runner would mean two agents against one transcript. The newest
-    // wins — a restarted CLI is the common case, and its predecessor is
-    // usually a socket that hasn't noticed it's dead yet.
+    // Newest wins: a restarted CLI's predecessor is usually a dead socket.
     if (session.runnerSocket && session.runnerSocket !== socket) {
       runnerSockets.delete(session.runnerSocket);
       session.runnerSocket.terminate();
@@ -209,9 +178,7 @@ export function attachWs(wss: WebSocketServer): void {
     session.keySource = msg.keySource;
     session.keyHint = msg.keyHint;
     session.model = msg.model ?? null;
-    // Restored only on the runner's word that the clone those turns ran against
-    // is still on its disk. Dropping it on every disconnect cost a reconnecting
-    // laptop its whole conversation, when nothing about the work had moved.
+    // Restored only on the runner's word that its clone still exists.
     if (msg.resumeAgentSession) {
       session.agentSessionId = msg.resumeAgentSession;
       mirrorSessionMeta(session);
@@ -234,18 +201,13 @@ export function attachWs(wss: WebSocketServer): void {
 
     switch (msg.type) {
       case "runner_event": {
-        // Same path regardless of transport: seq assignment, broadcast and
-        // the Postgres mirror all happen here. Text is scrubbed on the way
-        // in — see validate.redactKeys.
         appendEvent(session, { kind: msg.kind, data: redactEventData(msg.data) });
         break;
       }
 
       case "runner_status": {
         setStatus(session, msg.status);
-        // A run that just settled is what releases the queue. This is the old
-        // onRunSettled, now driven by the runner reporting in rather than by a
-        // promise resolving in this process.
+        // A settled run releases the queue.
         if (msg.status !== "working") {
           if (liveParticipantCount(session) === 0) {
             session.instructionQueue.length = 0;
@@ -269,7 +231,7 @@ export function attachWs(wss: WebSocketServer): void {
       case "runner_changes": {
         const waiting = pendingChanges.get(msg.requestId);
         pendingChanges.delete(msg.requestId);
-        // The requester may have closed the tab while this was in flight.
+        // The requester may have left while this was in flight.
         if (!waiting || waiting.readyState !== waiting.OPEN) break;
         send(waiting, {
           type: "session_changes",
@@ -282,8 +244,6 @@ export function attachWs(wss: WebSocketServer): void {
       }
 
       case "runner_publish_result": {
-        // Broadcast: everyone watched the work, everyone should see where it
-        // landed.
         broadcast(
           session,
           msg.ok
@@ -302,9 +262,7 @@ export function attachWs(wss: WebSocketServer): void {
     }
   }
 
-  // The host's machine went away. Unlike a participant there's no grace window:
-  // an in-flight run on a disconnected machine will never report a result, so
-  // leaving the room on "working" would hang it forever.
+  // No grace window: a run on a vanished machine never reports, so "working" would hang.
   function handleRunnerDisconnect(socket: WebSocket): void {
     const session = runnerSockets.get(socket);
     if (!session) return;
@@ -313,15 +271,11 @@ export function attachWs(wss: WebSocketServer): void {
 
     session.runnerSocket = null;
     session.instructionQueue.length = 0;
-    // The conversation can't be resumed against a working dir that is gone.
     session.agentSessionId = null;
     if (session.status === "working") setStatus(session, "idle");
     broadcast(session, sessionStateMessage(session));
   }
 
-  // Whichever way a socket disconnects (clean close, terminate() from the
-  // heartbeat, or the error handler below), the accounting is identical —
-  // everything funnels through here rather than duplicating cleanup per path.
   function handleDisconnect(socket: WebSocket): void {
     handleRunnerDisconnect(socket);
 
@@ -330,8 +284,7 @@ export function attachWs(wss: WebSocketServer): void {
     connections.delete(socket);
 
     const { session, participant } = state;
-    // A reconnect may already have taken over this participant (new socket
-    // attached, this one's close arriving late) — don't clobber it.
+    // A reconnect may already own this participant; this close arrived late.
     if (participant.socket !== socket) return;
     participant.socket = null;
 
@@ -340,21 +293,13 @@ export function attachWs(wss: WebSocketServer): void {
     );
   }
 
-  // `join` is the one message handler that needs to be async — reattaching
-  // after a reconnect is synchronous, but a session that isn't live might
-  // still exist in Postgres, and that lookup is the read-only-replay path.
   async function handleJoin(socket: WebSocket, msg: JoinMessage): Promise<void> {
+    // A second join would orphan the first participant (connections is keyed by socket).
     if (connections.has(socket)) {
-      // Same guard C2 was missing: without it, a second `join` on one socket
-      // mints a second participant and silently orphans the first — the
-      // first becomes unreachable (connections is keyed by socket) and only
-      // the second is ever cleaned up on close.
       send(socket, { type: "error", message: "already joined a session" });
       return;
     }
 
-    // Checked before the session lookup: a bad name is the client's mistake
-    // either way, and there's no reason to touch Postgres to tell them so.
     const name = validate.displayName(msg.displayName);
     if (!name.ok) {
       send(socket, { type: "error", message: name.error });
@@ -363,6 +308,7 @@ export function attachWs(wss: WebSocketServer): void {
 
     const session = getSession(msg.sessionId);
     if (!session) {
+      // Not live, but it may exist in Postgres: read-only replay.
       const persisted = await loadPersistedSession(msg.sessionId);
       if (persisted) {
         send(socket, {
@@ -387,8 +333,7 @@ export function attachWs(wss: WebSocketServer): void {
       : undefined;
 
     if (resumed) {
-      // The old socket may still technically be open (e.g. a slow close
-      // racing this reconnect) — it's stale either way, so reclaim the seat.
+      // The old socket may still look open (slow close); it's stale either way.
       if (resumed.socket && resumed.socket !== socket) {
         connections.delete(resumed.socket);
         resumed.socket.terminate();
@@ -403,8 +348,7 @@ export function attachWs(wss: WebSocketServer): void {
       if (session.suggestions.length) {
         send(socket, { type: "suggestions", items: session.suggestions });
       }
-      // Nobody saw them leave (presence never changed during grace), so
-      // there's nothing to broadcast to everyone else.
+      // Presence never changed during grace, so there's nothing to broadcast.
       return;
     }
 
@@ -418,9 +362,6 @@ export function attachWs(wss: WebSocketServer): void {
     session.participants.set(participant.id, participant);
     connections.set(socket, { session, participant });
 
-    // First joiner becomes driver (spec §6.2). Enforcing the lock on
-    // `instruct` and the request/hand-over flow are Phase 3 — for now this
-    // is just bookkeeping so session_state reports someone.
     if (session.driverId === null) {
       setDriver(session, participant.id);
     }
@@ -428,8 +369,6 @@ export function attachWs(wss: WebSocketServer): void {
     send(socket, { type: "joined", participantId: participant.id, token: participant.token });
     send(socket, { type: "history", events: session.events });
     send(socket, sessionStateMessage(session));
-    // Pending proposals are session state a late joiner needs too — without
-    // this they see an empty queue until the next one happens to arrive.
     if (session.suggestions.length) {
       send(socket, { type: "suggestions", items: session.suggestions });
     }
@@ -446,11 +385,8 @@ export function attachWs(wss: WebSocketServer): void {
     alive.set(socket, true);
     socket.on("pong", () => alive.set(socket, true));
 
-    // Without this, a protocol-level error (e.g. an unmasked client frame)
-    // emits 'error' on the socket, and an unhandled 'error' on an
-    // EventEmitter throws — taking down the whole process and every other
-    // session on it. terminate() forces 'close' to fire so the normal
-    // participant-cleanup path still runs.
+    // An unhandled 'error' (e.g. an unmasked client frame) throws and would take
+    // down every session; terminate() makes 'close' fire so cleanup still runs.
     socket.on("error", (err) => {
       console.error("socket error:", err instanceof Error ? err.message : err);
       socket.terminate();
@@ -464,9 +400,7 @@ export function attachWs(wss: WebSocketServer): void {
         return;
       }
 
-      // Runners share this server with browsers but speak a different message
-      // set, so they branch off before the client switch below. A socket is a
-      // runner from its hello onward.
+      // Runners speak a different message set; a socket is one from its hello onward.
       const kind = (parsed as { type?: unknown }).type;
       if (kind === "runner_hello" || runnerSockets.has(socket)) {
         handleRunnerMessage(socket, parsed as RunnerMessage);
@@ -494,6 +428,7 @@ export function attachWs(wss: WebSocketServer): void {
           }
           const { session, participant } = state;
 
+          // The server enforces the driver lock; the UI hiding controls isn't enough.
           if (participant.id !== session.driverId) {
             send(socket, {
               type: "error",
@@ -508,9 +443,7 @@ export function attachWs(wss: WebSocketServer): void {
             return;
           }
 
-          // Nothing can execute this without a runner. Say so plainly rather
-          // than queueing it into a void — the agent lives on someone's
-          // machine now, and that machine may simply not be there.
+          // Without a runner nothing can execute this; don't queue it into a void.
           if (!session.runnerSocket) {
             send(socket, {
               type: "error",
@@ -520,9 +453,6 @@ export function attachWs(wss: WebSocketServer): void {
             return;
           }
 
-          // Never runs two agents concurrently against the same working dir:
-          // the instruction lands in the transcript immediately, but the run
-          // waits for any in-flight one to settle (see commitInstruction).
           commitInstruction(session, text.value, participant.id);
           break;
         }
@@ -533,7 +463,6 @@ export function attachWs(wss: WebSocketServer): void {
           const { session, participant } = state;
 
           if (session.driverId === null) {
-            // Nobody's driving — nothing to grant, nothing to wait for.
             setDriver(session, participant.id);
             broadcast(session, {
               type: "control_changed",
@@ -558,6 +487,7 @@ export function attachWs(wss: WebSocketServer): void {
           if (!state) return;
           const { session, participant } = state;
 
+          // No busy check on purpose: control may change hands mid-run.
           if (participant.id !== session.driverId) {
             send(socket, {
               type: "error",
@@ -604,8 +534,7 @@ export function attachWs(wss: WebSocketServer): void {
             return;
           }
 
-          // Stop means stop — anything queued behind the current run was
-          // only ever going to run because this one finished normally.
+          // Queued instructions assumed the current run would finish normally.
           session.instructionQueue.length = 0;
           if (session.runnerSocket) {
             sendRunner(session.runnerSocket, { type: "stop_run" });
@@ -627,12 +556,8 @@ export function attachWs(wss: WebSocketServer): void {
             });
             return;
           }
-          // Read-only, so any participant may ask — a viewer wanting to see
-          // what the agent did is the normal case, not a privileged one.
-          //
-          // The answer now arrives on the runner's socket rather than from a
-          // promise, so remember who asked. Without the id the reply has no
-          // way back to this particular browser.
+          // Read-only, so not driver-gated. The reply comes via the runner's
+          // socket, so requestId is how it finds its way back to this browser.
           const requestId = randomUUID();
           pendingChanges.set(requestId, socket);
           setTimeout(() => pendingChanges.delete(requestId), CHANGES_TIMEOUT_MS);
@@ -648,8 +573,7 @@ export function attachWs(wss: WebSocketServer): void {
           if (!state) return;
           const { session, participant } = state;
 
-          // Same guard shape as `instruct` — publishing writes to a branch and
-          // possibly to GitHub, so it belongs to whoever holds the wheel.
+          // Publishing writes to a branch and possibly GitHub, so it's driver-only.
           if (participant.id !== session.driverId) {
             send(socket, {
               type: "error",
@@ -666,22 +590,17 @@ export function attachWs(wss: WebSocketServer): void {
             return;
           }
 
-          // Falls back rather than erroring: the title is a convenience on a
-          // commit message, and refusing to publish real work over a bad one
-          // would be the wrong trade.
+          // Fall back rather than refuse to publish real work over a bad title.
           const checked = validate.publishTitle(msg.title);
           const title = checked.ok
             ? checked.value
             : `Relay session ${session.id}`;
 
-          // No request id needed, unlike changes: the result is broadcast to
-          // the whole room, so there's no single requester to route back to.
           sendRunner(session.runnerSocket, { type: "run_publish", title });
           break;
         }
 
-        // Anyone may propose. Deliberately not driver-gated: the whole point
-        // is to give people who do not hold the wheel a way to contribute.
+        // Deliberately not driver-gated: it's how non-drivers contribute.
         case "suggest": {
           const state = connections.get(socket);
           if (!state) return;
@@ -711,9 +630,7 @@ export function attachWs(wss: WebSocketServer): void {
           break;
         }
 
-        // Driver only, and the reason is the invariant: promoting is what turns
-        // a proposal into a run, so it has to be the same privilege as typing
-        // an instruction directly.
+        // Driver-only: promoting starts a run, same privilege as `instruct`.
         case "promote_suggestion": {
           const state = connections.get(socket);
           if (!state) return;
@@ -735,20 +652,17 @@ export function attachWs(wss: WebSocketServer): void {
           }
 
           const index = session.suggestions.findIndex((s) => s.id === msg.id);
-          // Already promoted or dismissed by someone else — not an error worth
-          // reporting, just nothing left to do.
+          // Already promoted or dismissed by someone else.
           if (index === -1) return;
           const [promoted] = session.suggestions.splice(index, 1);
           broadcastSuggestions(session);
 
-          // Attributed to the driver, not the author: the driver is who chose
-          // to run it, and the transcript records who committed an action.
+          // Attributed to the driver, who chose to run it, not the author.
           commitInstruction(session, promoted.text, participant.id);
           break;
         }
 
-        // The driver can clear anything; an author can withdraw their own.
-        // Nobody else, or one watcher could silence another.
+        // Driver or author only, so one watcher can't silence another.
         case "dismiss_suggestion": {
           const state = connections.get(socket);
           if (!state) return;

@@ -6,11 +6,8 @@ import { useMedia } from "@/lib/useMedia";
 
 type Peek = "sessions" | "changes" | null;
 
-/**
- * The two side panels. On a wide screen each is open or closed by
- * preference; on a narrow one it floats over the stream and opens only on
- * request, without disturbing the preference the wide screen remembers.
- */
+// On narrow screens a panel floats and opens on request without touching the
+// preference the wide layout remembers.
 export function usePanels() {
   const [sessionsPref, setSessionsPref] = usePanel("sessions");
   const [changesPref, setChangesPref] = usePanel("changes");

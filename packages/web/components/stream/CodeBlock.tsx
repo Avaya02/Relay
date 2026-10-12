@@ -14,11 +14,7 @@ function textOf(node: ReactNode): string {
 // A two-line snippet with a gutter reads as a form, not code.
 const NUMBER_FROM = 4;
 
-/**
- * react-markdown's `pre`, as beUI's highlighted code block. The copy takes
- * the source text, not the rendered DOM, so the clipboard gets exactly what
- * the agent wrote.
- */
+// Copies the source text, not the rendered DOM.
 export function CodeBlock({ children }: { children?: ReactNode }) {
   const { copy } = useCopy();
   const code = Children.toArray(children).find(isValidElement) as
@@ -39,7 +35,6 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
   );
 }
 
-/** Wide tables scroll in their own box rather than breaking the measure. */
 export function TableWrap({ children }: { children?: ReactNode }) {
   return (
     <div className="table-wrap">

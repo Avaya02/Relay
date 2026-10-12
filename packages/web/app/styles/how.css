@@ -1,13 +1,3 @@
-/* ==================================================================
-   HOW — the sequence. Its own file because landing.css sat at the
-   1000-line cap in CLAUDE.md and this is one concern: everything here
-   is scoped to <section className="how">.
-
-   Numbered because this genuinely is an ordered process and the order
-   carries the information. Numbering sections that AREN'T sequences is
-   the reflex this deliberately avoids doing everywhere else.
-   ================================================================== */
-
 .how .steps {
   list-style: none;
   margin: 2.5rem 0 0;

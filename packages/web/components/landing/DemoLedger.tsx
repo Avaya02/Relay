@@ -2,20 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// A replay of a REAL captured session — the transcript below is a trimmed,
-// verbatim excerpt of an actual Relay run against a real repository (Claude
-// Sonnet, 13 tool calls, 46s). It is a recording, not a live session, and the
-// UI says so.
-//
-// Why replay rather than a screenshot: Relay's entire claim is temporal —
-// "the same session, at the same moment, for everyone". A still image can't
-// express that, and a video would be heavier and less crisp than the actual
-// DOM. This renders the real ledger components, so what a visitor sees is the
-// product's own surface, not a mockup of it.
-//
-// It also carries the part of the pitch that's hardest to describe: you watch
-// as the *viewer*, see the composer locked, and watch control hand over to you.
-
+// A trimmed, verbatim excerpt of a real captured run (13 tool calls, 46s), not a
+// live session; the UI says so.
 type Step =
   | { kind: "instruction"; who: string; text: string }
   | { kind: "text"; text: string }
@@ -40,14 +28,8 @@ const SCRIPT: Step[] = [
   { kind: "done", summary: "13 steps · 46s · $0.04" },
 ];
 
-// How long each kind of step stays on screen before the next one lands.
-//
-// This was one flat 760ms for every step, which spent exactly as much of the
-// replay on "read README.md" as on the handover — the one moment in the loop
-// that shows something no other agent product does. Three things change at
-// once there (the ledger row, the presence line, the composer unlocking), and
-// at 760ms all three were gone before they registered. Tool calls now rip,
-// and the handover gets a beat to land in.
+// The handover changes three things at once; a flat 760ms dwell let them pass
+// unnoticed, so it gets the longest beat.
 const DWELL: Record<Step["kind"], number> = {
   instruction: 1100,
   action: 480,
@@ -57,30 +39,18 @@ const DWELL: Record<Step["kind"], number> = {
 };
 const HOLD_MS = DWELL.done;
 
-/**
- * Rows the replay never drops below, including when it loops.
- *
- * Rewinding to zero blanked the frame outright: measured, the pane went from
- * fully rendered to 0% filled about a second after load, which reads as the
- * demo breaking rather than as a replay starting. Keeping the driver's
- * instruction and the first call on screen means the frame is never empty and
- * the loop still reads as a restart.
- */
+// Rewinding to zero blanked the pane (measured: fully rendered to 0% filled
+// about a second after load), which reads as the demo breaking.
 const REPLAY_FLOOR = 2;
 
 export function DemoLedger() {
-  // Starts fully rendered, which is also what the server emits — the replay is
-  // an enhancement on top of a complete default. Reduced motion, a hidden tab,
-  // a headless render, or JS failing all leave the whole transcript visible
-  // rather than an empty frame.
+  // Starts fully rendered (as the server emits) so reduced motion, headless or
+  // failed JS still show the whole transcript.
   const [shown, setShown] = useState(SCRIPT.length);
   const [started, setStarted] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
 
-  // The frame is a fixed square, so a long run scrolls inside it the way the
-  // real session view does. Pinning to the bottom keeps the newest row in
-  // view; without it the replay silently continues below the fold of its own
-  // panel and looks like it stalled.
+  // Pin to the bottom, or the replay continues below the panel's fold and looks stalled.
   useEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
@@ -89,10 +59,8 @@ export function DemoLedger() {
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    // Every state change happens inside the timeout, never in the effect body,
-    // so the first paint always matches the server's markup.
-    // Keyed off the step that just landed, not the one coming next: the dwell
-    // belongs to what the visitor is currently looking at.
+    // State changes only inside the timeout so first paint matches the server's markup.
+    // Dwell is keyed off the step that just landed, the one being looked at.
     const delay = !started
       ? 700
       : shown >= SCRIPT.length
@@ -143,8 +111,6 @@ export function DemoLedger() {
         </div>
       </div>
 
-      {/* The lock, shown rather than described: you are the viewer, so the
-          composer isn't yours until control moves. */}
       <div className={handedOver ? "demo-bar demo-bar--driving" : "demo-bar"}>
         {handedOver ? (
           <>

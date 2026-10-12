@@ -1,13 +1,3 @@
-/* ==================================================================
-   SPEC — the spec sheet. Its own file because landing.css sat at the
-   1000-line cap in CLAUDE.md and this is one concern: everything here
-   is scoped to <section className="spec">.
-
-   A datasheet, not a grid of icon cards. Denser, more honest about
-   what the thing actually is, and not the pattern every generated
-   landing page reaches for.
-   ================================================================== */
-
 .spec-sheet {
   margin: 2.5rem 0 0;
   border: 1px solid var(--border);

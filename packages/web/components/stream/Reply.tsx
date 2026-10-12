@@ -9,20 +9,16 @@ import { useCopy } from "@/components/session/useCopy";
 import { CodeBlock, TableWrap } from "./CodeBlock";
 import { useIsNew } from "./newRows";
 
-// A single reply can be a 130-line file listing. Rendered whole it pushes
-// every other row off screen. Past this it clamps and opens in place — decided
-// from the text during render, not by measuring the node in an effect, so an
-// append-heavy surface stays cheap.
+// A reply can be a 130-line listing that pushes every other row off screen. Decided
+// from the text during render, not by measuring in an effect, to stay cheap.
 const CLAMP_LINES = 14;
 
 const components = { pre: CodeBlock, table: TableWrap };
 
-/** What came back, on beUI's StreamingResponse: the answer, then its actions and the run's meta. */
 export function Reply({ events, aside }: { events: Event[]; aside?: ReactNode }) {
   const isNew = useIsNew(events[0].seq);
   const { copy } = useCopy();
-  // The markdown source, not the rendered text: what people paste this into
-  // is usually another markdown surface, and a flattened copy loses fences.
+  // Markdown source, not rendered text: a flattened copy loses code fences.
   const source = events.map(textOf).join("\n\n");
 
   return (
@@ -45,8 +41,7 @@ export function Reply({ events, aside }: { events: Event[]; aside?: ReactNode })
 
 const textOf = (e: Event) => String(e.data.text ?? "");
 
-// Clamped per message, not across the reply: a long listing followed by
-// "Done — tests pass." must not fold the conclusion away with the listing.
+// Per message, so a long listing doesn't fold away the "Done" after it.
 function ReplyPart({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
   const lineCount = text.split("\n").length;
