@@ -17,7 +17,6 @@ export type RunnerOptions = {
   mode: "mock" | "real";
   keySource: "oauth" | "api-key" | "mock";
   keyHint: string | null;
-  /** Set only when the operator supplied a key explicitly. */
   apiKeyHelper?: string;
   model: string;
 };
@@ -32,11 +31,7 @@ export function startRunner(opts: RunnerOptions): void {
   let attempts = 0;
   let workingDir: string | null = null;
   let currentRun: AbortController | null = null;
-  // Kept so a reconnect can offer it back. Only meaningful alongside a
-  // surviving workingDir — see resumeAgentSession in the hello below.
   let agentSessionId: string | null = null;
-  // Set when the server says the problem is permanent, so `close` stops
-  // rescheduling and the process can exit instead of spinning.
   let giveUp = false;
 
   function send(msg: RunnerMessage): void {
@@ -52,8 +47,7 @@ export function startRunner(opts: RunnerOptions): void {
     },
   };
 
-  // Prepared on the first instruction rather than at startup: cloning for a
-  // session nobody ever drives is wasted work.
+  // Lazy: don't clone for a session nobody drives.
   async function ensureWorkingDir(): Promise<string> {
     workingDir ??= await repo.prepareWorkingDir(sessionId);
     return workingDir;
@@ -90,8 +84,6 @@ export function startRunner(opts: RunnerOptions): void {
   }
 
   async function handleChangesRequest(requestId: string): Promise<void> {
-    // Nothing has run yet, so there is nothing to diff — an empty answer is
-    // correct here, not an error.
     if (!workingDir) {
       send({
         type: "runner_changes",
@@ -158,19 +150,15 @@ export function startRunner(opts: RunnerOptions): void {
 
     switch (msg.type) {
       case "runner_ready":
-        // Only now is the socket genuinely attached. Resetting backoff on
-        // "open" instead would make a server that accepts and immediately
-        // rejects look like a healthy connection, and retry it every second
-        // forever.
+        // Reset here, not on "open": a server that accepts then rejects would
+        // otherwise be retried every second forever.
         attempts = 0;
         console.log("connected — waiting for instructions");
         break;
       case "runner_rejected":
         console.error(`\n  ${msg.reason}\n`);
         if (msg.fatal) {
-          // Retrying cannot change the answer, and a silent reconnect loop
-          // against a dead session is worse than stopping: the terminal keeps
-          // claiming to be connected while nothing works.
+          // Permanent rejection: stop reconnecting so `close` lets the process exit.
           giveUp = true;
           socket?.close();
           process.exitCode = 1;
@@ -204,12 +192,9 @@ export function startRunner(opts: RunnerOptions): void {
         mode,
         keySource: opts.keySource,
         keyHint: opts.keyHint,
-        // Only when something actually answers with it. The scripted agent
-        // replays a fixture and never reaches a model, so naming one in the
-        // room would be the same lie the "Demo" label exists to prevent.
+        // The mock never reaches a model, so don't name one.
         ...(mode === "real" ? { model: opts.model } : {}),
-        // Offered only when this process still holds the clone those turns ran
-        // against. A restarted CLI has neither, and correctly starts fresh.
+        // Only valid while this process still holds the clone those turns ran in.
         ...(workingDir && agentSessionId ? { resumeAgentSession: agentSessionId } : {}),
       });
     });
@@ -222,8 +207,7 @@ export function startRunner(opts: RunnerOptions): void {
 
     ws.on("close", () => {
       if (socket === ws) socket = null;
-      // An in-flight run can no longer report anything, so stop it rather than
-      // letting it spend time (or credit) with nowhere to send the result.
+      // A run with no socket can't report; stop it rather than spend credit.
       currentRun?.abort();
 
       if (giveUp) {
@@ -243,19 +227,10 @@ export function startRunner(opts: RunnerOptions): void {
     void repo.disposeWorkingDir(sessionId).finally(() => process.exit(code));
   }
 
-  // Set by the first interrupt, so a second one leaves immediately — including
-  // one pressed while the check below is still running.
   let quitArmed = false;
 
-  /**
-   * Ctrl-C is how most sessions end, and it takes the clone with it. Anything
-   * the agent wrote but nobody published dies there, with the transcript left
-   * describing edits that no longer exist anywhere — so the first interrupt
-   * says what is about to be lost instead of deleting it silently.
-   *
-   * The in-flight run is deliberately left alone: stopping it and then not
-   * exiting would leave a dead run inside a live session.
-   */
+  // Ctrl-C deletes the clone, so the first press warns about unpublished work.
+  // The in-flight run is left alone: aborting without exiting leaves a dead run in a live session.
   async function interrupt(): Promise<void> {
     if (quitArmed) return cleanup(0);
     quitArmed = true;
@@ -265,7 +240,7 @@ export function startRunner(opts: RunnerOptions): void {
     try {
       pending = (await repo.sessionChanges(workingDir)).files.length;
     } catch {
-      // Never let a failed diff strand someone in a process that won't quit.
+      // A failed diff must not stop the user from quitting.
       return cleanup(0);
     }
     if (pending === 0) return cleanup(0);
@@ -277,11 +252,9 @@ export function startRunner(opts: RunnerOptions): void {
   }
 
   process.on("SIGINT", () => void interrupt());
-  // No prompt on these two: SIGTERM is programmatic and SIGHUP means the
-  // terminal is already gone, so a warning would print to nobody.
+  // No warning on these: SIGHUP means the terminal is gone. Closing the window
+  // sends SIGHUP, and without a handler the clone was left behind.
   process.on("SIGTERM", () => cleanup(0));
-  // Closing the terminal window sends SIGHUP, not SIGTERM — the most common way
-  // a session actually ends, and without this it left its clone behind.
   process.on("SIGHUP", () => cleanup(0));
 
   connect();

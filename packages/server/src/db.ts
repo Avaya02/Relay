@@ -1,13 +1,8 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/prisma/client.js";
 
-// Lazy + fail-soft, same shape as githubRepo()/githubToken() in repo.ts: a
-// missing DATABASE_URL (Postgres not set up yet on a fresh checkout) should
-// degrade the transcript mirror to a no-op, not crash the server. The
-// in-memory transcript — spec §6.5's "required" half — works either way.
-// Read inside the function rather than at module load for the same reason
-// every other env read in this codebase is: ESM evaluates imports before
-// index.ts's process.loadEnvFile() call runs.
+// Lazy because ESM evaluates imports before index.ts calls loadEnvFile(). A missing
+// DATABASE_URL turns the mirror into a no-op rather than crashing.
 let client: PrismaClient | null | undefined;
 
 export function getPrisma(): PrismaClient | null {

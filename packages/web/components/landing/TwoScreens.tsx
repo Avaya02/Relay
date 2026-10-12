@@ -4,28 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import type { Participant } from "@relay/shared";
 import { ControlBar } from "@/components/ControlBar";
 
-// "One writer. Never two." argued in the only form that can actually prove it:
-// the same session, at the same instant, on two people's screens.
-//
-// Both viewports render from ONE piece of state, so the transcripts cannot
-// drift — that is the claim, made structurally rather than asserted. The only
-// difference between the two halves is `selfId`, which is why the real
-// ControlBar can be dropped into both: it already renders the driver's
-// controls or the viewer's from that one prop. Nothing here re-implements the
-// product to describe it.
-//
-// avi and noor rather than "avi and you": ControlBar renders
-// "<name> is driving", so a participant literally named "you" produces "you is
-// driving". The hero already puts the visitor in the seat; this section is the
-// mechanism seen from outside, which is the right register for evidence.
-
+// Both screens render from one piece of state, differing only in `selfId`, so the
+// real ControlBar works in both. Not "you": ControlBar would render "you is driving".
 const AVI: Participant = { id: "p-avi", displayName: "avi" };
 const NOOR: Participant = { id: "p-noor", displayName: "noor" };
 const PARTICIPANTS = [AVI, NOOR];
 
-// One id, rendered in both address bars and in the frame's own header. Same
-// URL on two machines is the claim this section makes, so it is stated once
-// here rather than typed out per screen.
 const SESSION_ID = "4Kp2xQmN";
 const SESSION_URL = `relayrun.in/session/${SESSION_ID}`;
 
@@ -37,9 +21,6 @@ type Step =
   | { kind: "handover" }
   | { kind: "done"; summary: string };
 
-// A run that actually changes something: reads, a write, control moving
-// mid-task, a failing test, then a green one. A transcript of pure reads would
-// show the lock moving over work that did not matter.
 const SCRIPT: Step[] = [
   {
     kind: "instruction",
@@ -50,10 +31,7 @@ const SCRIPT: Step[] = [
   { kind: "action", verb: "read", target: "apps/api/src/middleware/", result: "6 files" },
   { kind: "text", text: "I'll add it as middleware and wire it into the router." },
   { kind: "action", verb: "wrote", target: "middleware/rate-limit.ts", result: "+52" },
-  // Renders no transcript row on purpose. The request belongs in the control
-  // bar, which is where a driver actually sees it — putting it in the ledger
-  // too would say it twice and contradict noor's own bar, which still offers
-  // "Request control" until the lock really moves.
+  // No transcript row on purpose: the request shows in the control bar only.
   { kind: "request" },
   { kind: "handover" },
   { kind: "instruction", who: "noor", text: "Run the tests before wiring it in" },
@@ -63,8 +41,7 @@ const SCRIPT: Step[] = [
   { kind: "done", summary: "11 steps · 1m 12s" },
 ];
 
-// Dwell per step kind. The request and the handover are the two beats this
-// whole section exists for — everything else is the work they happen during.
+// The request and handover are the beats that matter, so they dwell longest.
 const DWELL: Record<Step["kind"], number> = {
   instruction: 1200,
   action: 520,
@@ -74,13 +51,10 @@ const DWELL: Record<Step["kind"], number> = {
   done: 4200,
 };
 
-// Never rewinds past the opening instruction: a frame that empties itself
-// reads as the demo breaking rather than as a replay looping.
+// An emptied frame reads as the demo breaking, so the loop never rewinds past this.
 const FLOOR = 2;
 
-// How long the transcript takes to settle after a row lands. Deliberately
-// longer than the shortest dwell (an action, at 520ms) so consecutive rows
-// hand off to one continuous drift rather than a series of jumps.
+// Longer than the shortest dwell (520ms) so consecutive rows drift, not jump.
 const SCROLL_MS = 900;
 
 export function TwoScreens() {
@@ -90,17 +64,8 @@ export function TwoScreens() {
   const [inView, setInView] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  // The replay used to start on mount, which meant it had already run for as
-  // long as the visitor took to scroll here — they arrived at whatever frame
-  // it happened to be on. It now waits until it is nearly on screen, and
-  // stops again when it leaves: an animation nobody can see is just timers.
-  //
-  // The 300px pre-roll is doing a second job. First paint is the WHOLE
-  // transcript, so that a pre-hydration paint and anyone with reduced motion
-  // (for whom the loop never runs) gets something complete rather than two
-  // orphaned rows. That means the run has to rewind to its opening frame
-  // once before it can play — and the margin is where that happens, while
-  // the frame is still below the fold with nobody watching.
+  // First paint is the whole transcript (SSR, reduced motion), so the 300px
+  // pre-roll is where it rewinds to the opening frame, unseen.
   useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
@@ -126,15 +91,13 @@ export function TwoScreens() {
         setShown(FLOOR);
         return;
       }
-      // Ending the run raises `looping` rather than rewinding on the spot —
-      // twelve rows vanishing between two frames read as the demo breaking.
+      // Fade out via `looping` first; rows vanishing in one frame look broken.
       if (shown >= SCRIPT.length) setLooping(true);
       else setShown((n) => n + 1);
     }, delay);
     return () => clearTimeout(t);
   }, [inView, started, shown]);
 
-  // The rewind itself, once the fade has had time to land.
   useEffect(() => {
     if (!looping) return;
     const t = setTimeout(() => {
@@ -149,19 +112,12 @@ export function TwoScreens() {
   const requested = visible.some((s) => s.kind === "request");
 
   const driverId = handedOver ? NOOR.id : AVI.id;
-  // The request is pending only in the window between asking and being granted.
   const pending = requested && !handedOver ? [NOOR] : [];
 
   return (
-    // inert, not aria-hidden: this is a depiction of a claim the prose above
-    // already makes, and aria-hidden alone would leave ControlBar's buttons and
-    // select in the tab order — focusable controls inside a hidden subtree.
+    // inert, not aria-hidden: aria-hidden would leave ControlBar's controls
+    // focusable inside a hidden subtree.
     <div className="on-photo" inert ref={rootRef}>
-      {/* No Relay-branded bar above these. Two browser windows sitting under
-          one piece of this app's own chrome read as Relay containing browsers
-          containing Relay — and the shared seq counter it carried has been
-          made redundant by the address bars, which prove the two windows are
-          on one session far better than a number did: same URL, two machines. */}
       <div className={looping ? "twoscreen twoscreen--looping" : "twoscreen"}>
         <div className="twoscreen-grid">
           <Screen self={AVI} driverId={driverId} pending={pending} visible={visible} shown={shown} />
@@ -189,10 +145,7 @@ function Screen({
 }) {
   const bodyRef = useRef<HTMLDivElement>(null);
 
-  // Driven here rather than by CSS `scroll-behavior: smooth`, which has no
-  // duration knob — the platform picks one, and its choice is a fast snap at
-  // these distances. A row landing should read as the transcript settling,
-  // so this eases it out over SCROLL_MS instead.
+  // Not CSS `scroll-behavior: smooth`: it has no duration knob and snaps at these distances.
   useEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
@@ -207,7 +160,6 @@ function Screen({
     const start = performance.now();
     const tick = (now: number) => {
       const p = Math.min(1, (now - start) / SCROLL_MS);
-      // ease-out cubic: quick to commit, long to settle.
       el.scrollTop = from + (to - from) * (1 - Math.pow(1 - p, 3));
       if (p < 1) raf = requestAnimationFrame(tick);
     };
@@ -219,16 +171,6 @@ function Screen({
 
   return (
     <div className={driving ? "screen screen--driving" : "screen"}>
-      {/* A window, not a panel. Two browser frames around one identical
-          transcript say "two people, two machines" in a way a name label
-          above a bordered box never did — and the address bar carries the
-          proof, because it is the same URL in both.
-
-          The lights are macOS's own, including the part everyone forgets:
-          an unfocused window greys them out. So colour here marks which
-          screen holds the lock rather than decorating the frame, and the
-          handover moves it from one window to the other — which is the beat
-          this whole section exists for. */}
       <div className="screen-chrome">
         <span className="screen-lights" aria-hidden>
           <i className="screen-light screen-light--close" />
@@ -247,9 +189,7 @@ function Screen({
         </div>
       </div>
 
-      {/* Keyed on the driver so the flip animation replays on both screens the
-          moment the lock moves — the "at once" is the whole point, and a
-          silent swap loses it. */}
+      {/* Keyed on the driver so the flip animation replays on both screens. */}
       <div className="screen-control" key={driverId}>
         <ControlBar
           participants={PARTICIPANTS}
@@ -297,7 +237,6 @@ function Row({ step }: { step: Step }) {
           <span>⇄</span> avi handed control to noor
         </div>
       );
-    // The request lands in the control bar, not the transcript.
     case "request":
       return null;
     case "done":

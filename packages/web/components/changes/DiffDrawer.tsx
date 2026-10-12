@@ -6,11 +6,6 @@ import { Patch } from "./Patch";
 import { FileMark, Stat } from "./ChangesRail";
 import type { ChangedFile } from "./derive";
 
-/**
- * One file's patch, over the stream. The rail can't show a line of real
- * code; this can, and it closes on Escape, on its own button, or by clicking
- * the same row again.
- */
 export function DiffDrawer({ file, onClose }: { file: ChangedFile; onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

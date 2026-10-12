@@ -1,12 +1,3 @@
-/* ==================================================================
-   FAQ — objections answered before the final CTA, not after it. Six
-   questions, in descending order of how much they'd stop someone from
-   running the command: the file-boundary question leads.
-
-   Its own file because landing.css sits at the 1000-line cap in
-   CLAUDE.md and this is one concern.
-   ================================================================== */
-
 .faq {
   padding-block: clamp(3rem, 7vw, 5.5rem);
 }
@@ -29,18 +20,14 @@
   color: var(--text-dim);
   margin-bottom: 0.75rem;
 }
-/* A tick, not a bullet — the same achromatic-chrome rule the hero eyebrow's
-   dot follows: this marks a label, it doesn't signal state, so it stays
-   neutral rather than reaching for --accent. */
+/* Marks a label, not state, so neutral rather than --accent. */
 .faq-eyebrow::before {
   content: "";
   width: 2px;
   height: 0.875rem;
   background: var(--text-dim);
 }
-/* Same rule as .lock-lede, copied rather than shared: this section owns its
-   own file, and reaching into landing.css for one class would tie the two
-   together for no reason other than that the properties happen to match. */
+/* Same as .lock-lede, copied so this file doesn't depend on landing.css. */
 .faq-lede {
   margin: 1.25rem 0 0;
   font-size: 0.9375rem;
@@ -50,10 +37,6 @@
   max-width: 38ch;
 }
 
-/* A bordered card, not a floating list — the same move as .spec-sheet and
-   .demo-frame: this system gets its boxes from a 1px edge, never a shadow.
-   The list border-top this replaced left the accordion looking untethered
-   from the rest of the page's boxed vocabulary. */
 .faq-list {
   border: 1px solid var(--border);
   background: var(--surface);
@@ -64,11 +47,8 @@
 .faq-item:last-child {
   border-bottom: 0;
 }
-/* One open question at a time: <details name="faq"> is a native exclusive
-   accordion (Chrome 120+, Safari 17.2+, Firefox 118+) — the browser closes
-   the others, no JS, no state. On an older browser every item just opens
-   independently, which is a worse interaction and not a broken one, so
-   nothing here needs a fallback. */
+/* <details name="faq"> is a native exclusive accordion (Chrome 120+, Safari 17.2+,
+   Firefox 118+); older browsers just open items independently, so no fallback. */
 .faq-q {
   display: flex;
   align-items: baseline;
@@ -88,10 +68,7 @@
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
-/* Full brightness by default, same as .spec-row dt: a question is a label
-   you're scanning, not a result you haven't earned yet. Dimming every closed
-   row to --text-dim was the thing actually worth fixing here — it fought the
-   one job an FAQ list has, which is to be read closed before it's opened. */
+/* Full brightness: dimming closed rows fought the job of reading questions closed. */
 .faq-q-text {
   flex: 1;
   font-size: 1rem;
@@ -101,8 +78,6 @@
 .faq-item[open] .faq-q-text {
   font-weight: 500;
 }
-/* A plus that rotates into a cross on open — one glyph, no icon swap, no
-   layout shift between the two states. */
 .faq-icon {
   font-family: var(--font-mono);
   font-size: 1.0625rem;
@@ -114,9 +89,7 @@
 }
 .faq-a {
   margin: 0;
-  /* Left indent matches the question's own text start (measured, not
-     estimated: 55px at this padding/gap/step-n width), so the answer reads
-     as continuing the question rather than starting a new block. */
+  /* Indent matches the question's text start (measured: 55px). */
   padding: 0 1.5rem 1.5rem 3.4375rem;
   max-width: 56ch;
   font-size: 0.875rem;

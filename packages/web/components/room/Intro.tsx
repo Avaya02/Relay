@@ -8,8 +8,7 @@ import { DriverAvatar, PresenceAvatar } from "./PresenceAvatar";
 import { InviteButton } from "./InviteButton";
 import { RunnerCommand, agentLabel, agentState } from "./agent";
 
-// Repo-agnostic on purpose: the first three things anyone asks of an agent
-// in a codebase they're about to watch it work in.
+// Repo-agnostic on purpose.
 const EXAMPLES = [
   "Summarize what this repository does and how it's laid out",
   "Find the three largest source files and suggest how to split them",
@@ -21,11 +20,7 @@ function nameList(names: string[]): string {
   return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 
-/**
- * Before the first instruction: who's here, what's attached, what to try.
- * It changes with the viewer's role, since a watcher can't act on "type an
- * instruction" but can suggest one.
- */
+// Varies by role: a watcher can't "type an instruction" but can suggest one.
 export function Intro({
   repo,
   agent,
@@ -41,14 +36,13 @@ export function Intro({
   driverId: string | null;
   selfId: string | null;
   onExample: (text: string) => void;
-  /** The dock already holds instructions waiting; a second list competes. */
+  // The dock already lists waiting instructions; a second list would compete.
   suggestionsPending?: boolean;
 }) {
   const hue = useHue();
   const state = agentState(agent);
   const isDriver = selfId !== null && selfId === driverId;
   const driver = participants.find((p) => p.id === driverId) ?? null;
-  // You first, then everyone else in the order they arrived.
   const people = [
     ...participants.filter((p) => p.id === selfId),
     ...participants.filter((p) => p.id !== selfId),

@@ -7,8 +7,7 @@ import { DetailOpenCtx, FoldedSteps, StepRow } from "./StepRow";
 import { NoteRow } from "./NoteRow";
 import { activeLabel, fmtDuration, histogram, type ActionRow, type TraceEntry } from "./rows";
 
-// About eight rows. Past this a live run glides instead of growing, so a
-// forty-step run doesn't shove the whole transcript up a row at a time.
+// About eight rows; past it a live run glides instead of shoving the transcript up.
 const LIVE_WINDOW = 240;
 
 function itemOf(entry: TraceEntry): AgentActivityItem {
@@ -25,10 +24,6 @@ function itemOf(entry: TraceEntry): AgentActivityItem {
   };
 }
 
-/**
- * The record of a turn's work, on beUI's AgentActivity: a capped window that
- * glides while the run is live, folding to one summary line once it settles.
- */
 export function StepsCard({
   trace,
   actions,

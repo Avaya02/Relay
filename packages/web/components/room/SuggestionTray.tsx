@@ -10,11 +10,6 @@ import { Tip } from "./pop";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-/**
- * The watchers' voice, waiting for the wheel. A suggestion is inert until the
- * driver sends it, and sending goes through the same server path as typing an
- * instruction, so there is still exactly one writer.
- */
 export function SuggestionTray({
   suggestions,
   isDriver,
@@ -52,8 +47,7 @@ export function SuggestionTray({
           <ul className="sugg-list">
             <AnimatePresence initial={false}>
               {suggestions.map((s) => {
-                // An author can always withdraw their own, even while someone
-                // else drives: otherwise a typo sits in front of the room.
+                // Authors can withdraw their own, or a typo sits in front of the room.
                 const canDismiss = isDriver || s.by === selfId;
                 const mine = s.by === selfId;
                 return (
@@ -74,8 +68,7 @@ export function SuggestionTray({
                       />
                       <div className="sugg-body">
                         <span className="sugg-by">
-                          {/* Written before they took the wheel: no longer a
-                              suggestion to anyone, just their own note. */}
+                          {/* Written before they took the wheel: their own note now. */}
                           {s.by === driverId
                             ? mine
                               ? "Your earlier suggestion"

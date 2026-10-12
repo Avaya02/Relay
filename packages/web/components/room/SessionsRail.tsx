@@ -12,9 +12,6 @@ import {
 import { RunnerCommand } from "./agent";
 import { Tip } from "./pop";
 
-// The way back. See lib/recentSessions.ts for why this is localStorage and
-// not an account: a reverse-chronological list in date buckets, answering
-// "what was I just in?", not a calendar.
 export function SessionsRail({
   currentId,
   onClose,
@@ -99,8 +96,7 @@ function SessionList({
 }
 
 function Row({ session, current, now }: { session: RecentSession; current: boolean; now: number }) {
-  // The first instruction is what the session was about; the repo is where.
-  // A session nobody drove yet has only the where.
+  // Title is what it was about, repo where; an undriven session has only the repo.
   const name = session.title || session.repo || session.id;
   const facts = [
     session.title ? session.repo : null,

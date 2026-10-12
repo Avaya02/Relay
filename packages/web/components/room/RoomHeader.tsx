@@ -44,7 +44,6 @@ export function RoomHeader({
   pendingRequests: Participant[];
   onHandOver: (participantId: string) => void;
   ended?: boolean;
-  /** The sessions rail is out of view, so the header carries the way to it. */
   showRailToggle: boolean;
   onToggleRail: () => void;
   changesCount: number;

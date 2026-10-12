@@ -20,14 +20,14 @@ export function PromptBlock({
   participants: Participant[];
   selfId: string | null;
   queued: boolean;
-  /** Accepted, then never run — the room stopped the agent first. */
+  // Accepted, then never run: the room stopped the agent first.
   dropped: boolean;
 }) {
   const isNew = useIsNew(event.seq);
   const hue = useHue();
   const by = event.by ?? "";
   const author = participants.find((p) => p.id === event.by) ?? null;
-  // The transcript outlives the room: whoever sent this may have left.
+  // The sender may have left; the transcript outlives the room.
   const name = event.by === selfId ? "You" : (author?.displayName ?? "Someone");
 
   return (

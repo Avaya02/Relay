@@ -1,12 +1,4 @@
-/* ==================================================================
-   ROOM — the live session. Everyone in it is a colour, and whoever
-   holds the wheel lends theirs to the run. Graphite and hairlines
-   carry the structure so those colours, and a step's green or red,
-   are the only colour on the page.
-   ================================================================== */
-
-/* Registered so a handover fades the room's colour instead of snapping
-   it: an unregistered custom property can't be interpolated. */
+/* Registered so a handover fades the colour: unregistered properties can't interpolate. */
 @property --driver {
   syntax: "<color>";
   inherits: true;
@@ -30,8 +22,7 @@
   --room-ok: #4cc38a;
   --room-error: #f07a74;
 
-  /* Six, roughly evenly spaced around the wheel and all light enough to
-     carry dark initials and to set a name in on the darkest ground. */
+  /* Light enough to carry dark initials and to set a name in on the darkest ground. */
   --hue-1: #8ab4ff;
   --hue-2: #f5a3c7;
   --hue-3: #7fdcb0;

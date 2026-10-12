@@ -22,7 +22,6 @@ export function PresenceAvatar({
   );
 }
 
-/** An avatar wearing the wheel: the driver, everywhere they appear. */
 export function DriverAvatar({
   participant,
   hue,

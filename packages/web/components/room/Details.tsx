@@ -6,10 +6,6 @@ import { useShowSteps } from "@/lib/prefs";
 import { RoomPopover } from "./pop";
 import { RunnerCommand, agentLabel, agentState } from "./agent";
 
-/**
- * The repository is the session's name, so it is also the door to what's
- * running it: which agent, on whose machine, on whose money.
- */
 export function Details({
   repo,
   agent,

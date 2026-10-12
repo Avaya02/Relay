@@ -1,11 +1,5 @@
 import type { Event, ToolDetail } from "@relay/shared";
 
-// The transcript, folded into what a reader thinks in: turns.
-//
-// Everything here is derived from the event list every viewer already has,
-// in `seq` order, with nothing stored — so a late joiner replaying `history`
-// arrives at the same picture as someone who watched it happen.
-
 export type ActionRow = {
   type: "action";
   call: Event;
@@ -20,23 +14,17 @@ export type Row =
 
 export type Turn = {
   key: string;
-  /** Null only for a replay that opens mid-run, before any instruction. */
+  // Null for a replay that opens mid-run, before any instruction.
   instruction: Event | null;
-  /** 1-based, counted from instructions — the same number on every screen. */
   number: number;
   rows: Row[];
-  /** No terminal row yet: this is the run happening now. */
+  // No terminal row yet.
   live: boolean;
-  /** Accepted by the server but waiting behind a run still in flight. */
+  // Accepted by the server but waiting behind a run in flight.
   queued: boolean;
 };
 
-/**
- * Fold each tool_result into the tool_call it belongs to. Results are matched
- * by the server-assigned tool id; an unmatched result (possible only if a
- * history replay is cut mid-action) degrades to its own row rather than
- * vanishing.
- */
+// An unmatched result (a history replay cut mid-action) gets its own row rather than vanishing.
 function buildRows(events: Event[]): (Row | { type: "instruction"; event: Event })[] {
   const resultsByCallId = new Map<string, Event>();
   for (const e of events) {
@@ -78,21 +66,12 @@ function buildRows(events: Event[]): (Row | { type: "instruction"; event: Event 
   return rows;
 }
 
-/**
- * Group rows into turns.
- *
- * The server appends a `user_instruction` the moment it accepts one, even
- * while a run is in flight — the text is queued, the event is not. So an
- * instruction that arrives while an earlier turn is still live does not open
- * the turn that subsequent rows belong to: those rows are the earlier run's,
- * and they keep attaching to it until it settles. The new instruction waits
- * as a *queued* turn and becomes the live one when its predecessor ends.
- */
+// The server logs `user_instruction` on accept even mid-run, so it becomes a
+// queued turn; later rows still belong to the earlier run until it settles.
 export function groupTurns(events: Event[]): Turn[] {
   const turns: Turn[] = [];
   let number = 0;
 
-  // The turn rows attach to: the earliest one still running.
   const running = () => turns.find((t) => t.live && !t.queued) ?? null;
 
   for (const row of buildRows(events)) {
@@ -111,15 +90,12 @@ export function groupTurns(events: Event[]): Turn[] {
 
     let target = running();
     if (!target) {
-      // A queued turn whose predecessor has settled is the one running now.
       const next = turns.find((t) => t.queued);
       if (next) {
         next.queued = false;
         target = next;
       } else {
-        // A replay can open mid-run, with rows arriving before any instruction
-        // this viewer ever saw. They belong to a turn whose prompt is
-        // off-screen, not to nothing.
+        // A replay opened mid-run: these rows belong to a turn whose prompt is off-screen.
         target = { key: "t0", instruction: null, number: 0, rows: [], live: true, queued: false };
         turns.push(target);
       }
@@ -128,7 +104,6 @@ export function groupTurns(events: Event[]): Turn[] {
     target.rows.push(row);
     if (row.type === "done" || row.type === "error") {
       target.live = false;
-      // The run settling is what lets the next queued instruction start.
       const next = turns.find((t) => t.queued);
       if (next) next.queued = false;
     }
@@ -160,7 +135,6 @@ export function detailOf(row: ActionRow): ToolDetail | undefined {
   );
 }
 
-/** "read 4 · edited 2 · ran 1" — the shape of a finished turn's work. */
 export function histogram(actions: ActionRow[]): string {
   const counts = new Map<string, number>();
   for (const a of actions) {
@@ -175,11 +149,7 @@ export function histogram(actions: ActionRow[]): string {
     .join(" · ");
 }
 
-/**
- * Consecutive actions with the same verb fold into one entry once there are
- * enough of them to read as noise rather than as a record: six reads in a row
- * is "read six files", and the individual paths are one click away.
- */
+// Runs of the same verb at least this long fold into one entry.
 export const FOLD_AT = 4;
 
 export type StepEntry =
@@ -197,7 +167,7 @@ export function foldSteps(actions: ActionRow[]): StepEntry[] {
       verbOf(actions[j].call) === verb &&
       !isPlanUpdate(actions[j].call) &&
       !isPlanUpdate(actions[i].call) &&
-      // A failure never folds away — it's the row a reader is looking for.
+      // Failures never fold away.
       actions[j].result?.data.ok !== false
     ) {
       j++;
@@ -214,12 +184,8 @@ export function foldSteps(actions: ActionRow[]): StepEntry[] {
 
 export type TraceEntry = StepEntry | { kind: "note"; event: Event };
 
-/**
- * A turn's work in the order it happened: steps, and what the agent said
- * between them. While the run is live every message stays in the trace,
- * because which one is the reply can't be known until the run settles; after
- * that, text past the last step is the reply and leaves it.
- */
+// While live every message stays in the trace: which one is the reply isn't
+// known until the run settles.
 export function splitTurn(turn: Turn, live: boolean): { trace: TraceEntry[]; reply: Event[] } {
   const actions = actionsOf(turn);
   const lastActionSeq = actions.length ? actions[actions.length - 1].call.seq : -1;
@@ -258,7 +224,6 @@ const PRESENT: Record<string, string> = {
   delegated: "Delegating",
 };
 
-/** "Running npm test" for the live line; "Thinking" between steps. */
 export function activeLabel(actions: ActionRow[]): string {
   const pending = [...actions].reverse().find((a) => !a.result);
   if (!pending) return "Thinking";
@@ -292,7 +257,6 @@ export function fmtDuration(ms: number): string {
   return `${m}m ${s}s`;
 }
 
-/** The instruction that started the run in flight, if one is. */
 export function workingSince(turns: Turn[]): string | null {
   const live = turns.find((t) => t.live && !t.queued);
   return live?.instruction?.ts ?? null;
@@ -302,13 +266,11 @@ export function queuedCount(turns: Turn[]): number {
   return turns.filter((t) => t.queued).length;
 }
 
-/** The first instruction, for the sessions rail. */
 export function firstInstruction(events: Event[]): string {
   const e = events.find((ev) => ev.kind === "user_instruction");
   return e ? String(e.data.text ?? "").replace(/\s+/g, " ").trim().slice(0, 80) : "";
 }
 
-/** This viewer's own most recent instruction, for ↑ recall in the composer. */
 export function lastInstructionBy(events: Event[], by: string | null): string | null {
   if (!by) return null;
   for (let i = events.length - 1; i >= 0; i--) {

@@ -19,7 +19,6 @@
   min-height: 0;
 }
 
-/* --- Header ------------------------------------------------------------ */
 .room-head {
   display: flex;
   flex: none;
@@ -111,8 +110,7 @@
   padding: 0 7px;
 }
 
-/* A panel that has to float over the stream on a narrow screen gets a scrim
-   to close it with; on a wide one it sits in the flow and has none. */
+/* Narrow screens only: the floating panel gets a scrim to close it. */
 .room-scrim {
   position: fixed;
   inset: 0;
@@ -128,8 +126,7 @@
 }
 
 @media (max-width: 720px) {
-  /* The sessions button already leads the header; the wordmark would only
-     squeeze the repository, which is what tells you where you are. */
+  /* The sessions button already leads; the wordmark would squeeze the repository name. */
   .room-title,
   .room-head-sep,
   .room-head .room-wordmark {

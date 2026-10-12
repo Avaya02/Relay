@@ -9,34 +9,13 @@ import { CommandBlock } from "@/components/landing/CommandBlock";
 import { TwoScreens } from "@/components/landing/TwoScreens";
 import { TopologyDiagram } from "@/components/landing/TopologyDiagram";
 
-// The landing page, in the brand register: instrument faceplate. Structure is
-// carried by hairline rules and a visible frame rather than cards and shadows,
-// and chrome is set in mono.
-//
-// Chrome here is achromatic — every heading, control and label is a neutral.
-// The only colour on the page lives inside the session panels, marking live
-// state, which is the same split the reference makes between its monochrome
-// chrome and the status badges inside its product screenshots.
-//
-// Two things this page deliberately does NOT do, both of which the reference
-// aesthetic would have suggested:
-//
-//   - No customer logo strip. Relay has no customers, and inventing social
-//     proof is the one thing on a portfolio page that cannot survive a
-//     follow-up question.
-//   - No pricing / testimonials / waitlist nav. Borrowing a SaaS information
-//     architecture would promise a product that isn't behind it.
-//
-// The primary action is a command, not a button. Sessions are created by the
-// CLI on the host's own machine — there is no "start" this page could honestly
-// offer, because the page has no repository.
-
+// Chrome is achromatic; colour marks live state in the session panels only.
+// The primary action is a command: sessions are created by the CLI, not this page.
 export default function Home() {
   const router = useRouter();
   const [joinId, setJoinId] = useState("");
 
-  // Accepts a bare id or a pasted session URL — people will paste the whole
-  // link, and rejecting that would be pedantry dressed as validation.
+  // Accepts a bare id or a pasted session URL.
   function handleJoin(e: React.FormEvent) {
     e.preventDefault();
     const raw = joinId.trim();
@@ -45,18 +24,14 @@ export default function Home() {
     router.push(`/session/${id}`);
   }
 
-  // "Get started" scrolls to the command block — which, on most screens, is
-  // already fully visible without scrolling. A plain anchor jump then moves
-  // the page by a few imperceptible pixels and looks like a dead button.
-  // Centering the target and flashing its border makes the click register
-  // regardless of how far (or whether) the page actually moves.
+  // The command block is usually already visible, so a plain anchor jump looks
+  // like a dead button; centering and flashing it makes the click register.
   function handleGetStarted(e: React.MouseEvent) {
     e.preventDefault();
     const wrap = document.getElementById("start");
     if (!wrap) return;
     wrap.scrollIntoView({ behavior: "smooth", block: "center" });
-    // The wrapper is the scroll target; the border being flashed belongs to
-    // the .cmd box inside it, which is the thing that actually has one.
+    // The wrapper scrolls; the .cmd inside it owns the border that flashes.
     const cmd = wrap.querySelector(".cmd");
     if (!cmd) return;
     cmd.classList.remove("cta-flash");
@@ -104,21 +79,11 @@ export default function Home() {
           </div>
         </header>
 
-        {/* The reference sets this band directly under its nav, before any
-            content — it reads as the top edge of an instrument rather than as
-            a divider between two things. */}
         <div className="hatch" aria-hidden />
 
-        {/* Fold 1 — the claim, and the thing itself. */}
         <section className="hero">
           <div className="hero-copy">
-            {/* The one eyebrow on the whole page. One as a deliberate system
-                is voice; one above every section is scaffolding.
-
-                Deliberately not badge--live: chrome is achromatic here, so the
-                dot carries liveness by pulsing rather than by hue. The colour
-                answer to "is this live" sits in the session panel beside it,
-                which is where status belongs. */}
+            {/* Not badge--live: chrome is achromatic, so the dot pulses instead of using hue. */}
             <span className="badge hero-eyebrow">
               <span className="badge-dot" aria-hidden />
               Live multiplayer
@@ -161,7 +126,6 @@ export default function Home() {
               </div>
             </form>
 
-            {/* Renders nothing until this browser has actually been in one. */}
             <RecentSessions />
           </div>
 
@@ -175,8 +139,6 @@ export default function Home() {
 
         <div className="hatch" aria-hidden />
 
-        {/* Fold 2 — the lock. The part nobody else has, so it gets the most
-            room on the page. */}
         <section className="lock" id="lock">
           <div className="lock-inner lock-grid">
             <div className="lock-head">
@@ -217,9 +179,6 @@ export default function Home() {
 
         <div className="hatch" aria-hidden />
 
-        {/* Fold 3 — the trust argument. This is the whole reason the
-            architecture is shaped the way it is, so it says so plainly rather
-            than hiding in a spec row. */}
         <section className="lock" id="trust">
           <div className="lock-inner lock-grid">
             <div className="lock-head">
@@ -260,9 +219,6 @@ export default function Home() {
 
         <div className="hatch" aria-hidden />
 
-        {/* Fold 4 — the sequence. Numbered because this genuinely IS an
-            ordered process and the order carries information; numbering
-            sections that aren't sequences is the reflex this avoids. */}
         <section className="how" id="how">
           <div className="how-inner">
             <h2 className="section-title">What happens when you send one</h2>
@@ -315,9 +271,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Fold 5 — the spec sheet. A datasheet rather than a grid of icon
-            cards: denser, more honest, and not the pattern every generated
-            landing page reaches for. */}
         <section className="spec">
           <div className="spec-inner">
             <h2 className="section-title">What&apos;s actually running</h2>
@@ -377,13 +330,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Fold 6 — objections, answered before the CTA that follows rather
-            than after it. Ordered by how much each would stop someone from
-            actually running the command; the file-boundary question leads,
-            because it's the one "Your code stays on your machine" invites and
-            doesn't fully answer on its own. Native <details name="faq">
-            groups: an exclusive accordion with no JS, the same reasoning
-            ControlBar's hand-over menu uses a native <select> for. */}
+        {/* Native <details name="faq"> gives an exclusive accordion with no JS. */}
         <section className="faq" id="faq">
           <div className="faq-inner faq-grid">
             <div className="faq-head">
@@ -517,9 +464,6 @@ export default function Home() {
             <span className="landing-foot-copy">© 2026</span>
           </div>
 
-          {/* No repo link yet — Avaya02/Relay isn't public. A link to a
-              private repo 404s for every visitor, which is worse than no
-              link; add a "Source" entry here the day it goes public. */}
           <nav className="landing-foot-col">
             <span className="landing-foot-head">Elsewhere</span>
             <a

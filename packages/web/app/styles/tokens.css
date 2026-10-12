@@ -3,74 +3,47 @@
  */
 @custom-variant dark (&:is(.dark *));
 
-/*
- * Relay design tokens (RELAY_BUILD_SPEC.md §7).
- * Dark is the only theme (no toggle) — `.dark` stays permanently on <html>
- * (see layout.tsx) purely so shadcn's `dark:`-prefixed utility refinements
- * apply deterministically, not based on OS preference.
- */
+/* Dark only: `.dark` stays on <html> (layout.tsx) so shadcn's `dark:` utilities
+   apply deterministically, not by OS preference. */
 :root {
-  /* Ground. Measured off the reference, not chosen: it is #0A0A0A, not black.
-     The previous value assumed pure black from screenshots and was wrong. */
+  /* Measured off the reference: #0A0A0A, not pure black. */
   --bg: #0a0a0a;
   --surface: #121212; /* header, rails, panels */
   --surface-2: #1a1a1a; /* raised: composer, expanded detail, popovers */
 
-  /* Alpha rather than flat hex, which is what the reference does: a hairline
-     over a raised panel resolves brighter than the same rule over the ground,
-     so the structure stays legible as surfaces stack. Composites to #262626 /
-     #2D2D2D / #343434 across the three grounds. */
+  /* Alpha so hairlines stay legible as surfaces stack; composites to
+     #262626 / #2D2D2D / #343434 across the three grounds. */
   --border: rgba(250, 250, 250, 0.12);
   --border-lit: rgba(250, 250, 250, 0.2);
 
-  /* Achromatic. The old ramp carried a blue cast inherited from the graphite
-     system that preceded it; the reference's neutrals have no hue at all. */
   --text: #fafafa;
   --text-dim: #a3a3a3;
-  /* The reference's own tertiary (#7C7C7C) measures 4.49:1 on --surface and
-     4.17:1 on --surface-2 — it survives there only because that page uses it
-     on the ground alone. Relay puts it on raised panels (ledger timestamps),
-     so it is solved against the *worst* ground: #828282 is the 4.5:1 minimum,
-     this is that plus headroom. Measured 5.73 / 5.43 / 5.04. */
+  /* Used on raised panels, so solved against the worst ground: #828282 is the
+     4.5:1 minimum; this adds headroom. Measured 5.73 / 5.43 / 5.04. */
   --text-faint: #8a8a8a;
 
-  /* Reserved for "live / active / you-are-driving" only — nothing
-     decorative. A restrained blue: the amber it replaced read as a warning
-     everywhere it appeared, and yellow on near-black is the one accent that
-     cannot be made to look calm. Measured 8.1:1 on --surface; any filled-
-     accent surface takes --bg text. */
+  /* Live / active / you-are-driving only, never decorative. Measured 8.1:1 on
+     --surface; filled-accent surfaces take --bg text. */
   --accent: #6ea8fe;
 
-  /* Sampled from the reference's own hero screenshot by canvas readback, so
-     these are its literal status hues rather than an interpretation of them.
-     Its red (#C24F4F) measures 3.75:1 on --surface-2 and fails AA as text —
-     it survives there only by sitting on a tinted badge fill — so it is
-     lifted along its own hue until the worst ground clears the floor.
-     There is no --state-warn: the reference has no pending colour, and
-     pending now reads as neutral. */
+  /* Sampled from the reference. Its red (#C24F4F) is 3.75:1 on --surface-2 and
+     fails AA, so ours is lifted. No --state-warn: pending reads neutral. */
   --state-ok: #37b773;
   --state-error: #de6060;
 
-  /* Small fixed palette assigned per participant (name dot, driving
-     cursor) — muted, not neon. Cycled by join order in Presence.tsx. */
+  /* Cycled by join order (lib/presence.ts). */
   --presence-1: #e5a3b3;
   --presence-2: #9bb4e0;
   --presence-3: #b9e0a5;
   --presence-4: #e0c48a;
 
-  /* shadcn semantic roles, mapped onto the tokens above rather than left at
-     shadcn's own defaults. */
   --background: var(--bg);
   --foreground: var(--text);
   --card: var(--surface);
   --card-foreground: var(--text);
   --popover: var(--surface-2);
   --popover-foreground: var(--text);
-  /* Not the accent. A control is not live state, and DESIGN.md already rules
-     out filled-accent buttons — but this mapping kept handing every shadcn
-     <Button> an accent fill anyway. Cyan merely looked like a bright CTA;
-     coral reads as destructive, which turned a latent rule violation into a
-     misleading one. Matches the landing page's .btn-solid exactly. */
+  /* Not the accent: a control isn't live state. Matches the landing .btn-solid. */
   --primary: var(--text);
   --primary-foreground: var(--bg);
   --secondary: var(--surface-2);
@@ -82,14 +55,10 @@
   --destructive-foreground: var(--bg);
   --input: var(--border);
   --ring: var(--accent);
-  /* Square. 2px was a good guess at the reference; measuring it gave 0 — every
-     structural card, panel, badge and button there has no radius at all. Flows
-     through every shadcn primitive via the --radius-sm/md/lg chain below. */
+  /* Square: measured 0 on the reference. Flows to shadcn via the --radius-sm/md/lg chain. */
   --radius: 0;
 
-  /* Session-view additions. The landing keeps the square instrument register;
-     the session runs a square *shell* with softened controls and cards, which
-     is what separates "SaaS app" from "faceplate" without touching the ramp. */
+  /* Session-view additions: a square shell with softened controls and cards. */
   --surface-3: #202020; /* popovers, menus, hover on --surface-2 */
   --radius-control: 4px; /* buttons, inputs, chips, hover fills */
   --radius-card: 6px; /* composer, code blocks, popovers, detail panels */
@@ -97,7 +66,6 @@
   --shadow-popover: 0 4px 16px rgb(0 0 0 / 0.35);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* Named so a tint can't be re-derived slightly differently at each site. */
   --accent-soft: color-mix(in oklch, var(--accent) 10%, transparent);
   --accent-edge: color-mix(in oklch, var(--accent) 35%, transparent);
   --ok-soft: color-mix(in oklch, var(--state-ok) 10%, transparent);
@@ -105,8 +73,7 @@
   --error-soft: color-mix(in oklch, var(--state-error) 10%, transparent);
   --error-edge: color-mix(in oklch, var(--state-error) 35%, transparent);
 
-  /* Type scale. 11px is meta only — timestamps, costs, turn numbers. Nothing
-     interactive sits below 12px; the old chrome ran almost entirely at 11. */
+  /* 11px is meta only; nothing interactive sits below 12px. */
   --fs-2xs: 0.6875rem;
   --fs-xs: 0.75rem;
   --fs-sm: 0.8125rem;
@@ -129,9 +96,7 @@
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  /* Characterful display face — landing hero + session title ONLY. Never
-     used for buttons, labels, or data (RELAY_BUILD_SPEC.md §7 + product-
-     register typography rules: one working family everywhere else). */
+  /* Landing hero and session title only; never buttons, labels or data. */
   --font-heading: var(--font-display);
 
   --color-background: var(--background);

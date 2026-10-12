@@ -3,12 +3,6 @@ import path from "node:path";
 import type { PlanItem, ToolDetail } from "@relay/shared";
 import type { RunEmitter } from "../emit.js";
 
-/**
- * The offline, zero-cost agent. Emits a fixed sequence on a timer instead of
- * running a model, but the *shape* of its events matches the real agent's
- * exactly, so the front end and broadcast layer behave identically either way.
- */
-
 type ScriptStep = (emit: RunEmitter) => void;
 
 const STEP_DELAY_MS = 700;
@@ -38,9 +32,6 @@ function toolResultStep(
   return (emit) => emit.event("tool_result", { id, tool, ok, summary, detail });
 }
 
-// The mock has to exercise the plan strip too, for the same reason it has to
-// actually write files: a surface that only appears under the real agent can
-// only be tested by spending API quota.
 function planStep(
   id: string,
   done: number,
@@ -64,9 +55,7 @@ function planStep(
   ];
 }
 
-// Real agents answer "what's in here?" with a wall of markdown, long enough
-// to push the ledger off screen. The mock has to produce one too, or the
-// clamp that handles it is untestable offline.
+// Long enough to exercise the UI's reply clamp offline.
 const MOCK_LONG_REPLY = [
   "Here's what changed, with the surrounding structure for context:",
   "",
@@ -129,8 +118,7 @@ function buildScript(instruction: string): ScriptStep[] {
     ...planStep(`${n}-p2`, 1, 1, MOCK_PLAN),
     toolCallStep(`${n}-2`, "Write", "wrote", "RELAY_NOTES.md", MOCK_DIFF),
     toolResultStep(`${n}-2`, "Write", true, "written"),
-    // One nested path, deliberately: a root-only mock can't exercise the
-    // workspace rail's directory/filename split.
+    // Nested on purpose, to exercise the workspace rail's directory/filename split.
     toolCallStep(`${n}-2b`, "Write", "wrote", "docs/session-log.md", {
       type: "diff",
       path: "docs/session-log.md",
@@ -157,12 +145,7 @@ function buildScript(instruction: string): ScriptStep[] {
   ];
 }
 
-/**
- * The mock claims to edit files, so it should actually edit them. Otherwise the
- * offline path can't exercise anything downstream of the working dir — the
- * session diff and publish flow would only ever be testable by spending real
- * API quota, which defeats the point of having a mock at all.
- */
+// Really writes files so the session diff and publish flow work offline.
 async function applyMockEdits(dir: string): Promise<void> {
   try {
     await writeFile(
@@ -230,8 +213,7 @@ export async function runMockAgent(opts: MockRunOptions): Promise<void> {
     return;
   }
 
-  // Same shape the real agent reports, so the capstone row renders identically
-  // offline. The cost is fabricated; nothing was spent.
+  // The cost is fabricated; nothing was spent.
   emit.event("agent_done", {
     steps: 4,
     durationMs: Date.now() - startedAt,

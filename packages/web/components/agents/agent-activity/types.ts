@@ -59,7 +59,6 @@ export interface AgentActivityTrace {
   icon?: ReactNode;
 }
 
-/** A row the host renders itself, e.g. a richer tool row with its own detail. */
 export interface AgentActivityCustom {
   id: string;
   type: "custom";
@@ -77,37 +76,29 @@ export type AgentActivityItem =
 export type AgentActivityContentType = AgentActivityItem["type"] | "mixed";
 
 export interface AgentActivityProps {
-  /** Chronological activity entries. Append or update items as events stream. */
   items: AgentActivityItem[];
-  /** Expected activity kind before the first streamed item arrives. */
+  // Expected kind before the first streamed item arrives.
   contentType?: AgentActivityContentType;
-  /** Current run phase. Active runs always stay expanded. */
+  // Active runs always stay expanded.
   status?: AgentActivityStatus;
-  /** Elapsed run time, in seconds. Used by the step-only summary. */
+  // Seconds; used by the step-only summary.
   duration?: number;
-  /** Controlled expanded state used after the run completes. */
   open?: boolean;
-  /** Initial expanded state used after the run completes. */
   defaultOpen?: boolean;
-  /** Called when the completed activity disclosure changes state. */
   onOpenChange?: (open: boolean) => void;
-  /** Collapse the disclosure when status changes from working to complete. */
   collapseOnComplete?: boolean;
-  /** Optional label shown while the run is active. */
   activeLabel?: ReactNode;
-  /** Optional completed summary. Derived from the item types by default. */
+  // Derived from the item types by default.
   summary?: ReactNode;
-  /** Optional renderer for the contents of the active status row. */
   renderWorkingStatus?: (context: {
     label: ReactNode;
     duration: number;
   }) => ReactNode;
-  /** Optional renderer for the contents before the built-in disclosure chevron. */
   renderCompletedStatus?: (context: {
     summary: ReactNode;
     duration: number;
   }) => ReactNode;
-  /** Maximum visible activity height before the stream begins gliding. */
+  // Height before the stream begins gliding.
   maxHeight?: number;
   className?: string;
   contentClassName?: string;

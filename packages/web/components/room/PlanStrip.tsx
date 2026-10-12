@@ -6,9 +6,6 @@ import { ChevronDown, ListChecks } from "lucide-react";
 import type { PlanItem } from "@relay/shared";
 import { PlanMark } from "@/components/stream/PlanMark";
 
-// The agent's own checklist, live. The stream answers "what just happened";
-// this answers "where are we going, and how far in", which a watcher can't
-// ask mid-run without interrupting. One row tall when closed.
 export function PlanStrip({ plan }: { plan: PlanItem[] }) {
   const [open, setOpen] = useState(false);
 

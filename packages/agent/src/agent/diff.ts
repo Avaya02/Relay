@@ -1,19 +1,11 @@
 import type { DiffLine, ToolDetail } from "@relay/shared";
 import { planItems } from "./summarize.js";
 
-/**
- * Line-level diff for the expandable detail on an edit row.
- *
- * Hand-written rather than pulled from a package: the inputs are one Edit's
- * old/new strings, and this keeps a diff library out of the browser bundle —
- * the ledger receives finished lines, not two blobs to diff client-side.
- */
 export function lineDiff(oldStr: string, newStr: string): DiffLine[] {
   const a = oldStr.split("\n");
   const b = newStr.split("\n");
 
-  // Guard against a pathological LCS table on a huge Write. Above this, show
-  // the change wholesale rather than hanging the run.
+  // Bounds the LCS table on a huge Write; past it, show the change wholesale.
   if (a.length * b.length > 40_000) {
     return [
       ...a.map((text) => ({ op: "-" as const, text })),
@@ -50,8 +42,6 @@ export function lineDiff(oldStr: string, newStr: string): DiffLine[] {
   return out;
 }
 
-// What, if anything, is worth showing when a row is expanded. Only edits get a
-// diff — a Read's contents are the agent's business, not the watcher's.
 export function detailForCall(
   tool: string,
   input: Record<string, unknown>,
@@ -65,8 +55,6 @@ export function detailForCall(
     return { type: "diff", path, lines: lineDiff(input.old_string, input.new_string) };
   }
   if (tool === "Write" && typeof input.content === "string") {
-    // A new file is all additions — that IS the diff, and it reads correctly in
-    // the same renderer.
     return {
       type: "diff",
       path,
@@ -74,9 +62,8 @@ export function detailForCall(
     };
   }
   if (tool === "TodoWrite") {
-    // The whole checklist rides along on the event. The client takes the newest
-    // one as the session's current plan, which is what makes it survive replay
-    // and late joins with no separate plan message and no server-side state.
+    // The full checklist rides on the event so the plan survives replay and late
+    // joins without server-side state.
     const todos = planItems(input.todos);
     if (todos.length) return { type: "plan", todos };
   }

@@ -1,26 +1,6 @@
-/* ==================================================================
-   LANDING PAGE (brand register)
-   Aesthetic lane, named deliberately: INSTRUMENTATION — cockpit
-   placards, oscilloscope faceplates, a recorder running. Not
-   editorial-typographic, not Stripe-minimal, not acid-maximalism.
-   The palette is the app's own committed graphite + signal cyan;
-   the accent is allowed to carry far more here than in the app,
-   because "live" is the whole pitch.
-
-   This file now holds only the page shell (nav, root padding) and
-   furniture shared across sections (.section-title, the .lock/.how/.spec
-   padding rule). Each section below the nav owns its own file —
-   hero.css, lock-trust.css, how.css, spec.css, faq.css, close.css,
-   footer.css — split out once this file reached the 1000-line cap in
-   CLAUDE.md. Buttons and .sr-only moved to primitives.css: both are
-   used beyond this page (the app's own composer), so landing.css was
-   never their real home.
-   ================================================================== */
-
+/* Page shell and shared section furniture; each section owns its own file. */
 .landing {
-  /* One shared measure. Every section's content sits on the same left edge —
-     the nav mark, the hero headline, and each section title line up. The
-     .frame wrapper reads --measure to draw the vertical rails. */
+  /* One measure for every section's left edge; .frame reads it to draw the rails. */
   --measure: 75rem;
   --gutter: clamp(1.25rem, 4vw, 2rem);
 
@@ -29,10 +9,7 @@
   background: var(--bg);
 }
 
-/* Nav is a section of the frame, so the frame owns the width and the rails —
-   it only owns its own padding. */
-/* Three tracks: the links centre on the NAV, not on the gap the mark and CTA
-   happen to leave — which is what flex auto-margins would have given. */
+/* Three tracks so the links centre on the nav, not on the gap the mark and CTA leave. */
 .landing-nav {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -41,21 +18,12 @@
   padding: 1rem var(--gutter);
   border-bottom: 1px solid var(--border);
 }
-/* The wordmark carries the brand alone — no symbol beside it. A tile with an R
-   in it duplicated the first letter of a word already sitting next to it, and
-   added a second thing to look at where one confident one reads better.
-   The favicon keeps the tile, because a browser tab has no room for a word. */
 .landing-mark {
   font-family: var(--font-wordmark);
-  /* Roughly double the nav links. A wordmark set at body size reads as one more
-     label in the bar; the size is most of what makes it read as a mark at all,
-     and this is the only place on the page allowed to be the largest thing in
-     its row. */
+  /* Roughly double the nav links, or it reads as one more label. */
   font-size: 1.5rem;
   font-weight: 400;
-  /* Open, not tightened. Mono's even rhythm is the whole reason to set a
-     wordmark in one — compressing it back to sans spacing throws away the
-     characteristic that made the face worth choosing. */
+  /* Open: tightening a mono wordmark throws away its even rhythm. */
   letter-spacing: 0.01em;
   color: var(--text);
 }
@@ -78,11 +46,8 @@
   color: var(--text);
 }
 
-/* An <a> carrying a button shape needs the centring a <button> gets free. */
-/* Both actions share the grid's last column; a fourth grid child would wrap
-   onto a new row and break the centring of the links. Pinned to column 3
-   explicitly: once the links hide below 900px, auto-placement would drop this
-   into the middle track and leave it floating mid-header. */
+/* Pinned to column 3: once the links hide below 900px, auto-placement would drop
+   this into the middle track. A fourth grid child would wrap and break the centring. */
 .landing-nav-actions {
   grid-column: 3;
   display: flex;
@@ -94,7 +59,7 @@
 .landing-nav-gh {
   display: inline-flex;
   align-items: center;
-  /* A button label that wraps spills out of its fixed 2.25rem height. */
+  /* A wrapped label spills out of the fixed 2.25rem height. */
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -114,11 +79,9 @@
   }
 }
 
-/* --- Shared section furniture --- */
 .section-title {
   font-family: var(--font-display);
-  /* 54px at 1440 in the reference — this was capped at 40px and read as a
-     different, smaller system than the hero it sits under. */
+  /* 54px at 1440 in the reference. */
   font-size: clamp(1.75rem, 3.75vw, 3.375rem);
   font-weight: 400;
   letter-spacing: -0.05em;
@@ -128,7 +91,7 @@
   text-wrap: balance;
 }
 
-/* Section rules come from .frame > section now, so these only own padding. */
+/* Section rules come from .frame > section; these only own padding. */
 .lock,
 .how,
 .spec {
@@ -141,13 +104,10 @@
 }
 
 @media (max-width: 900px) {
-  /* The nav's middle links are the first thing to go — the mark and the
-     actions are what a narrow screen actually needs. */
   .landing-nav-links {
     display: none;
   }
-  /* With the middle track empty, equal 1fr halves squeezed the actions into
-     half the row; the mark only needs its own width. */
+  /* With the middle track empty, equal 1fr halves squeezed the actions. */
   .landing-nav {
     grid-template-columns: auto 1fr;
   }

@@ -21,9 +21,7 @@ export function StepDetail({ detail }: { detail: ToolDetail }) {
     );
   }
   if (detail.type === "plan") {
-    // The same checklist the plan strip shows, frozen at this moment in the
-    // run — "what did the plan look like back then", which the live strip
-    // can't answer.
+    // The plan as it stood at this point in the run, which the live strip can't show.
     return (
       <div className="step-detail">
         <ol className="plan-list plan-list--inline">

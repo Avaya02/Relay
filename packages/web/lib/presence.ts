@@ -10,20 +10,13 @@ function preferredHue(participantId: string): number {
   return Math.abs(hash) % HUES;
 }
 
-/** A colour for someone who may have left the room, so no longer in its list. */
+// Standalone for people who may have left and so aren't in the list.
 export function hueOf(participantId: string): string {
   return `var(--hue-${preferredHue(participantId) + 1})`;
 }
 
-/**
- * Everyone in the room gets their own colour. Hashing alone collides often
- * (three people across six hues share one 44% of the time), so each person
- * takes their hashed hue unless someone who joined earlier holds it. The
- * list arrives in join order from the server, so every screen assigns the
- * same colours. When the earlier holder leaves, the person they displaced
- * moves to their own hue — on every screen at once, which is the property
- * that matters: "I'm the pink one" has to be true for everybody.
- */
+// Hashing alone collides often (three people across six hues share one 44% of
+// the time), so earlier joiners keep their hue. Join order makes every screen agree.
 export function assignHues(participants: Participant[]): Map<string, string> {
   const taken = new Set<number>();
   const out = new Map<string, string>();
@@ -38,7 +31,6 @@ export function assignHues(participants: Participant[]): Map<string, string> {
   return out;
 }
 
-/** "Avaya Sharma" → "AS", "noor" → "N", "" → "?" */
 export function initials(displayName: string): string {
   const parts = displayName.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";

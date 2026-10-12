@@ -1,11 +1,7 @@
 import { RATE_LIMIT_MAX_SESSIONS, RATE_LIMIT_WINDOW_MS } from "./config.js";
 
-// Fixed-window counter, in memory. Deliberately not a sliding window or a
-// token bucket: this guards one unauthenticated endpoint on a single-process
-// server, and a burst of at most 2x the limit across a window boundary is not
-// a failure mode worth extra machinery. If the server ever runs more than one
-// process, this stops being correct — and so does everything else about
-// session state, so it fails at the same time as the rest.
+// Fixed window on purpose: a 2x burst at a boundary is tolerable here. In-memory,
+// so only correct for a single process, like all session state.
 const hits = new Map<string, { count: number; resetAt: number }>();
 
 export function rateLimited(key: string): boolean {
@@ -21,8 +17,7 @@ export function rateLimited(key: string): boolean {
   return entry.count > RATE_LIMIT_MAX_SESSIONS;
 }
 
-// Without this the map grows one entry per distinct IP, forever — the exact
-// leak the rate limiter exists to prevent, just moved somewhere quieter.
+// Otherwise the map grows one entry per distinct IP forever.
 const SWEEP_MS = 5 * 60_000;
 const sweep = setInterval(() => {
   const now = Date.now();
@@ -32,16 +27,8 @@ const sweep = setInterval(() => {
 }, SWEEP_MS);
 sweep.unref();
 
-/**
- * The client address to rate-limit against.
- *
- * Railway, Render and Fly all terminate TLS at a proxy, so `socket.remoteAddress`
- * is the proxy's and identical for every caller — limiting on it would throttle
- * the whole internet as one client. The leftmost x-forwarded-for entry is the
- * original caller. It is trivially spoofable, which is fine here: the header can only
- * be used to *evade* the limit, never to get someone else limited, because a
- * forged value simply creates a new bucket.
- */
+// Behind a proxy remoteAddress is the proxy's, so use the leftmost x-forwarded-for.
+// Spoofable, but that can only evade the limit, never get someone else limited.
 export function clientKey(
   headers: Record<string, string | string[] | undefined>,
   fallback: string | undefined,

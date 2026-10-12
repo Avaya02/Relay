@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 
-/** A media query as live state; false on the server, where there is no viewport. */
+// False on the server, which has no viewport.
 export function useMedia(query: string): boolean {
   return useSyncExternalStore(
     (cb) => {

@@ -23,7 +23,6 @@
     0 0 0 3px color-mix(in oklch, var(--driver) 13%, transparent);
 }
 
-/* --- The wheel ----------------------------------------------------------- */
 .request {
   display: flex;
   align-items: center;
@@ -95,7 +94,6 @@
   font-size: 12.5px;
 }
 
-/* --- Suggestions ------------------------------------------------------------ */
 .sugg {
   overflow: hidden;
   border-bottom: 1px solid var(--room-line);
@@ -163,7 +161,6 @@
   padding: 0;
 }
 
-/* --- Field -------------------------------------------------------------------- */
 .composer {
   display: flex;
   flex-direction: column;
@@ -338,7 +335,6 @@
   }
 }
 
-/* --- Ended -------------------------------------------------------------------- */
 .dock-ended {
   display: flex;
   align-items: center;

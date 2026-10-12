@@ -2,11 +2,8 @@
 
 import { Eye, Hand, Link2 } from "lucide-react";
 
-// The picture the join page stands on. Same-origin so WebGL can read it as a
-// texture. Produced by scripts/prepare-join-sky.py from
-// assets/join-sky-source.webp — Aceternity's demo painting, graded to a night
-// sky. It's their artwork, not licensed to Relay: a placeholder to replace
-// with an owned image before launch. Swap the file here to change the scene.
+// Same-origin so WebGL can read it as a texture. Aceternity's demo painting
+// (scripts/prepare-join-sky.py), not licensed to Relay: replace before launch.
 export const JOIN_SCENE_IMAGE = "/join-sky.webp";
 
 function Facts() {
@@ -28,12 +25,6 @@ function Facts() {
   );
 }
 
-/**
- * The painting, whole. Its sky is graded onto the page ground, so the panel
- * above and beside it is simply more sky: the image can sit low, uncropped
- * across its width, with the figure near the middle of the panel and the
- * copy on the black above it. No effects, no hover; just the landscape.
- */
 export function JoinSceneSky() {
   return (
     <aside className="join-scene join-scene--sky">
@@ -54,7 +45,6 @@ export function JoinSceneSky() {
   );
 }
 
-/** The backup: the photograph full-bleed, copy at the foot. */
 export function JoinScenePhoto() {
   return (
     <aside className="join-scene">

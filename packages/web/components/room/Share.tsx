@@ -4,11 +4,6 @@ import { Check, ExternalLink, Link2 } from "lucide-react";
 import { useCopy } from "@/components/session/useCopy";
 import { RoomPopover } from "./pop";
 
-/**
- * Getting a second person into the room. One driver and everyone else
- * following is invisible in a single tab, so the panel also opens a second
- * viewer right here to watch the wheel change hands.
- */
 export function Share({ sessionId }: { sessionId: string }) {
   const { copied, copy } = useCopy();
   const url = typeof window === "undefined" ? "" : window.location.href;

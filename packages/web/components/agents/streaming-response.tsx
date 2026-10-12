@@ -31,15 +31,12 @@ export type StreamingResponseStatus = "streaming" | "complete" | "error";
 export type StreamingResponseFeedback = "up" | "down" | null;
 
 export interface StreamingResponseProps {
-  /** Rendered response content. Pass plain text or the output of a Markdown renderer. */
   children: ReactNode;
   status?: StreamingResponseStatus;
-  /** Plain-text value copied by the built-in copy action. */
   copyText?: string;
-  /** Overrides the built-in clipboard action. */
+  // Overrides the built-in clipboard action.
   onCopy?: () => void | Promise<void>;
   onRetry?: () => void;
-  /** Optional sources shown as a compact footer disclosure after streaming. */
   sources?: CitationItem[];
   sourcesOpen?: boolean;
   defaultSourcesOpen?: boolean;
@@ -48,11 +45,9 @@ export interface StreamingResponseProps {
   feedback?: StreamingResponseFeedback;
   defaultFeedback?: StreamingResponseFeedback;
   onFeedbackChange?: (feedback: StreamingResponseFeedback) => void;
-  /** Set false when a surrounding conversation log announces streamed text. */
+  // False when a surrounding conversation log already announces streamed text.
   announce?: boolean;
-  /** Hides the built-in completion actions without changing response status. */
   showActions?: boolean;
-  /** Trailing content on the actions row, e.g. the run's time and cost. */
   aside?: ReactNode;
   className?: string;
   contentClassName?: string;
@@ -125,8 +120,7 @@ export function StreamingResponse({
   const streaming = status === "streaming";
   const complete = status === "complete";
   const canCopy = Boolean(copyText || onCopy);
-  // Thumbs with nowhere to send them would be decoration pretending to be a
-  // feature, so they appear only when a caller actually records feedback.
+  // Thumbs only appear when a caller actually records feedback.
   const collectsFeedback = Boolean(onFeedbackChange);
   const hasSources = sources.length > 0;
   const shouldShowActions =

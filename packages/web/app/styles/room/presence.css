@@ -1,5 +1,3 @@
-/* A person is their colour: a solid disc with dark initials, the way a
-   multiplayer canvas marks whose cursor is whose. */
 .pa {
   --size: 24px;
 
@@ -26,8 +24,7 @@
   --size: 30px;
 }
 
-/* The wheel: a ring in the driver's own colour, standing off the avatar by
-   a gap of ground so it reads as worn, not as a border. */
+/* A gap of ground between ring and avatar so it reads as worn, not as a border. */
 .wheel {
   position: relative;
   display: inline-grid;
@@ -41,7 +38,6 @@
   pointer-events: none;
 }
 
-/* --- Roster (header) ------------------------------------------------------ */
 .roster {
   display: inline-flex;
   align-items: center;
@@ -69,7 +65,7 @@
   position: relative;
   display: inline-grid;
 }
-/* Enough overlap to read as a group, not so much that it eats a second initial. */
+/* Overlap enough to read as a group without eating a second initial. */
 .roster-slot + .roster-slot {
   margin-left: -2px;
 }
@@ -80,9 +76,8 @@
 .roster:is(:hover, [data-state="open"]) .roster-slot .pa {
   box-shadow: 0 0 0 2px var(--room-raised-2);
 }
-/* The ring stands 4px proud of its avatar, so the driver gets that room on
-   both sides instead of covering a neighbour's initials. Animated so the
-   spacing travels with the ring on a handover. */
+/* The ring stands 4px proud, so the driver gets that room instead of covering a
+   neighbour's initials; animated so spacing travels with the ring. */
 .roster-slot {
   transition: margin 280ms var(--room-ease);
 }
@@ -127,7 +122,6 @@
   font-weight: 500;
 }
 
-/* --- People list ------------------------------------------------------------ */
 .people-head {
   display: flex;
   align-items: center;

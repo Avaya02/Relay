@@ -25,8 +25,7 @@ before adding anything to it.
   fails, "this looks wrong but isn't."
 - Never: a header comment on a self-evident type, `// Server -> Client` above a type already
   named that, a line narrating the next three lines.
-- Existing files predate this rule and are deliberately essay-commented. Leave them as they
-  are, but do not match their density in new code.
+- Keep comments to 1–2 lines; write only the why.
 
 **1000 lines is a hard cap.** At ~400, start looking for the seam. Split by concern into a
 named folder (`agent/run.ts`, `agent/summarize.ts`, `agent/diff.ts`) — never by line count

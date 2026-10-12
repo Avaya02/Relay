@@ -6,11 +6,7 @@ import { Tooltip } from "radix-ui";
 import { HueProvider } from "./hues";
 import type { usePanels } from "./usePanels";
 
-/**
- * The room's skeleton, shared by a live session and a replayed one so ending
- * a session doesn't turn it into a different app: sessions on the left, the
- * stream and dock in the middle, changes on the right.
- */
+// Shared by live and replayed sessions so ending one doesn't become a different app.
 export function RoomFrame({
   hues,
   driverHue,
@@ -21,7 +17,7 @@ export function RoomFrame({
   children,
 }: {
   hues: Map<string, string>;
-  /** Whoever has the wheel lends the room their colour; nobody, and it's grey. */
+  // Grey when nobody has the wheel.
   driverHue: string | undefined;
   panels: ReturnType<typeof usePanels>;
   rail: ReactNode;

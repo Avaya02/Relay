@@ -48,8 +48,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     session.participants.find((p) => p.id === session.selfId)?.displayName ?? null;
   const fileCount = files.length;
 
-  // Remembered only once the server has confirmed the join — a link to a
-  // session that rejected you is not a session you were in.
+  // Only after the server confirms the join; a rejected link isn't a session you were in.
   useEffect(() => {
     if (session.selfId === null) return;
     rememberSession({
@@ -111,8 +110,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   const runnerConnected = session.agent?.runnerConnected ?? false;
   const openFile = openPath ? (files.find((f) => f.path === openPath) ?? null) : null;
 
-  // The composer's blocked states, most-blocking first. A watcher's
-  // suggestion needs no runner, so only the driver is held back by one.
+  // Suggestions need no runner, so only the driver is blocked by a missing one.
   const block: ComposerBlock = !online
     ? { kind: "reconnecting" }
     : isDriver && session.agent && !runnerConnected
@@ -155,8 +153,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
           deletions={session.changes?.deletions ?? 0}
           selectedPath={openPath}
           onSelect={setOpenPath}
-          // Publishing is driver-only *and* needs a live socket and something
-          // measured: nothing to publish until a diff exists.
+          // Nothing to publish until a diff has been measured.
           canPublish={isDriver && online && (session.changes?.files.length ?? 0) > 0}
           publishState={session.publishState}
           publishing={session.publishing}
@@ -225,7 +222,6 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
 
 const NO_HUES = new Map<string, string>();
 
-// A session that isn't live but whose transcript survived a restart.
 function ReplayView({
   sessionId,
   replayed,

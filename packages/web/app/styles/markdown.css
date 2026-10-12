@@ -1,12 +1,4 @@
-/* ==================================================================
-   MARKDOWN — the agent's answers. Scoped to .markdown-body so nothing
-   here can leak into shadcn primitives or the landing page.
-
-   Reading size, a real heading step, horizontal rules only in tables,
-   achromatic links: the answer is the one place the page relaxes into
-   prose, and it should read like a good document, not a chat bubble.
-   ================================================================== */
-
+/* Scoped to .markdown-body so nothing leaks into shadcn primitives or the landing page. */
 .markdown-body {
   font-size: var(--fs-lg);
   line-height: 1.65;
@@ -99,8 +91,7 @@
   border-radius: var(--radius-control);
 }
 
-/* Tables: rules between rows, none between cells. A wide table scrolls in
-   its own wrapper rather than breaking the measure. */
+/* A wide table scrolls in its own wrapper rather than breaking the measure. */
 .markdown-body .table-wrap {
   overflow-x: auto;
   border: 1px solid var(--border);
@@ -132,8 +123,6 @@
   white-space: nowrap;
 }
 
-/* Code blocks are beUI's (components/agents/code-block): header with the
-   language and a per-block copy, shiki tokens, a gutter past three lines. */
 .codeblock pre {
   font-size: 0.8125rem;
   font-variant-ligatures: none;

@@ -4,7 +4,6 @@ import { Check, Copy } from "lucide-react";
 import type { AgentInfo } from "@relay/shared";
 import { useCopy } from "@/components/session/useCopy";
 
-/** `claude-sonnet-5` → `sonnet-5`. Only the vendor prefix, only when present. */
 export function shortModel(model: string | null): string {
   if (!model) return "Live";
   return model.replace(/^claude-/, "");
@@ -22,7 +21,6 @@ export function agentState(agent: AgentInfo | null): AgentState {
   return agent.mode === "real" ? "live" : "demo";
 }
 
-/** The one command that brings an agent into a session, copyable in place. */
 export function RunnerCommand() {
   const { copied, copy } = useCopy();
   return (

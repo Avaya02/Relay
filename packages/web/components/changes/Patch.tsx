@@ -1,7 +1,5 @@
-// Minimal unified-diff renderer. The patch arrives as text from `git diff`,
-// so colour by line prefix rather than parsing hunks properly — this is a
-// review surface, not a merge tool. The preamble is dropped: the header
-// above already names the file and its status.
+// Colours by line prefix rather than parsing hunks; the preamble is dropped
+// because the header already names the file.
 export function Patch({ patch }: { patch: string }) {
   const lines = patch
     .split("\n")

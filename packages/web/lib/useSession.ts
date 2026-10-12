@@ -32,9 +32,7 @@ export type PublishState = {
   error?: string;
 };
 
-// A session that isn't live but whose transcript survived a restart (spec
-// §6.5's read-only replay). Present instead of a normal join — there's no
-// participant identity in a dead session, so `selfId` never gets set.
+// A dead session has no participant identity, so `selfId` is never set.
 export type ReplayedSession = {
   status: SessionStatus;
   driverId: string | null;
@@ -44,10 +42,6 @@ export type ReplayedSession = {
 export type UseSessionResult = {
   connection: ConnectionState;
   selfId: string | null;
-  /**
-   * A rejoin is already in flight from a remembered identity, so the join
-   * form would be asking for something the page is about to supply itself.
-   */
   resuming: boolean;
   events: Event[];
   participants: Participant[];
@@ -60,13 +54,9 @@ export type UseSessionResult = {
   publishing: boolean;
   replayed: ReplayedSession | null;
   repo: string | null;
-  /** What runs on the next instruction, and on whose credentials. */
   agent: AgentInfo | null;
-  /** Newest plan in the transcript, or null if the agent never made one. */
   plan: PlanItem[] | null;
-  /** Proposals from the room, waiting for the driver to send or drop one. */
   suggestions: Suggestion[];
-  /** Every run this session has paid for, summed. */
   totalCostUsd: number;
   runCount: number;
   join: (displayName: string) => void;
@@ -83,11 +73,8 @@ export type UseSessionResult = {
   dismissSuggestion: (id: string) => void;
 };
 
-// The agent's newest plan wins — a TodoWrite supersedes every earlier one,
-// so this walks backwards and stops at the first it finds. Scanning the
-// transcript (rather than storing plan state) is what makes the plan correct
-// for a late joiner and after a reconnect: both replay `history`, and the
-// answer falls out of the same events everyone else already has.
+// Derived from the transcript, not stored, so late joiners and reconnects (which
+// replay `history`) get the right plan for free.
 function latestPlan(events: Event[]): PlanItem[] | null {
   for (let i = events.length - 1; i >= 0; i--) {
     const event = events[i];
@@ -98,9 +85,6 @@ function latestPlan(events: Event[]): PlanItem[] | null {
   return null;
 }
 
-// What this session has actually cost, across every turn. The per-run figure
-// already rides on each agent_done; nothing was adding them up, so a session
-// with six turns showed six separate prices and no total.
 function runTotals(events: Event[]): {
   totalCostUsd: number;
   runCount: number;
@@ -116,15 +100,8 @@ function runTotals(events: Event[]): {
   return { totalCostUsd, runCount };
 }
 
-/**
- * The identity this tab holds in a session, so a refresh rejoins instead of
- * asking who you are again.
- *
- * sessionStorage, deliberately, not localStorage: a token names one
- * participant, and localStorage would hand the same one to every tab — two
- * windows of the same session would then fight over a single seat. Per-tab
- * also means closing the tab genuinely leaves.
- */
+// sessionStorage, not localStorage: a token names one participant, and sharing
+// it across tabs would make two windows fight over one seat.
 type SavedIdentity = { name: string; token: string };
 
 const identityKey = (sessionId: string) => `relay:identity:${sessionId}`;
@@ -138,8 +115,7 @@ function readIdentity(sessionId: string): SavedIdentity | null {
     if (typeof parsed.name !== "string" || typeof parsed.token !== "string") return null;
     return parsed.name ? { name: parsed.name, token: parsed.token } : null;
   } catch {
-    // Private mode, cleared storage, or a value someone else wrote. Asking
-    // for a name again is a fine outcome; throwing on mount is not.
+    // Private mode or a foreign value: asking for a name again beats throwing on mount.
     return null;
   }
 }
@@ -149,8 +125,7 @@ function saveIdentity(sessionId: string, identity: SavedIdentity): void {
   try {
     window.sessionStorage.setItem(identityKey(sessionId), JSON.stringify(identity));
   } catch {
-    // Storage is full or blocked — the session still works, it just won't
-    // survive a refresh.
+    // Blocked or full; the session just won't survive a refresh.
   }
 }
 
@@ -159,32 +134,19 @@ function clearIdentity(sessionId: string): void {
   try {
     window.sessionStorage.removeItem(identityKey(sessionId));
   } catch {
-    // Nothing to recover from: the stale value simply stays.
+    // Nothing to recover; the stale value stays.
   }
 }
 
-// Connects once per mount, sends `join`, and reduces every incoming
-// ServerMessage into local state. Rendering strictly follows the server's
-// `seq` order — never the client's own sense of timing — since events
-// arrive already ordered (history replay, then live agent_events) and we
-// only ever append.
-//
-// Reconnect: a dropped socket retries with backoff and rejoins
-// automatically. The server's own grace window (sessions.ts) is what makes
-// this transparent rather than just fast — a `resumeToken` carried across
-// the reconnect reattaches to the same participant identity (still driving,
-// if it was driving) instead of arriving as a stranger.
+// Events arrive ordered by the server, so we only append. On reconnect the
+// resumeToken plus the server's grace window reattach the same participant.
 export function useSession(sessionId: string): UseSessionResult {
   const socketRef = useRef<WebSocket | null>(null);
   const pendingDisplayName = useRef<string | null>(null);
   const resumeToken = useRef<string | null>(null);
 
-  // Hydrated during the first render rather than in an effect: the socket
-  // opens from an effect, and a name that arrives after that has already
-  // missed the `join` it was needed for.
-  //
-  // Only refs are written, never state, so there is nothing for the server
-  // render to disagree with.
+  // Read during the first render, not an effect: the socket opens from an effect
+  // and a later name would miss its `join`. Only refs are written, so SSR agrees.
   const hydrated = useRef(false);
   if (!hydrated.current) {
     hydrated.current = true;
@@ -197,8 +159,7 @@ export function useSession(sessionId: string): UseSessionResult {
 
   const [connection, setConnection] = useState<ConnectionState>("connecting");
   const [selfId, setSelfId] = useState<string | null>(null);
-  // The socket handlers are attached once and would otherwise close over the
-  // first render's `selfId` forever.
+  // Handlers attach once and would close over the first render's selfId.
   const selfIdRef = useRef<string | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -214,11 +175,7 @@ export function useSession(sessionId: string): UseSessionResult {
   const [agent, setAgent] = useState<AgentInfo | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
 
-  // Both derived from the transcript rather than tracked as their own state:
-  // the events are already the source of truth, already ordered by the
-  // server, and already replayed to late joiners — so a watcher who arrives
-  // mid-run gets the current plan and the running cost with no extra
-  // protocol and no chance of the two disagreeing.
+  // Derived from events so a mid-run joiner gets them with no extra protocol.
   const plan = useMemo(() => latestPlan(events), [events]);
   const { totalCostUsd, runCount } = useMemo(() => runTotals(events), [events]);
 
@@ -229,8 +186,7 @@ export function useSession(sessionId: string): UseSessionResult {
 
     function scheduleReconnect() {
       if (cancelled) return;
-      // 1s, 2s, 4s, 8s, capped at 15s, with jitter so a whole room of
-      // reconnecting clients doesn't hammer the server in lockstep.
+      // Jitter keeps a whole room from reconnecting in lockstep.
       const base = Math.min(15_000, 1000 * 2 ** attempt);
       attempt++;
       const delay = base * (0.7 + Math.random() * 0.6);
@@ -273,9 +229,7 @@ export function useSession(sessionId: string): UseSessionResult {
         switch (msg.type) {
           case "joined":
             resumeToken.current = msg.token;
-            // Written here rather than at join time because only the server
-            // can mint the token, and a name without one rejoins as a
-            // stranger.
+            // Saved now because only the server mints the token.
             saveIdentity(sessionId, {
               name: pendingDisplayName.current ?? "",
               token: msg.token,
@@ -293,13 +247,8 @@ export function useSession(sessionId: string): UseSessionResult {
             break;
           case "history":
             setEvents(msg.events);
-            // Catching up on the transcript is only half the picture — the
-            // other half is what the repo looks like now. Without this,
-            // someone who joins after a turn finished sees the ledger say a
-            // file was written and the workspace not list it, because
-            // `session_changes` was only ever sent in reply to a turn ending.
-            // Cheap and idempotent: a session that never ran has no working
-            // dir and the server answers with an empty set.
+            // Late joiners would otherwise see files written in the ledger but
+            // missing from the workspace; changes were only sent when a turn ended.
             socket.send(JSON.stringify({ type: "request_changes" }));
             break;
           case "agent_event":
@@ -314,9 +263,6 @@ export function useSession(sessionId: string): UseSessionResult {
             break;
           case "status":
             setStatus(msg.status);
-            // A finished turn is exactly when "so what changed?" becomes the
-            // question. Asking here (inside the socket's message handler,
-            // not an effect) keeps it a plain event-driven request.
             if (msg.status === "done") {
               socket.send(JSON.stringify({ type: "request_changes" }));
             }
@@ -345,12 +291,10 @@ export function useSession(sessionId: string): UseSessionResult {
             break;
           case "participant_joined":
           case "participant_left":
-            // session_state is sent alongside these and is the source of
-            // truth for the participant list — nothing to do here.
+            // session_state, sent alongside, owns the participant list.
             break;
           case "control_changed":
             setDriverId(msg.driverId);
-            // Whoever it moved to, every outstanding request is now stale.
             setPendingRequests([]);
             break;
           case "control_requested":
@@ -369,9 +313,7 @@ export function useSession(sessionId: string): UseSessionResult {
             );
             break;
           case "error":
-            // A refusal aimed at the rejoin itself means the stored identity
-            // is the problem; drop it so the next load asks cleanly rather
-            // than retrying the same bad token forever.
+            // A refused rejoin means the stored identity is bad; drop it rather than retry forever.
             if (selfIdRef.current === null) clearIdentity(sessionId);
             setLastError(msg.message);
             break;
@@ -480,8 +422,7 @@ export function useSession(sessionId: string): UseSessionResult {
   return {
     connection,
     selfId,
-    // A name was restored and the server hasn't confirmed it yet. Nothing to
-    // ask the viewer for, so the form shouldn't be on screen.
+    // A restored name the server hasn't confirmed yet; the join form shouldn't show.
     resuming: pendingDisplayName.current !== null && selfId === null && lastError === null,
     events,
     participants,

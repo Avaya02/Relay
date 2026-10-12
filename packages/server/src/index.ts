@@ -11,20 +11,13 @@ import {
 } from "./config.js";
 import { clientKey, rateLimited } from "./ratelimit.js";
 
-// Optional convenience: packages/server/.env, if present, saves retyping
-// RELAY_AGENT etc. on every `pnpm dev`. Loaded first so agent.ts/repo.ts see
-// it via process.env. Silently skipped if the file doesn't exist — the
-// export-in-shell workflow still works exactly as before.
 try {
   process.loadEnvFile();
 } catch {
-  // no .env file — fine, env vars can still be set in the shell
+  // No .env file; shell env vars still work.
 }
 
-// Backstop only — the real fix for the known crash source (an unmasked/
-// malformed WS frame) is the per-socket 'error' handler in ws.ts. This is
-// here so a bug we haven't found yet degrades to one bad request instead of
-// killing every session on the process.
+// Backstop for bugs we haven't found; the known crash (bad WS frame) is handled in ws.ts.
 process.on("uncaughtException", (err) => {
   console.error("uncaught exception:", err);
 });
@@ -32,9 +25,8 @@ process.on("unhandledRejection", (err) => {
   console.error("unhandled rejection:", err);
 });
 
-// Echoes the caller's origin rather than "*" so an allowlist is actually
-// enforceable. Vary matters because the answer now differs per request, and a
-// CDN that caches one origin's response for another would undo the whole check.
+// Echo the origin, not "*", so the allowlist is enforceable; Vary stops a CDN
+// serving one origin's response to another.
 function withCors(res: ServerResponse, origin: string | undefined): void {
   if (origin && originAllowed(origin)) {
     res.setHeader("access-control-allow-origin", origin);
@@ -57,18 +49,14 @@ function handleCreateSession(req: IncomingMessage, res: ServerResponse): void {
     return;
   }
 
-  // Reaping bounds memory under normal use; this bounds it under abuse, when
-  // sessions arrive faster than the 10-minute reap retires them. 503 rather
-  // than 429 — the caller did nothing wrong, the server is simply full.
+  // 503 not 429: the caller did nothing wrong, the server is just full.
   if (liveSessionCount() >= MAX_LIVE_SESSIONS) {
     json(res, 503, { error: "server is at capacity — try again shortly" });
     return;
   }
 
   const session = createNewSession();
-  // The runner token is returned exactly once, to whoever created the session —
-  // normally the relayrun CLI, which is the only party that needs it. It is
-  // never sent to a browser or persisted.
+  // Returned once, to the creator (the CLI); never sent to a browser or persisted.
   json(res, 201, { id: session.id, runnerToken: session.runnerToken });
 }
 
@@ -81,18 +69,13 @@ const httpServer = createServer((req, res) => {
     return;
   }
 
-  // Platform health checks (Railway, Render, Fly) poll a path and expect a
-  // fast 200. Separate from `/` so that uptime pings are distinguishable from
-  // real traffic in the logs.
   if (req.url === "/healthz") {
     json(res, 200, { ok: true, sessions: liveSessionCount(), uptime: process.uptime() });
     return;
   }
 
   if (req.method === "POST" && req.url === "/sessions") {
-    // A browser POST from an unlisted origin is blocked by CORS at the reply,
-    // but the session is created before the browser ever sees that. Checking
-    // here is what actually prevents the allocation.
+    // CORS only blocks the reply; the session would already exist.
     if (!originAllowed(req.headers.origin)) {
       json(res, 403, { error: "origin not allowed" });
       return;
@@ -105,9 +88,7 @@ const httpServer = createServer((req, res) => {
   res.end("relay server: ok\n");
 });
 
-// `noServer` rather than `{ server }`: the upgrade has to be refused *before*
-// the handshake completes, and the built-in path gives no hook early enough to
-// reject an origin without first accepting the socket.
+// `noServer` so the origin is rejected before the handshake completes.
 const wss = new WebSocketServer({ noServer: true });
 
 httpServer.on("upgrade", (req, socket, head) => {
@@ -121,8 +102,7 @@ httpServer.on("upgrade", (req, socket, head) => {
 
 attachWs(wss);
 
-// A permanently-joinable session on a public server is an open door nobody
-// asked for, so this stays a local-development convenience.
+// Dev only: a permanent session on a public server would be an open door.
 if (!IS_PRODUCTION) bootstrapDemoSession();
 
 httpServer.listen(PORT, () => {
@@ -134,9 +114,7 @@ httpServer.listen(PORT, () => {
   }
 });
 
-// Platforms send SIGTERM and then SIGKILL a few seconds later. Closing sockets
-// with a real code lets every browser's reconnect logic engage immediately
-// instead of waiting out a heartbeat on a socket that is already gone.
+// A real close code lets browsers reconnect immediately instead of waiting out a heartbeat.
 let shuttingDown = false;
 function shutdown(signal: string): void {
   if (shuttingDown) return;
@@ -149,9 +127,7 @@ function shutdown(signal: string): void {
   wss.close();
   httpServer.close(() => process.exit(0));
 
-  // Nothing is worth blocking a restart for: session state is in memory and
-  // does not survive one regardless, so a stuck socket must not hold the
-  // process past the platform's grace period.
+  // Platforms SIGKILL a few seconds after SIGTERM; a stuck socket mustn't hold on.
   setTimeout(() => process.exit(0), 5_000).unref();
 }
 process.on("SIGTERM", () => shutdown("SIGTERM"));

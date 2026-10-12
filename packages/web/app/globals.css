@@ -1,11 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-/*
- * Split by concern, in cascade order. Tailwind v4 inlines these before it
- * compiles, so the import order below IS the cascade, and reordering it
- * changes rendering. Landing files first, then the session view.
- */
+/* Tailwind v4 inlines these in order, so import order is the cascade. */
 @import "./styles/tokens.css";
 @import "./styles/base.css";
 @import "./styles/primitives.css";

@@ -1,26 +1,17 @@
 import { ImageResponse } from "next/og";
 
-// The link preview IS the product surface for something whose entire premise is
-// "send someone the link" — a shared session that unfurls as a bare URL looks
-// broken before anyone has clicked it.
-//
-// Satori resolves no CSS custom properties, so these values are copied from
-// app/styles/tokens.css by hand and WILL drift unless a token change updates
-// them here too. --border is an alpha token there; this is its composited
-// value over --bg.
-
 export const alt = "Relay — watch an AI coding agent work, together, live";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
+// Satori resolves no CSS variables: these are copied by hand from app/styles/tokens.css
+// and will drift if tokens change. BORDER is --border composited over --bg.
 const BG = "#0a0a0a";
 const SURFACE = "#121212";
 const BORDER = "#262626";
 const TEXT = "#fafafa";
 const DIM = "#a3a3a3";
 
-// A miniature of the action ledger, which is the interface's signature surface.
-// Showing it beats showing a logo: it says what the thing is at a glance.
 const ROWS: [string, string, string][] = [
   ["read", "src/auth/session.ts", "142 lines"],
   ["edit", "src/auth/session.ts", "+18 −4"],
@@ -29,13 +20,8 @@ const ROWS: [string, string, string][] = [
   ["bash", "pnpm test", "24 passed"],
 ];
 
-// Satori cannot read woff2, and an old UA is what makes Google Fonts serve the
-// TTF it can. Fetched at build time (this route is prerendered), and failure is
-// non-fatal: a preview in the fallback face beats a build that cannot ship.
-//
-// Both faces are loaded because supplying `fonts` at all REPLACES Satori's
-// default set — registering only the wordmark silently dropped the headline to
-// monospace and collapsed the sans-against-mono contrast the design rests on.
+// Satori can't read woff2, so an old UA gets TTF. Load every face: `fonts` replaces
+// Satori's defaults, and omitting one dropped the headline to monospace.
 async function googleFont(family: string, weight: number): Promise<ArrayBuffer | null> {
   try {
     const css = await fetch(
@@ -77,8 +63,6 @@ export default async function Image() {
         }}
       >
         <div style={{ display: "flex", flexDirection: "column" }}>
-          {/* The wordmark alone, as in the nav — no tile. A symbol beside a
-              word that already starts with the same letter said it twice. */}
           <div
             style={{
               display: "flex",
@@ -119,7 +103,6 @@ export default async function Image() {
             border: `1px solid ${BORDER}`,
             borderRadius: 10,
             padding: "18px 24px",
-            // Data, so mono — the same rule the real ledger follows.
             fontFamily: "Mono, monospace",
           }}
         >
@@ -144,8 +127,7 @@ export default async function Image() {
     ),
     {
       ...size,
-      // Omitted entirely when both fetches failed, so Satori keeps its defaults
-      // rather than being handed an empty set.
+      // An empty set would replace Satori's defaults, so omit it.
       ...(fonts.length > 0 ? { fonts } : {}),
     },
   );

@@ -1,5 +1,4 @@
-/* The transcript was built on the landing's tokens. Inside the room they
-   resolve to the room's palette, and "live" means whoever is driving. */
+/* Landing tokens resolve to the room's palette here; "live" means whoever is driving. */
 .room {
   --bg: var(--room-bg);
   --surface: var(--room-raised);
@@ -14,7 +13,6 @@
   --radius-card: var(--room-r-lg);
 }
 
-/* A prompt is signed: the author's colour on the card edge and their name. */
 .room .prompt {
   padding: 10px 14px 12px;
   border-color: color-mix(in oklch, var(--hue) 22%, var(--room-line-2));
@@ -45,8 +43,7 @@
   font-size: 15px;
 }
 
-/* Preflight strips list markers; a listing of files without them reads as a
-   pile of chips. Code inside a list is quiet: the bullet already sets it off. */
+/* Preflight strips list markers, and a file listing without them reads as chips. */
 .room .markdown-body ul {
   list-style: disc;
 }
@@ -62,8 +59,7 @@
   background: none;
 }
 
-/* Rows scroll out under the plan bar and header; fade them rather than
-   slicing a card's border flush. */
+/* Fade rows under the plan bar and header rather than slicing a card's border. */
 .room .stream {
   mask-image: linear-gradient(to bottom, transparent, #000 18px);
 }

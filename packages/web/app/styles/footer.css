@@ -1,13 +1,3 @@
-/* ==================================================================
-   FOOTER — three tracks: the mark, links off the machine, links on
-   this page. Its own file, moved out of landing.css to buy back room
-   under the 1000-line cap in CLAUDE.md.
-
-   No fourth "Source" column: the repository is not public yet, and a
-   footer link to a private repo 404s for every visitor. It goes in
-   the moment the repo does — see the note above the JSX in page.tsx.
-   ================================================================== */
-
 .landing-foot {
   border-top: 1px solid var(--border);
   padding: 2rem var(--gutter);

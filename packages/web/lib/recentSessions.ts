@@ -3,40 +3,20 @@
 import { useEffect, useState } from "react";
 import type { SessionStatus } from "@relay/shared";
 
-// SESSIONS YOU'VE BEEN IN, remembered per browser.
-//
-// Relay has no accounts, and shouldn't have: the product is a link you share
-// with people you're already talking to (PRODUCT.md). But "no accounts" had a
-// consequence nobody chose — close the tab and the session was gone unless
-// you'd saved the URL somewhere. There was no way back to anything.
-//
-// localStorage is the honest fix for exactly this shape of problem. It is
-// per-browser, needs no server-side identity, and stores only what this
-// person already knows: sessions they personally joined. It is not a sync
-// feature and doesn't pretend to be — another device shows a different list,
-// which is the correct behaviour for something with no account behind it.
-//
-// Every access is wrapped: private windows, disabled site data, and iOS
-// quota errors all throw on plain reads, and none of them should take down
-// the session view.
-
+// Per-browser history in localStorage (there are no accounts, so no sync across
+// devices). Every access is wrapped: private windows and iOS quota errors throw.
 const KEY = "relay.sessions.v1";
 const LIMIT = 30;
 
 export type RecentSession = {
   id: string;
-  /** The name you joined as, so a shared browser isn't confusing. */
   name: string;
   repo: string | null;
-  /**
-   * The first instruction, clipped — what the session was *about*. Two
-   * sessions on one repo are the normal case, and a list labelled only by
-   * repo is a list of identical rows. Empty until someone drives.
-   */
+  // First instruction, clipped, so sessions on one repo aren't identical rows.
   title: string;
   firstSeen: number;
   lastSeen: number;
-  /** Cached from the last time this browser had the session open. */
+  // Cached from the last time this browser had the session open.
   files: number;
   runs: number;
   costUsd: number;
@@ -50,8 +30,7 @@ function read(): RecentSession[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    // Defensive: this is data an older build of the app wrote, and a user can
-    // edit it by hand. Anything malformed is dropped rather than rendered.
+    // Older builds or hand edits may have written this; drop anything malformed.
     return parsed.filter(
       (s): s is RecentSession =>
         !!s &&
@@ -72,8 +51,7 @@ function write(list: RecentSession[]): void {
   }
 }
 
-// In-tab subscribers. `storage` events only fire in *other* tabs, so a
-// component in this one would never hear about its own writes without this.
+// `storage` events only fire in other tabs, so this tab needs its own subscribers.
 const listeners = new Set<() => void>();
 
 function emit(): void {
@@ -117,17 +95,8 @@ export function forgetAllSessions(): void {
   emit();
 }
 
-/**
- * Reads on mount rather than during render: the server has no localStorage,
- * so rendering the list directly would produce markup the client can't match
- * and React would throw a hydration error. The empty first paint is correct.
- *
- * `now` comes back with the list rather than being read at render time. Two
- * reasons, and only the second one is obvious: `Date.now()` during render is
- * impure and React's lint rules reject it, and a fixed timestamp would leave
- * "just now" saying "just now" an hour later. It ticks once a minute, which
- * is the resolution the labels are written to.
- */
+// Reads on mount to avoid a hydration mismatch (no localStorage on the server).
+// `now` ticks here because Date.now() in render is impure and would go stale.
 export function useRecentSessions(): {
   sessions: RecentSession[];
   now: number;
@@ -141,7 +110,6 @@ export function useRecentSessions(): {
     const sync = () => setState({ sessions: read(), now: Date.now() });
     sync();
     listeners.add(sync);
-    // Another tab joining a session should show up here too.
     window.addEventListener("storage", sync);
     const tick = setInterval(sync, 60_000);
     return () => {
@@ -154,7 +122,6 @@ export function useRecentSessions(): {
   return state;
 }
 
-/** "just now" / "14m" / "3h" / "2d" — compact enough for a 15rem rail. */
 export function shortAgo(ts: number, now = Date.now()): string {
   const s = Math.max(0, Math.round((now - ts) / 1000));
   if (s < 45) return "just now";
@@ -165,11 +132,6 @@ export function shortAgo(ts: number, now = Date.now()): string {
   return `${Math.round(h / 24)}d`;
 }
 
-/**
- * Today / Yesterday / Earlier. Three buckets, not seven: a list this short
- * doesn't need a calendar, it needs to separate "what I was just doing" from
- * everything else.
- */
 export function bucketOf(ts: number, now = Date.now()): string {
   const startOfToday = new Date(now).setHours(0, 0, 0, 0);
   if (ts >= startOfToday) return "Today";

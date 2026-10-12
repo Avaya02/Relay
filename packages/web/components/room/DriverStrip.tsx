@@ -11,11 +11,6 @@ import { InviteButton } from "./InviteButton";
 
 const SWAP = { duration: 0.22, ease: [0.22, 1, 0.36, 1] } as const;
 
-/**
- * Who has the wheel, and the one thing you can do about it from where you
- * sit. The line swaps rather than snaps on a handover, in step with the ring
- * travelling in the header.
- */
 export function DriverStrip({
   participants,
   driverId,
@@ -114,8 +109,7 @@ export function DriverStrip({
               <InviteButton />
             )
           ) : (
-            // Keyed on the driver so "asked, waiting" resets by remounting when
-            // the wheel actually moves, rather than syncing state in an effect.
+            // Keyed on the driver so "asked, waiting" resets by remounting, not an effect.
             <WatcherAction
               key={driverId ?? "nobody"}
               driver={driver}

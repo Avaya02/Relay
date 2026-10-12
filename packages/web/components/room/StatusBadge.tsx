@@ -4,8 +4,7 @@ import { useSyncExternalStore } from "react";
 import { Check, Unplug, X } from "lucide-react";
 import type { SessionStatus } from "@relay/shared";
 
-// A one-second clock as an external store, so the elapsed counter re-renders
-// on a tick rather than by writing state from an effect.
+// One-second clock as an external store, so no state is written from an effect.
 function subscribe(cb: () => void): () => void {
   const t = setInterval(cb, 1000);
   return () => clearInterval(t);
@@ -28,11 +27,7 @@ const LABEL: Record<Kind, string> = {
   ended: "Ended",
 };
 
-/**
- * What the agent is doing, answerable at a glance. A runner that dropped out
- * outranks the run's own status: "Working" with nobody attached to work would
- * be the one lie this badge exists to prevent.
- */
+// A dropped runner outranks the run's status: "Working" with nobody attached would be a lie.
 export function StatusBadge({
   status,
   workingSince,

@@ -9,17 +9,12 @@ import { useHue } from "./hues";
 import { DriverAvatar, PresenceAvatar } from "./PresenceAvatar";
 import { RoomPopover } from "./pop";
 
-// Past this the stack ends in +N; at eight people the full row overflowed a
-// phone header.
+// At eight people the full row overflowed a phone header.
 const VISIBLE = 4;
 
 const WHEEL_SPRING = { type: "spring", stiffness: 380, damping: 30 } as const;
 
-/**
- * Who's here, and who has the wheel. The stack keeps join order rather than
- * pulling the driver to the front, so on a handover the ring travels to the
- * new driver instead of the people reshuffling under a ring that stays put.
- */
+// Join order, not driver-first, so a handover moves the ring instead of reshuffling people.
 export function Roster({
   participants,
   driverId,
