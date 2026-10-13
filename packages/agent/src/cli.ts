@@ -5,6 +5,7 @@ import { promisify } from "node:util";
 import { findClaudeLogin, hasClaudeCli, noLoginGuidance } from "./login.js";
 import { createRepo } from "./repo.js";
 import { startRunner } from "./runner.js";
+import { sandboxSupport } from "./agent/sandbox.js";
 import {
   apiKeyHelperPath,
   keyHint,
@@ -36,6 +37,9 @@ const USAGE = `relayrun — run a Relay session against a repository on this mac
   --token <token>        Runner token for --session
   --github-repo <o/n>    Open a PR here on publish
   --github-token <tok>   Token for --github-repo
+  --allow-domain <list>  Extra hosts the agent's commands may reach, comma-separated
+  --no-sandbox           Run the agent unboxed, with full access to this machine.
+                         Only for sessions where you trust everyone with the link
   -h, --help             Show this message
 `;
 
@@ -158,6 +162,14 @@ async function main(): Promise<void> {
   const sourcePath = await repoRoot(path.resolve(str(args, "repo") ?? process.cwd()));
   const credentials = await resolveCredentials(args);
 
+  const boxed = credentials.mode === "real" && !args["no-sandbox"];
+  if (boxed) {
+    const support = await sandboxSupport();
+    if (!support.ok) {
+      throw new Error(`${support.help}\n\n     Or start with --no-sandbox if you trust everyone you share the link with.`);
+    }
+  }
+
   const existing = str(args, "session");
   const existingToken = str(args, "token");
   if (existing && !existingToken) {
@@ -186,6 +198,13 @@ async function main(): Promise<void> {
   console.log(`  agent    ${billing}`);
   console.log(`  session  ${id}`);
   console.log(`  shared   transcript only — code, keys and files stay on this machine`);
+  if (credentials.mode === "real") {
+    console.log(
+      boxed
+        ? `  sandbox  on — commands can't read your keys or write outside the session folder`
+        : `  sandbox  OFF — whoever drives can run anything on this machine as you`,
+    );
+  }
   console.log(`\n  Share this link:\n    ${new URL(`/session/${id}`, webUrl)}\n`);
   if (!existing) {
     console.log(`  To reattach after a restart:\n    relayrun --session ${id} --token ${runnerToken}\n`);
@@ -201,6 +220,15 @@ async function main(): Promise<void> {
     keyHint: credentials.keyHint,
     apiKeyHelper: credentials.apiKeyHelper,
     model: str(args, "model") ?? DEFAULT_MODEL,
+    sandbox: boxed
+      ? {
+          sourcePath,
+          allowDomains: (str(args, "allow-domain") ?? "")
+            .split(",")
+            .map((d) => d.trim())
+            .filter(Boolean),
+        }
+      : null,
   });
 }
 

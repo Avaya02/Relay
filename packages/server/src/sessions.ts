@@ -43,6 +43,8 @@ export type Session = {
   model: string | null;
   // Inert until the driver promotes one, so "one writer" still holds.
   suggestions: Suggestion[];
+  // The runner reports a stop without knowing who asked; null when the room emptied.
+  stoppedBy: string | null;
 };
 
 export const MAX_SUGGESTIONS = 20;
@@ -77,6 +79,7 @@ function createSession(id: string): Session {
     keyHint: null,
     model: null,
     suggestions: [],
+    stoppedBy: null,
   };
   sessions.set(id, session);
   // Must run first: events reference the session row as a foreign key.

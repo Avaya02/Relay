@@ -55,6 +55,8 @@ rather than wedging the session.
 | `--token <tok>` | Runner token for `--session` |
 | `--github-repo <o/n>` | Open a PR here on publish |
 | `--github-token <tok>` | Token for `--github-repo` |
+| `--allow-domain <list>` | Extra hosts the agent's commands may reach, comma-separated |
+| `--no-sandbox` | Run the agent with full access to this machine |
 | `--server <url>` | Coordination server to use |
 | `--web <url>` | Web app, for the printed link |
 | `-h, --help` | Show usage |

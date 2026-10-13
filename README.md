@@ -51,9 +51,15 @@ type and replays a fixed run, so it's for UI work and demos rather than real ans
 - **Changes come back as a branch.** The driver can publish the session's changes to a
   branch in the host's repository, and optionally open a pull request.
 
-The clone is a clean starting point, not a sandbox. The agent runs with
-`permissionMode: "bypassPermissions"` and no OS-level isolation, which is the same trust model
-as running Claude Code directly on your own machine.
+**The agent's commands run in a sandbox.** Whoever drives isn't necessarily the person whose
+machine runs the agent, so the CLI turns on the Agent SDK's OS-level sandbox (Seatbelt on macOS,
+bubblewrap on Linux). Shell commands run without approval prompts, but they can only write inside
+the session's clone, can't read known credential locations or the host's own checkout (where
+gitignored `.env` files live), don't see secret-looking environment variables, and can only reach
+package registries and GitHub. File access outside the clone is refused. The sandbox is a strong
+boundary, not a complete one: see [`sandbox.ts`](packages/agent/src/agent/sandbox.ts) for exactly
+what it blocks. `--no-sandbox` restores unrestricted access for sessions where everyone with the
+link is trusted.
 
 An earlier version ran the agent on the server. That meant anyone using Relay had to give a
 shared machine shell access to their code, so the agent moved into the CLI and the server was
@@ -137,6 +143,8 @@ Without `--server` and `--web`, the CLI connects to the hosted service at relayr
 | `--web <url>` | `https://relayrun.in` | Web app, used for the printed link (also `RELAY_WEB`) |
 | `--session <id>` + `--token <token>` | none | Reattach to an existing session |
 | `--github-repo` + `--github-token` | none | Push the branch to GitHub and open a pull request on publish |
+| `--allow-domain <list>` | none | Extra hosts the agent's commands may reach, comma-separated |
+| `--no-sandbox` | off | Run the agent with full access to this machine |
 
 ### Server configuration
 
