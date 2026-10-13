@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import type { ChangedFile } from "@relay/shared";
+import { cacheDirFor } from "./agent/sandbox.js";
 
 const run = promisify(execFile);
 
@@ -253,6 +254,7 @@ export function createRepo(config: RepoConfig) {
     async disposeWorkingDir(sessionId: string): Promise<void> {
       const dir = path.join(sessionsDir, sessionId);
       await rm(dir, { recursive: true, force: true });
+      await rm(cacheDirFor(dir), { recursive: true, force: true });
       repoLocks.delete(dir);
     },
 

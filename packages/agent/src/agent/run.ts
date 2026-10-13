@@ -4,6 +4,8 @@ import { redactKeys } from "../redact.js";
 import { detailForCall } from "./diff.js";
 import { resultText, summarizeToolCall, summarizeToolResult } from "./summarize.js";
 import { orientation } from "./orient.js";
+import { mkdir } from "node:fs/promises";
+import { cacheDirFor, sandboxOptions } from "./sandbox.js";
 
 type PendingTool = { tool: string; verb: string; target: string };
 
@@ -15,6 +17,8 @@ export type RunOptions = {
   resume?: string;
   apiKeyHelper?: string;
   model: string;
+  // Null only with --no-sandbox, which restores the unrestricted agent.
+  sandbox: { sourcePath: string; allowDomains: string[] } | null;
 };
 
 export async function runRealAgent(opts: RunOptions): Promise<void> {
@@ -30,8 +34,19 @@ export async function runRealAgent(opts: RunOptions): Promise<void> {
     ? { settings: { apiKeyHelper } }
     : {};
 
+  // The SDK may report a result before throwing on abort; one ending per run, or
+  // the second one opens a phantom turn in the transcript.
+  let settled = false;
+  const stopped = () => {
+    if (!settled) emit.event("agent_stopped", { reason: "stopped" });
+    settled = true;
+    emit.status("idle");
+  };
+
   try {
     const where = await orientation(workingDir);
+    // The box can't create it: its parent is outside what commands may write.
+    if (opts.sandbox) await mkdir(cacheDirFor(workingDir), { recursive: true });
 
     const q = query({
       prompt: instruction,
@@ -42,10 +57,9 @@ export async function runRealAgent(opts: RunOptions): Promise<void> {
           ? { systemPrompt: { type: "preset" as const, preset: "claude_code" as const, append: where } }
           : {}),
         abortController: abort,
-        // Headless, so nobody can approve tool calls; runs with the host's own
-        // permissions on their own machine.
-        permissionMode: "bypassPermissions",
-        allowDangerouslySkipPermissions: true,
+        ...(opts.sandbox
+          ? sandboxOptions({ workingDir, ...opts.sandbox })
+          : { permissionMode: "bypassPermissions" as const, allowDangerouslySkipPermissions: true }),
         ...keyOptions,
         ...(resume ? { resume } : {}),
       },
@@ -100,7 +114,10 @@ export async function runRealAgent(opts: RunOptions): Promise<void> {
           }
         }
       } else if (msg.type === "result") {
-        if (msg.subtype === "success") {
+        settled = true;
+        // An API failure (bad key, rate limit, usage cap) still arrives as subtype
+        // "success", flagged is_error, with the reason in `result`.
+        if (msg.subtype === "success" && !msg.is_error) {
           emit.event("agent_done", {
             steps: msg.num_turns,
             durationMs: msg.duration_ms,
@@ -108,18 +125,23 @@ export async function runRealAgent(opts: RunOptions): Promise<void> {
           });
           emit.status("done");
         } else {
-          emit.event("agent_error", { message: `agent stopped: ${msg.subtype}` });
+          const reason = msg.subtype === "success" ? msg.result : `agent stopped: ${msg.subtype}`;
+          emit.event("agent_error", { message: redactKeys(reason || "the agent failed") });
           emit.status("error");
         }
       }
     }
+    if (abort.signal.aborted && !settled) stopped();
   } catch (err) {
     // A deliberate stop, not an error; still clear "working" so reconnecting
     // viewers don't see a status that never resolves.
     if (abort.signal.aborted) {
-      emit.status("idle");
+      stopped();
       return;
     }
+    // The SDK throws after an error result too; the result already ended the turn,
+    // and a second ending would open a phantom one.
+    if (settled) return;
     emit.event("agent_error", {
       message: redactKeys(err instanceof Error ? err.message : String(err)),
     });

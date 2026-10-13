@@ -11,7 +11,8 @@ export type EventKind =
   | "tool_call"
   | "tool_result"
   | "agent_done"
-  | "agent_error";
+  | "agent_error"
+  | "agent_stopped";
 
 export type Event = {
   // Per session, assigned server-side only.
@@ -64,6 +65,12 @@ export type AgentDoneData = {
   steps?: number;
   durationMs?: number;
   costUsd?: number;
+};
+
+// A run that ended without finishing. Without it the turn never closes, and the
+// next run's output renders under this one's prompt.
+export type AgentStoppedData = {
+  reason: "stopped" | "host_disconnected";
 };
 
 export type JoinMessage = {

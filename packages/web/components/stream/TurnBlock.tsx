@@ -1,6 +1,6 @@
 "use client";
 
-import type { Participant, SessionStatus } from "@relay/shared";
+import type { Event, Participant, SessionStatus } from "@relay/shared";
 import { PromptBlock } from "./PromptBlock";
 import { StepsCard } from "./StepsCard";
 import { Reply } from "./Reply";
@@ -31,6 +31,7 @@ export function TurnBlock({
   const live = turn.live && !turn.queued && status === "working";
   const dropped = turn.queued && status !== "working";
   const error = turn.rows.find((r) => r.type === "error");
+  const stopped = turn.rows.find((r) => r.type === "stopped")?.event;
   const { trace, reply } = splitTurn(turn, live);
 
   const showCard = trace.length > 0 || live;
@@ -94,6 +95,24 @@ export function TurnBlock({
       )}
 
       {meta && reply.length === 0 && <footer>{meta}</footer>}
+
+      {stopped && (
+        <footer>
+          <span className="turn-foot">
+            <span>{stoppedLabel(stopped, participants, selfId)}</span>
+            <span className="turn-foot-sep">·</span>
+            <span>{timeOf(stopped)}</span>
+          </span>
+        </footer>
+      )}
     </section>
   );
+}
+
+function stoppedLabel(event: Event, participants: Participant[], selfId: string | null): string {
+  if (event.data.reason === "host_disconnected") return "Stopped: the host's agent disconnected";
+  if (!event.by) return "Stopped";
+  if (event.by === selfId) return "Stopped by you";
+  const name = participants.find((p) => p.id === event.by)?.displayName;
+  return name ? `Stopped by ${name}` : "Stopped";
 }

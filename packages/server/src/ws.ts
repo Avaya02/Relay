@@ -74,6 +74,7 @@ export function attachWs(wss: WebSocketServer): void {
 
   function dispatchInstruction(session: Session, text: string): void {
     if (!session.runnerSocket) return;
+    session.stoppedBy = null;
     sendRunner(session.runnerSocket, {
       type: "run_instruction",
       text,
@@ -139,6 +140,7 @@ export function attachWs(wss: WebSocketServer): void {
     // Stop the run so an abandoned session doesn't keep spending the host's credit.
     if (liveParticipantCount(session) === 0) {
       session.instructionQueue.length = 0;
+      session.stoppedBy = null;
       if (session.runnerSocket) sendRunner(session.runnerSocket, { type: "stop_run" });
       scheduleReap(session);
     }
@@ -201,7 +203,13 @@ export function attachWs(wss: WebSocketServer): void {
 
     switch (msg.type) {
       case "runner_event": {
-        appendEvent(session, { kind: msg.kind, data: redactEventData(msg.data) });
+        const stopper = msg.kind === "agent_stopped" ? session.stoppedBy : null;
+        if (msg.kind === "agent_stopped") session.stoppedBy = null;
+        appendEvent(session, {
+          kind: msg.kind,
+          by: stopper ?? undefined,
+          data: redactEventData(msg.data),
+        });
         break;
       }
 
@@ -272,7 +280,11 @@ export function attachWs(wss: WebSocketServer): void {
     session.runnerSocket = null;
     session.instructionQueue.length = 0;
     session.agentSessionId = null;
-    if (session.status === "working") setStatus(session, "idle");
+    if (session.status === "working") {
+      // The runner can't report its own ending once its socket is gone.
+      appendEvent(session, { kind: "agent_stopped", data: { reason: "host_disconnected" } });
+      setStatus(session, "idle");
+    }
     broadcast(session, sessionStateMessage(session));
   }
 
@@ -536,6 +548,7 @@ export function attachWs(wss: WebSocketServer): void {
 
           // Queued instructions assumed the current run would finish normally.
           session.instructionQueue.length = 0;
+          session.stoppedBy = participant.id;
           if (session.runnerSocket) {
             sendRunner(session.runnerSocket, { type: "stop_run" });
           }

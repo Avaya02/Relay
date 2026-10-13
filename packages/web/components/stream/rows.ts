@@ -10,7 +10,8 @@ export type Row =
   | { type: "text"; event: Event }
   | ActionRow
   | { type: "done"; event: Event }
-  | { type: "error"; event: Event };
+  | { type: "error"; event: Event }
+  | { type: "stopped"; event: Event };
 
 export type Turn = {
   key: string;
@@ -61,6 +62,9 @@ function buildRows(events: Event[]): (Row | { type: "instruction"; event: Event 
       case "agent_error":
         rows.push({ type: "error", event });
         break;
+      case "agent_stopped":
+        rows.push({ type: "stopped", event });
+        break;
     }
   }
   return rows;
@@ -102,7 +106,7 @@ export function groupTurns(events: Event[]): Turn[] {
     }
 
     target.rows.push(row);
-    if (row.type === "done" || row.type === "error") {
+    if (row.type === "done" || row.type === "error" || row.type === "stopped") {
       target.live = false;
       const next = turns.find((t) => t.queued);
       if (next) next.queued = false;

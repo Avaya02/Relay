@@ -202,6 +202,7 @@ export async function runMockAgent(opts: MockRunOptions): Promise<void> {
   await sleep(INITIAL_DELAY_MS, signal);
   for (const step of script) {
     if (signal.aborted) {
+      emit.event("agent_stopped", { reason: "stopped" });
       emit.status("idle");
       return;
     }
@@ -209,6 +210,7 @@ export async function runMockAgent(opts: MockRunOptions): Promise<void> {
     await sleep(STEP_DELAY_MS, signal);
   }
   if (signal.aborted) {
+    emit.event("agent_stopped", { reason: "stopped" });
     emit.status("idle");
     return;
   }
