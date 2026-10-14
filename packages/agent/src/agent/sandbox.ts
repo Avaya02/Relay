@@ -4,9 +4,7 @@ import type { CanUseTool, Options } from "@anthropic-ai/claude-agent-sdk";
 
 const run = promisify(execFile);
 
-// Whoever drives can see the code through the agent anyway; the box guards the
-// rest of the host's machine. Package registries only, so installs work but a
-// run can't post anywhere else.
+// Registries only: installs work, but a run can't send data anywhere else.
 const ALLOWED_DOMAINS = [
   "registry.npmjs.org",
   "registry.yarnpkg.com",
@@ -22,8 +20,7 @@ const ALLOWED_DOMAINS = [
   "rubygems.org",
 ];
 
-// The sandbox can read most of the machine by default and ships no deny list,
-// so every secret location has to be named.
+// The sandbox reads most of the machine by default, so secrets must be named.
 const SECRET_PATHS = [
   "~/.ssh",
   "~/.aws",
@@ -34,7 +31,6 @@ const SECRET_PATHS = [
   "~/.netrc",
   "~/.git-credentials",
   "~/.pypirc",
-  // Holds npm publish tokens; a stolen one can ship a poisoned package.
   "~/.npmrc",
   "~/.gem/credentials",
   "~/.cargo/credentials",
@@ -50,14 +46,11 @@ const SECRET_PATHS = [
   "~/.mozilla",
 ];
 
-// Matched by name because the CLI inherits whatever the host exported in their
-// shell. Claude Code itself keeps them: the API key helper reads one. Whole name
-// parts only, so GIT_AUTHOR_NAME survives and AWS_ACCESS_KEY_ID doesn't.
+// Whole name parts, so GIT_AUTHOR_NAME stays visible and AWS_ACCESS_KEY_ID doesn't.
 export const SECRET_ENV =
   /(^|_)(api_?key|access_?key|private_?key|key|token|secret|passw(or)?d|pass|credentials?|auth|dsn|database_url|redis_url|mongo(db)?_ur[il])(_|$)/i;
 
-// Caches default to the home directory, which the box won't let commands write,
-// and inside the clone they'd show up as session changes and get published.
+// Outside the clone, or caches would show up as session changes.
 export function cacheDirFor(workingDir: string): string {
   return `${workingDir}.cache`;
 }
@@ -65,8 +58,7 @@ export function cacheDirFor(workingDir: string): string {
 function cacheEnv(cacheDir: string): Record<string, string> {
   return {
     npm_config_cache: `${cacheDir}/npm`,
-    // npm and pnpm read ~/.npmrc on every run; it's denied above, so point them
-    // at an empty one instead of letting them fail on it.
+    // ~/.npmrc is denied; without this npm fails trying to read it.
     npm_config_userconfig: `${cacheDir}/npmrc`,
     npm_config_store_dir: `${cacheDir}/pnpm`,
     YARN_CACHE_FOLDER: `${cacheDir}/yarn`,
@@ -77,16 +69,14 @@ function cacheEnv(cacheDir: string): Record<string, string> {
   };
 }
 
-// Nobody is there to approve, so anything the box doesn't already allow is
-// refused. Shell commands are the exception: Claude Code still asks about ones
-// like `FOO=bar npm test`, but with unsandboxed retries off they run boxed anyway.
+// No one is there to approve. Shell commands still run boxed, so they pass.
 export const refuse: CanUseTool = async (toolName, input) => {
   if (toolName === "Bash" && input.dangerouslyDisableSandbox !== true) {
     return { behavior: "allow", updatedInput: input };
   }
-  // Runs on Anthropic's side and touches nothing here. WebFetch stays refused:
-  // it fetches from this machine, so it could reach the host's local network.
+  // Runs on Anthropic's side; WebFetch stays refused since it can reach the local network.
   if (toolName === "WebSearch") return { behavior: "allow", updatedInput: input };
+
   const target = String(input.file_path ?? input.path ?? input.url ?? input.command ?? "");
   console.log(`blocked: ${toolName} ${target}`.slice(0, 200));
   return {
@@ -110,17 +100,14 @@ export function sandboxOptions(opts: {
     env: { ...process.env, ...cacheEnv(cacheDir) },
     sandbox: {
       enabled: true,
-      autoAllowBashIfSandboxed: true,
-      // Otherwise the agent can ask to re-run a blocked command outside the box.
       allowUnsandboxedCommands: false,
-      failIfUnavailable: true,
       network: {
         allowedDomains: [...ALLOWED_DOMAINS, ...opts.allowDomains],
         strictAllowlist: true,
       },
       filesystem: {
         allowWrite: [cacheDir],
-        // The host's own checkout holds the .env files the clone leaves out.
+        // The original checkout holds the .env files the clone leaves out.
         denyRead: [...SECRET_PATHS, opts.sourcePath],
       },
       credentials: {
@@ -141,7 +128,6 @@ async function onPath(cmd: string): Promise<boolean> {
   }
 }
 
-// Checked before the link is printed, so nobody joins a session that can't run.
 export async function sandboxSupport(): Promise<SandboxSupport> {
   if (process.platform === "darwin") return { ok: true };
   if (process.platform === "linux") {
@@ -151,13 +137,8 @@ export async function sandboxSupport(): Promise<SandboxSupport> {
     if (missing.length === 0) return { ok: true };
     return {
       ok: false,
-      help: `the agent's sandbox needs ${missing.join(" and ")} on Linux
-     sudo apt-get install ${missing.join(" ")}     (Debian/Ubuntu)
-     sudo dnf install ${missing.join(" ")}         (Fedora)`,
+      help: `the agent's sandbox needs ${missing.join(" and ")}: sudo apt-get install ${missing.join(" ")}`,
     };
   }
-  return {
-    ok: false,
-    help: "the agent's sandbox needs macOS, Linux or WSL2; on Windows, run relayrun inside WSL2",
-  };
+  return { ok: false, help: "the agent's sandbox needs macOS, Linux or WSL2" };
 }

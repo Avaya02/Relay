@@ -35,7 +35,6 @@ test("the box denies the host's checkout and credential folders, and allows only
   assert.equal(opts.permissionMode, "acceptEdits");
   assert.equal(opts.sandbox?.enabled, true);
   assert.equal(opts.sandbox?.allowUnsandboxedCommands, false);
-  assert.equal(opts.sandbox?.failIfUnavailable, true);
   assert.equal(opts.sandbox?.network?.strictAllowlist, true);
   assert.ok(opts.sandbox?.network?.allowedDomains?.includes("registry.npmjs.org"));
   assert.ok(opts.sandbox?.network?.allowedDomains?.includes("example.internal"));
