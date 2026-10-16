@@ -24,7 +24,8 @@ That's it. You'll get:
   repo     your-project  (/Users/you/your-project)
   agent    real agent — billed to this machine's Claude Code login
   session  8M2zrrx9Ng
-  shared   transcript only — code, keys and files stay on this machine
+  shared   the transcript, including files the agent reads or edits and command output
+  sandbox  on — commands can't read your keys or write outside the session folder
 
   Share this link:
     https://relayrun.in/session/8M2zrrx9Ng

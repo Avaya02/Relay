@@ -1,0 +1,451 @@
+/* The hero's agent demo: the landing's own palette and type, no presence hues.
+   One white thumb is the only emphasis, and it means the wheel. */
+.hero-demo-frame.lab {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  container-type: inline-size;
+}
+
+.lab-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  height: 2.5rem;
+  padding: 0 0.875rem;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-faint);
+}
+.lab-head-id {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.625rem;
+}
+.lab-mark {
+  font-family: var(--font-wordmark);
+  font-size: 0.8125rem;
+  color: var(--text);
+}
+.lab-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  color: var(--text-dim);
+}
+.lab-status[data-working] {
+  color: var(--text);
+}
+.lab-dot {
+  display: inline-block;
+  flex: none;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.lab-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, transparent, #000 2rem);
+}
+/* Anchored to the bottom: the newest line is always in view and older ones
+   leave by the top, as a transcript pinned to the latest does. */
+.lab-measure {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem 1.125rem 1.375rem;
+  transition: padding-bottom 360ms var(--ease-out);
+}
+.lab[data-sugg] .lab-measure {
+  padding-bottom: 5.25rem;
+}
+/* Spacing lives inside each growing box, so it arrives with the row. */
+.lab-turn > div {
+  display: flex;
+  flex-direction: column;
+}
+.lab-turn + .lab-turn > div {
+  padding-top: 1.25rem;
+}
+.lab-turn > div > .droom-enter > div {
+  padding-top: 0.625rem;
+}
+
+/* Thread: instructions as signed messages, work on a rail, then the answer. */
+.lab-ask {
+  display: grid;
+  justify-items: end;
+  gap: 0.3125rem;
+  align-self: flex-end;
+  max-width: 85%;
+}
+.lab-ask-who {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-faint);
+}
+.lab-ask-text {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+.lab-rail {
+  margin: 0.625rem 0 0 0.4375rem;
+  padding-left: 0.875rem;
+  border-left: 1px solid var(--border);
+}
+.lab-step {
+  display: grid;
+  grid-template-columns: 0.875rem auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.5rem;
+  padding: 0.3125rem 0;
+  font-size: 0.8125rem;
+}
+.lab-mark {
+  display: grid;
+  place-items: center;
+  color: var(--text-faint);
+}
+.lab-step[data-state="pending"] .lab-mark {
+  color: var(--text);
+}
+.lab-step[data-state="fail"] .lab-mark {
+  color: var(--state-error);
+}
+.lab-verb {
+  font-weight: 500;
+  color: var(--text-dim);
+}
+.lab-step[data-state="pending"] .lab-verb {
+  color: var(--text);
+}
+.lab-chip {
+  justify-self: start;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0.0625rem 0.375rem;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lab-result {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+/* Test outcomes are the only colour in the frame. */
+.lab-result[data-tone="pass"],
+.lab-tl--out[data-tone="pass"] {
+  color: var(--state-ok);
+}
+.lab-result[data-tone="fail"],
+.lab-tl--out[data-tone="fail"] {
+  color: var(--state-error);
+}
+.lab-step-code {
+  grid-column: 2 / -1;
+}
+.lab-code {
+  margin: 0.5rem 0 0.25rem;
+  padding: 0.625rem 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 0.71875rem;
+  line-height: 1.65;
+  color: var(--text-faint);
+  white-space: pre;
+}
+.lab-code b {
+  font-weight: 400;
+  color: var(--text);
+}
+.lab-line {
+  display: block;
+}
+.lab-say {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--text);
+  text-wrap: pretty;
+}
+
+/* Terminal: the same run, line by line. */
+.lab[data-variant="terminal"] .lab-measure {
+  font-family: var(--font-mono);
+  font-size: 0.78125rem;
+  line-height: 1.65;
+}
+.lab[data-variant="terminal"] .lab-turn + .lab-turn > div {
+  padding-top: 0.875rem;
+}
+.lab[data-variant="terminal"] .lab-turn > div > .droom-enter > div {
+  padding-top: 0.25rem;
+}
+.lab-tl {
+  display: flex;
+  gap: 0.5rem;
+  color: var(--text-dim);
+}
+.lab-tl--ask {
+  color: var(--text);
+}
+.lab-tl-who,
+.lab-tl-gt,
+.lab-tl-elbow {
+  flex: none;
+  color: var(--text-faint);
+}
+.lab-tl-bullet {
+  flex: none;
+  color: var(--text-faint);
+}
+.lab-call[data-state="pending"] .lab-tl-bullet {
+  color: var(--text);
+}
+.lab-call b {
+  font-weight: 500;
+  color: var(--text);
+}
+.lab-tl--out {
+  padding-left: 0.375rem;
+  color: var(--text-faint);
+}
+.lab-tl--say {
+  color: var(--text);
+}
+.lab[data-variant="terminal"] .lab-code {
+  margin: 0.25rem 0 0.25rem 1.25rem;
+}
+
+/* Seats: everyone in the room, and the wheel as a white thumb that slides. */
+.lab-bar {
+  position: relative;
+  flex: none;
+  padding: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+.lab-seats {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+.lab-thumb {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  left: 0;
+  width: calc(100% / var(--n));
+  background: var(--text);
+  transform: translateX(calc(var(--i) * 100%));
+  transition: transform 560ms var(--ease-out);
+}
+.lab-seat {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.5625rem 0.75rem;
+  color: var(--text);
+  transition: color 300ms var(--ease-out);
+}
+.lab-seat[data-driving] {
+  color: var(--bg);
+}
+.lab-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid var(--border-lit);
+  border-radius: 50%;
+  background: var(--surface-2);
+  font: 600 0.625rem/1 var(--font-sans);
+  color: var(--text-dim);
+  transition:
+    background-color 300ms var(--ease-out),
+    border-color 300ms var(--ease-out),
+    color 300ms var(--ease-out);
+}
+.lab-seat[data-driving] .lab-avatar {
+  border-color: var(--bg);
+  background: var(--bg);
+  color: var(--text);
+}
+.lab-seat-text {
+  display: grid;
+  min-width: 0;
+  line-height: 1.25;
+}
+.lab-seat-text b,
+.lab-seat-text small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lab-seat-text b {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+.lab-seat-text small {
+  font-family: var(--font-mono);
+  font-size: 0.65625rem;
+  color: var(--text-faint);
+  transition: color 300ms var(--ease-out);
+}
+/* #525252 on the white thumb: 7.4:1. */
+.lab-seat[data-driving] small {
+  color: #525252;
+}
+
+/* A watcher's suggestion, pinned to their seat until the driver sends it. */
+.lab-sugg {
+  position: absolute;
+  z-index: 2;
+  bottom: calc(100% - 0.25rem);
+  left: calc(0.75rem + (var(--j) + 0.5) * (100% - 1.5rem) / var(--n));
+  width: max-content;
+  max-width: min(17rem, 72%);
+  padding: 0.5rem 0.75rem 0.5625rem;
+  /* Flat: a drop shadow fell onto the white thumb below as a smudge. */
+  border: 1px solid var(--border-lit);
+  background: var(--surface-2);
+  transform: translateX(-50%);
+  transition:
+    opacity 260ms var(--ease-out),
+    transform 380ms var(--ease-out);
+}
+.lab-sugg::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-right: 1px solid var(--border-lit);
+  border-bottom: 1px solid var(--border-lit);
+  background: var(--surface-2);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+/* Sent: it lifts toward the stream, where it lands as the driver's instruction. */
+.lab-sugg[data-leaving] {
+  opacity: 0;
+  transform: translate(-50%, -1.5rem);
+}
+.lab-sugg-by {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.65625rem;
+  color: var(--text-faint);
+}
+.lab-sugg-text {
+  margin: 0.125rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lab-status[data-working] .lab-dot,
+  .lab-step[data-state="pending"] .lab-dot,
+  .lab-call[data-state="pending"] .lab-tl-bullet {
+    animation: status-pulse 1.6s ease-in-out infinite;
+  }
+  /* The running step's label shimmers: the one moving word is the work itself. */
+  .lab-step[data-state="pending"] .lab-verb {
+    background: linear-gradient(90deg, var(--text-faint) 0%, var(--text) 45%, var(--text-faint) 90%) 0 0 / 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: lab-shimmer 1.6s linear infinite;
+  }
+  .lab-line[data-enter] {
+    animation: lab-line 240ms var(--ease-out) both;
+    animation-delay: var(--d);
+  }
+  .lab-word {
+    animation: lab-fade 260ms var(--ease-out) both;
+    animation-delay: var(--d);
+  }
+  .lab-char {
+    animation: lab-fade 40ms linear both;
+    animation-delay: var(--d);
+  }
+  .lab[data-phase="out"] > * {
+    animation: droom-dip-out 320ms var(--ease-out) forwards;
+  }
+  .lab[data-phase="in"] > * {
+    animation: droom-dip-in 320ms var(--ease-out);
+  }
+}
+/* The rewind swaps state while hidden; the thumb mustn't glide back on screen. */
+.lab[data-phase="in"],
+.lab[data-phase="in"] * {
+  transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lab,
+  .lab * {
+    transition: none !important;
+  }
+}
+@keyframes lab-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes lab-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes lab-line {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+}
+
+@container (max-width: 420px) {
+  .lab-measure {
+    padding: 1rem 0.875rem 1.125rem;
+  }
+  .lab-bar {
+    padding: 0.625rem;
+  }
+  .lab-seat {
+    padding: 0.5rem 0.625rem;
+  }
+  /* Measured: with the disc, a phone's seat cut "at the wheel" short. */
+  .lab-avatar {
+    display: none;
+  }
+  /* Long lines run off a phone's frame; fading the edge says "continues". */
+  .lab-code {
+    mask-image: linear-gradient(to right, #000 80%, transparent);
+  }
+}

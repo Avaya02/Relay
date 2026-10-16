@@ -197,7 +197,9 @@ async function main(): Promise<void> {
   console.log(`\n  repo     ${path.basename(sourcePath)}  (${sourcePath})`);
   console.log(`  agent    ${billing}`);
   console.log(`  session  ${id}`);
-  console.log(`  shared   transcript only — code, keys and files stay on this machine`);
+  // Not "files stay on this machine": anything the agent reads, edits or runs is in the
+  // transcript, which every viewer receives and relayrun.in stores.
+  console.log(`  shared   the transcript, including files the agent reads or edits and command output`);
   if (credentials.mode === "real") {
     console.log(
       boxed

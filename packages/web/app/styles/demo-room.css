@@ -1,0 +1,236 @@
+/* The landing's room demos: the session page's own classes inside a fixed frame.
+   Only layout and the scripted motion live here; colour, type and every control
+   come from the room's stylesheets. */
+
+/* The landing is achromatic, so its demos print people in greys rather than the
+   room's hues (white 18:1, the greys 9:1 and 5.4:1 on the room's raised ground). */
+.twoscreen,
+.hero-demo-frame {
+  --hue-1: #fafafa;
+  --hue-2: #b4b4b4;
+  --hue-4: #8c8c8c;
+}
+
+/* The parent stretches it (grid or flex), so no height is needed. */
+.room.droom {
+  height: auto;
+  min-height: 0;
+  flex-direction: column;
+  /* The room's narrow rules are viewport queries, and the frame is far narrower
+     than the viewport, so they're restated at the end against its own width. */
+  container-type: inline-size;
+}
+
+/* The room's header at its narrow (<720px) density. */
+.droom .room-head {
+  gap: 6px;
+  padding: 0 6px 0 8px;
+}
+.droom .room-crumb {
+  max-width: 11rem;
+}
+.droom .droom-share {
+  width: 30px;
+  padding: 0;
+}
+.droom .droom-roster {
+  padding: 0 8px;
+}
+
+/* Positions come from DemoRoster rather than margins, so one ring can glide. */
+.droom .droom-stack {
+  position: relative;
+  display: block;
+  height: 24px;
+  transition: width 280ms var(--room-ease);
+}
+.droom .droom-slot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  transform: translateX(var(--x));
+  transition: transform 280ms var(--room-ease);
+}
+.droom .droom-ring {
+  inset: auto;
+  top: -4px;
+  left: 0;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  transform: translateX(var(--x));
+  transition:
+    transform 420ms var(--room-ease),
+    border-color 420ms var(--room-ease);
+}
+
+.droom-stream {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  /* The room's fade under the plan bar, rather than slicing a card in half. */
+  mask-image: linear-gradient(to bottom, transparent, #000 18px);
+}
+/* Anchored to the bottom: new rows push older ones up and out, as a transcript
+   pinned to the latest does, with nothing to scroll. */
+.droom-measure {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 1.5rem 1rem 1rem;
+}
+.droom .turn {
+  gap: 0;
+}
+.droom .turn > .activity {
+  margin-top: 0.75rem;
+}
+/* Spacing sits inside the growing box, so it arrives with the row, not before it. */
+.droom .turn > .droom-enter > div {
+  padding-top: 0.75rem;
+}
+.droom-turn + .droom-turn > div {
+  padding-top: 2.25rem;
+}
+/* The room hides this below a 900px viewport, but a frame in a 768px page is
+   705px wide; the frame drops the whole bar when it's too narrow. */
+.droom .rplan-now {
+  display: block;
+}
+.droom .droom-placeholder {
+  color: var(--room-ink-3);
+}
+
+.droom-enter {
+  display: grid;
+}
+.droom-enter > div {
+  min-height: 0;
+}
+.droom-reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 260ms var(--room-ease),
+    opacity 200ms var(--room-ease);
+}
+.droom-reveal[data-open] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.droom-reveal > div {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .droom-enter[data-enter] {
+    animation: droom-grow 300ms var(--room-ease) both;
+  }
+  .droom-enter[data-enter] > div {
+    overflow: hidden;
+  }
+  .droom .strip-who[data-swap] {
+    animation: droom-swap 220ms var(--room-ease);
+  }
+  .droom[data-phase="out"] > * {
+    animation: droom-dip-out 320ms var(--room-ease) forwards;
+  }
+  .droom[data-phase="in"] > * {
+    animation: droom-dip-in 320ms var(--room-ease);
+  }
+}
+/* The rewind swaps state while hidden; nothing may animate the swap itself, or
+   the wheel would visibly travel back to the first driver. */
+.droom[data-phase="in"],
+.droom[data-phase="in"] * {
+  transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .droom,
+  .droom * {
+    transition: none !important;
+  }
+}
+@keyframes droom-grow {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+@keyframes droom-swap {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes droom-dip-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes droom-dip-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* The room's own narrow-screen rules (stream.css and dock.css at 640px). */
+@container (max-width: 520px) {
+  .droom .step-row {
+    grid-template-columns: 1rem 4rem minmax(5rem, 1fr) minmax(0, auto) 1rem;
+  }
+  .droom .step-duration {
+    display: none;
+  }
+  .droom .dock {
+    padding: 0 8px 8px;
+  }
+  .droom .sugg-hint {
+    display: none;
+  }
+  .droom .composer-chip-text {
+    max-width: 7rem;
+  }
+  .droom-measure {
+    padding: 1rem 0.75rem 0.75rem;
+  }
+}
+/* Narrower than the room ever runs: drop what a phone-width room can spare. */
+@container (max-width: 420px) {
+  .droom .droom-wide,
+  .droom .strip-meta,
+  .droom .rplan {
+    display: none;
+  }
+}
+/* Inset in a phone's page, a frame is narrower than a phone's room. Measured:
+   "You have the wheel" cut to "You have the …" beside Hand over and Release. */
+@container (max-width: 360px) {
+  .droom .dock {
+    padding: 0 4px 4px;
+  }
+  .droom .strip {
+    gap: 8px;
+    padding-left: 10px;
+  }
+  .droom .strip-who {
+    gap: 8px;
+  }
+  .droom .strip-actions .rbtn--sm {
+    padding: 0 7px;
+  }
+}
+/* Release and Cancel are the secondary actions; the primary one stays. 330px so a
+   360px phone's 316px frame keeps "You have the wheel" whole. */
+@container (max-width: 330px) {
+  .droom .strip-actions .rbtn--ghost {
+    display: none;
+  }
+}

@@ -14,7 +14,7 @@ export function TopologyDiagram() {
 
         <div className="topo-link">
           <span className="topo-wire" />
-          <span className="topo-payload">events only</span>
+          <span className="topo-payload">transcript</span>
           <span className="topo-wire" />
         </div>
 
@@ -23,7 +23,7 @@ export function TopologyDiagram() {
           <ul className="topo-items">
             <li>ordering</li>
             <li>the driver lock</li>
-            <li>fan-out</li>
+            <li>fan-out and replay</li>
             <li className="topo-absent">no repository</li>
           </ul>
         </div>

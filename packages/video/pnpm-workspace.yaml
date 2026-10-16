@@ -1,0 +1,4 @@
+# Its own workspace root, so pnpm never folds it into the repo's workspace (which
+# excludes it) and Remotion stays out of every deploy's install.
+onlyBuiltDependencies:
+  - esbuild
