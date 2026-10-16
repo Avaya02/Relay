@@ -63,7 +63,8 @@ export type Run = {
   finish: number;
   took: string;
   doneAt: string;
-  reply: { lead: string; code: string; tail: string };
+  // Markdown as the agent writes it: paragraphs, then optional bullets; `code` spans.
+  reply: { lines: string[]; bullets?: string[]; code?: string[]; close?: string };
   // The status badge's clock, in run seconds, at `finish`.
   runSeconds: number;
   strokes: number[];
@@ -94,8 +95,8 @@ const B = {
   inviteClick: 13.6,
   himanshuJoins: 14.4,
   askClick: 20.4,
-  requestShows: 20.75,
-  handOverClick: 22.0,
+  requestShows: 21.05,
+  handOverClick: 22.45,
   himanshuFocus: 25.0,
   himanshuType: 25.25,
   end: 36.4,
@@ -120,9 +121,18 @@ export const RUN_1 = run(
     took: "11.8s",
     doneAt: "10:41:56",
     reply: {
-      lead: "GET /users now returns 50 per page with a ",
-      code: "next",
-      tail: " cursor, and the query pages in the database instead of loading every row. All 12 tests pass.",
+      lines: ["GET /users now returns 50 users per page with a `next` cursor."],
+      bullets: [
+        "The query pages in the database instead of loading every row.",
+        "The handler reads `?cursor=` and returns `next: null` on the last page.",
+      ],
+      code: [
+        "GET /users?limit=50",
+        '→ 200  { users: [ …50 ], next: "u_2a07" }',
+        "GET /users?cursor=u_2a07",
+        '→ 200  { users: [ …50 ], next: "u_31c9" }',
+      ],
+      close: "All 12 tests pass.",
     },
     runSeconds: 11,
   },
@@ -146,9 +156,7 @@ export const RUN_2 = run(
     took: "7.2s",
     doneAt: "10:42:38",
     reply: {
-      lead: "Added a test that walks to the last page and checks ",
-      code: "next",
-      tail: " is null. All 13 tests pass.",
+      lines: ["Added a test that walks to the last page and checks `next` is null. All 13 tests pass."],
     },
     runSeconds: 7,
   },

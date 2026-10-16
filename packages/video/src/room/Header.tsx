@@ -2,12 +2,14 @@ import type { CSSProperties } from "react";
 import { Check, ChevronDown, GitBranch, Hand, Link2, PanelLeft, PanelRight } from "lucide-react";
 import { PresenceAvatar } from "@/components/room/PresenceAvatar";
 import { FPS, mix, prog, sec } from "../time";
-import { AVI, HIMANSHU, PEOPLE, REPO, T, type Person } from "../script";
+import { AVI, HIMANSHU, PEOPLE, REPO, RUN_1, T, type Person } from "../script";
 import { breathe } from "./motion";
 import { asking, changedFiles, mixHex, present, statusAt } from "./state";
 
 // The room's header at its narrow density, as the landing demo draws it.
-export function Header({ f, viewer }: { f: number; viewer: Person }) {
+// The room's header: full density in a wide window (wordmark, title, labelled
+// share), the landing demo's narrow density in a half one.
+export function Header({ f, viewer, wide }: { f: number; viewer: Person; wide: boolean }) {
   const status = statusAt(f);
   const changes = changedFiles(f);
   return (
@@ -16,11 +18,18 @@ export function Header({ f, viewer }: { f: number; viewer: Person }) {
         <span className="rbtn rbtn--icon droom-wide">
           <PanelLeft size={16} />
         </span>
+        {wide && <span className="room-wordmark">relay</span>}
         <span className="room-crumb">
           <GitBranch size={14} />
           <span className="room-crumb-name">{REPO}</span>
           <ChevronDown size={13} />
         </span>
+        {wide && f >= RUN_1.start && (
+          <>
+            <span className="room-head-sep">/</span>
+            <span className="room-title">{RUN_1.text}</span>
+          </>
+        )}
         <span className="rstatus" data-kind={status.kind}>
           {status.kind === "done" ? (
             <Check size={13} strokeWidth={2.5} />
@@ -32,11 +41,12 @@ export function Header({ f, viewer }: { f: number; viewer: Person }) {
         </span>
       </div>
       <div className="room-head-right">
-        <Roster f={f} viewer={viewer} />
-        <span className="rbtn rbtn--secondary droom-wide droom-share">
+        <Roster f={f} viewer={viewer} wide={wide} />
+        <span className={wide ? "rbtn rbtn--secondary" : "rbtn rbtn--secondary droom-wide droom-share"}>
           <Link2 size={14} />
+          {wide && <span className="share-label">Share</span>}
         </span>
-        <span className="rbtn rbtn--icon room-panel-toggle">
+        <span className="rbtn rbtn--icon room-panel-toggle" aria-pressed={wide || undefined}>
           <PanelRight size={16} />
           {changes > 0 && <span className="count">{changes}</span>}
         </span>
@@ -59,7 +69,7 @@ function slotX(i: number, driver: number): number {
   return i === driver ? base + lead : base + lead + OPEN + OPEN + OVERLAP;
 }
 
-function Roster({ f, viewer }: { f: number; viewer: Person }) {
+function Roster({ f, viewer, wide }: { f: number; viewer: Person; wide: boolean }) {
   const people = present(f);
   // The ring glides between seats over the room's 420ms.
   const p = prog(f, T.handOver, sec(0.42));
@@ -100,6 +110,11 @@ function Roster({ f, viewer }: { f: number; viewer: Person }) {
           style={{ "--hue": mixHex(AVI.hue, HIMANSHU.hue, p), "--x": `${ringAt}px` } as CSSProperties}
         />
       </span>
+      {wide && (
+        <span className="roster-label" style={{ "--hue": AVI.hue } as CSSProperties}>
+          <b>{viewer.id === AVI.id ? "You" : AVI.name}</b> {viewer.id === AVI.id ? "have" : "has"} the wheel
+        </span>
+      )}
     </span>
   );
 }

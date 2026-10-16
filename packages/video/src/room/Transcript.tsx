@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { Check, ChevronDown, Copy } from "lucide-react";
+import { Check, ChevronDown, Copy, FileCode2 } from "lucide-react";
 import { PresenceAvatar } from "@/components/room/PresenceAvatar";
 import { VerbIcon } from "@/components/stream/verbIcon";
 import { activeLabel, histogram, type ActionRow } from "@/components/stream/rows";
@@ -148,16 +148,56 @@ function StepRow({ step, f, settled }: { step: Step; f: number; settled: boolean
   );
 }
 
+// components/agents/code-block.tsx for a plain-text block: numbered from four
+// lines, no syntax colour to strip from the landing's greys.
+function CodeBlock({ lines }: { lines: string[] }) {
+  return (
+    <div className="codeblock w-full overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface text-sm">
+      <div className="flex h-9 items-center gap-2.5 pl-3 pr-1.5">
+        <FileCode2 className="size-3.5 shrink-0 text-text-faint" />
+        <span className="font-mono text-[length:var(--fs-2xs)] text-text-faint">text</span>
+        <span className="ml-auto grid size-7 shrink-0 place-items-center text-text-faint">
+          <Copy className="size-3.5" />
+        </span>
+      </div>
+      <div className="overflow-hidden border-t border-border py-2">
+        <pre className="m-0 min-w-max font-mono text-xs leading-5 text-foreground/85">
+          <code>
+            {lines.map((line, i) => (
+              <span key={line} className="grid min-h-5 grid-cols-[2.75rem_minmax(0,1fr)]">
+                <span className="select-none pr-3 text-right tabular-nums text-text-faint">{i + 1}</span>
+                <span className="whitespace-pre pl-1 pr-4">{line}</span>
+              </span>
+            ))}
+          </code>
+        </pre>
+      </div>
+    </div>
+  );
+}
+
+// Backticks become code spans, as the room's markdown renders them.
+function inline(text: string) {
+  return text.split("`").map((part, i) => (i % 2 ? <code key={i}>{part}</code> : part));
+}
+
 function Reply({ run }: { run: Run }) {
   return (
     <article className="answer">
       <div className="answer-part">
         <div className="markdown-body">
-          <p>
-            {run.reply.lead}
-            <code>{run.reply.code}</code>
-            {run.reply.tail}
-          </p>
+          {run.reply.lines.map((line) => (
+            <p key={line}>{inline(line)}</p>
+          ))}
+          {run.reply.bullets && (
+            <ul>
+              {run.reply.bullets.map((line) => (
+                <li key={line}>{inline(line)}</li>
+              ))}
+            </ul>
+          )}
+          {run.reply.code && <CodeBlock lines={run.reply.code} />}
+          {run.reply.close && <p>{inline(run.reply.close)}</p>}
         </div>
       </div>
       <div className="mt-3">

@@ -1,5 +1,5 @@
 import { AbsoluteFill, useCurrentFrame } from "remotion";
-import { AVI_WIN, HIMANSHU_WIN, OVERVIEW, TERM_WIN, cameraAt, cameraTransform } from "./camera";
+import { AVI_HALF, AVI_WIDE, FULL, HIMANSHU_HALF, TERM_WIN, cameraAt, cameraTransform } from "./camera";
 import { Cursor } from "./Cursor";
 import { AVI_CURSOR, HIMANSHU_CURSOR, hovered, pressed } from "./cursors";
 import { FONT_ROOT } from "./fonts";
@@ -25,7 +25,7 @@ const HIMANSHU_CLICKS: [number, string][] = [
 
 // The poster: both screens at the moment of the ask, a frame the film itself
 // never holds in a wide shot.
-const POSTER = { f: T.requestShows + sec(0.55), camera: { ...OVERVIEW } };
+const POSTER = { f: T.requestShows + sec(0.55), camera: FULL };
 
 export function Tour({ measure = false, poster = false }: { measure?: boolean; poster?: boolean }) {
   const frame = useCurrentFrame();
@@ -39,7 +39,9 @@ export function Tour({ measure = false, poster = false }: { measure?: boolean; p
   // text through each other.
   const termIn = prog(f, T.termRaise, sec(0.12));
   const termOpacity = f < T.roomRaise ? termIn : 0;
-  const join = prog(f, T.himanshuJoins, sec(0.6), EASE_UI);
+  // Himanshu opening the link is a cut to the split screen; his window settles in.
+  const split = f >= T.himanshuJoins;
+  const join = prog(f, T.himanshuJoins, sec(0.45), EASE_UI);
   // Fades to the desk at both ends, so the loop meets itself.
   const veil = poster ? 0 : Math.max(1 - prog(f, 0, sec(0.35)), prog(f, DURATION - sec(0.6), sec(0.6)));
 
@@ -47,11 +49,11 @@ export function Tour({ measure = false, poster = false }: { measure?: boolean; p
     <AbsoluteFill className="dark tour">
       <style>{FONT_ROOT}</style>
       <div className="desk" style={{ transform: cameraTransform(camera) }}>
-        <BrowserWindow rect={AVI_WIN} url={f < T.roomRaise ? "relayrun.in" : SESSION_URL} owner={AVI}>
+        <BrowserWindow rect={split ? AVI_HALF : AVI_WIDE} url={f < T.roomRaise ? "relayrun.in" : SESSION_URL} owner={AVI}>
           {f < T.roomRaise ? (
             <Landing f={f} hover={aviHot.hover === "cmd"} press={aviHot.press === "cmd"} />
           ) : (
-            <Room f={f} viewer={AVI} hot={aviHot} />
+            <Room f={f} viewer={AVI} hot={aviHot} wide={!split} />
           )}
         </BrowserWindow>
         {termOpacity > 0 && (
@@ -63,12 +65,12 @@ export function Tour({ measure = false, poster = false }: { measure?: boolean; p
             <Terminal f={f} hover={aviHot.hover === "link"} />
           </TerminalWindow>
         )}
-        {join > 0 && (
+        {split && (
           <BrowserWindow
-            rect={HIMANSHU_WIN}
+            rect={HIMANSHU_HALF}
             url={SESSION_URL}
             owner={HIMANSHU}
-            style={{ opacity: join, transform: `translateX(${(1 - join) * 48}px)` }}
+            style={{ opacity: join, transform: `translateX(${(1 - join) * 24}px)` }}
           >
             <Room f={f} viewer={HIMANSHU} hot={himanshuHot} />
           </BrowserWindow>
