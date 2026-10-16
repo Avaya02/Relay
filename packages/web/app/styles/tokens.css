@@ -31,12 +31,6 @@
   --state-ok: #37b773;
   --state-error: #de6060;
 
-  /* Cycled by join order (lib/presence.ts). */
-  --presence-1: #e5a3b3;
-  --presence-2: #9bb4e0;
-  --presence-3: #b9e0a5;
-  --presence-4: #e0c48a;
-
   --background: var(--bg);
   --foreground: var(--text);
   --card: var(--surface);

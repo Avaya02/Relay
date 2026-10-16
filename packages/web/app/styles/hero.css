@@ -178,149 +178,9 @@
   font-size: 0.75rem;
   color: var(--state-error);
 }
-/* Edge-aligned so it reads as a label, not a caption. It must stay visible: the
-   page can't imply a live session when this is a replay. */
+/* The panel bleeds to the rail; its caption must not. */
 .hero-demo-note {
-  margin: 0.625rem 0 0;
-  /* The panel bleeds to the rail; text must not. */
   padding-right: var(--gutter);
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  color: var(--text-dim);
-  opacity: 0.85;
-}
-
-.demo-frame {
-  /* Depth comes from border weight, not blur. */
-  border: 1px solid var(--border-lit);
-  border-radius: var(--radius);
-  background: var(--surface);
-  overflow: hidden;
-}
-.demo-chrome {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.625rem 0.875rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-2);
-}
-.demo-chrome-left {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  min-width: 0;
-}
-.demo-chrome-right {
-  display: flex;
-  align-items: center;
-  gap: 0.875rem;
-  min-width: 0;
-}
-.demo-mark {
-  font-family: var(--font-wordmark);
-  font-size: 0.8125rem;
-  font-weight: 400;
-  color: var(--text);
-}
-.demo-session,
-.demo-status,
-.demo-person {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  color: var(--text-dim);
-  white-space: nowrap;
-}
-.demo-person {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-.demo-person b {
-  color: var(--text);
-  font-weight: 500;
-}
-.demo-dot {
-  width: 0.375rem;
-  height: 0.375rem;
-  border-radius: 999px;
-  flex: none;
-}
-.demo-status--live {
-  color: var(--accent);
-}
-@media (prefers-reduced-motion: no-preference) {
-  .demo-status--live {
-    animation: demo-pulse 1.9s ease-in-out infinite;
-  }
-}
-@keyframes demo-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.45;
-  }
-}
-
-.demo-body {
-  /* Fixed so the frame doesn't jitter as rows land. */
-  height: 19.5rem;
-  overflow: hidden;
-  padding: 0.875rem 1rem;
-}
-/* Green, not accent: accent means "in progress", and a completed handover is the opposite. */
-.demo-handover {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--state-ok);
-  padding-block: 0.375rem;
-}
-
-.demo-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 0.875rem;
-  border-top: 1px solid var(--border);
-  background: var(--surface-2);
-  font-size: 0.8125rem;
-}
-.demo-bar-label {
-  color: var(--text-dim);
-}
-.demo-bar-label b {
-  color: var(--text);
-  font-weight: 500;
-}
-/* White like Send, which it swaps with; in the accent it read as a status light. */
-.demo-bar-action {
-  font-size: 0.75rem;
-  color: var(--bg);
-  background: var(--text);
-  border-radius: var(--radius);
-  padding: 0.3125rem 0.6875rem;
-  white-space: nowrap;
-}
-.demo-bar-input {
-  flex: 1;
-  min-width: 0;
-  color: var(--text-dim);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.375rem 0.625rem;
-  font-size: 0.75rem;
-}
-.demo-bar-send {
-  font-size: 0.75rem;
-  color: var(--bg);
-  background: var(--text);
-  border-radius: var(--radius);
-  padding: 0.375rem 0.75rem;
 }
 
 /* assets/hero-background.png, graded by scripts/prepare-hero-image.py so its black
@@ -331,28 +191,27 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  /* Asymmetric so the ridge descends past the panel's corner. Past ~7vw left the
-     ledger's result column collapses ("22 lines" truncates to "2."). */
+  /* Asymmetric so the ridge descends past the panel's corner. */
   padding: clamp(2.5rem, 7.6vw, 7rem) 0 clamp(1.25rem, 2.5vw, 1.75rem)
     clamp(1.5rem, 5vw, 4.5rem);
 }
+.hero-demo-figure {
+  margin: 0;
+  min-width: 0;
+  /* Lets the stacked frame size its height from its own width (cqw). */
+  container-type: inline-size;
+}
 /* Height follows width: stretching to the copy column grew a long, mostly empty
-   rectangle as the viewport narrowed. The transcript scrolls inside instead. */
-.hero-demo .demo-frame {
-  display: flex;
-  flex-direction: column;
+   rectangle as the viewport narrowed. The transcript runs off the top instead. */
+.hero-demo-frame {
+  display: grid;
   aspect-ratio: 1 / 1;
   min-height: 22rem;
   min-width: 0;
-}
-.hero-demo .demo-body {
-  flex: 1;
-  height: auto;
-  min-height: 0;
-  overflow-y: auto;
-  /* Thin, not hidden: it's the only cue that the transcript continues. */
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-lit) transparent;
+  /* Depth comes from border weight, not blur; square like the rest of the page. */
+  border: 1px solid var(--border-lit);
+  background: var(--room-bg);
+  overflow: hidden;
 }
 .hero-demo::before {
   content: "";
@@ -380,7 +239,11 @@
   .hero-demo {
     padding: clamp(3rem, 12vw, 5rem) var(--gutter) 2.5rem;
   }
-  .demo-body {
-    height: 17rem;
+  /* Full width, a square ran 705px tall at 768px. Portrait and capped, it stays a
+     window and leaves a phone's room height for its dock. Not aspect-ratio plus
+     max-height: the ratio turns that cap into a max-width, which narrowed it. */
+  .hero-demo-frame {
+    aspect-ratio: auto;
+    height: min(34rem, 125cqw);
   }
 }

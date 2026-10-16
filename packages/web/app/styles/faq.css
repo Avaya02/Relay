@@ -96,6 +96,27 @@
   line-height: 1.6;
   color: var(--text-dim);
 }
+/* Measured: --api-key broke at its hyphen into "--" and "api-key". */
+.faq-a code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  color: var(--text);
+  white-space: nowrap;
+}
+/* Preflight strips the underline, and dim text alone doesn't read as a link. */
+.faq-a a {
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: var(--border-lit);
+  transition: text-decoration-color 120ms ease-out;
+}
+.faq-a a:hover {
+  text-decoration-color: var(--text);
+}
+.faq-a a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 
 @media (max-width: 900px) {
   .faq-grid {

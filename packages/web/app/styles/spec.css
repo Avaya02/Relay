@@ -25,10 +25,12 @@
   color: var(--text-dim);
   max-width: 68ch;
 }
+/* Flags like --no-sandbox broke at their hyphen. */
 .spec-row dd code {
   font-family: var(--font-mono);
   font-size: 0.875em;
   color: var(--text);
+  white-space: nowrap;
 }
 
 @media (max-width: 900px) {

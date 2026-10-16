@@ -1,0 +1,3 @@
+/* The web app's whole stylesheet, so every window is drawn by the product's CSS. */
+@import "../../web/app/globals.css";
+@import "./tour.css";

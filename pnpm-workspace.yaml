@@ -1,5 +1,8 @@
 packages:
   - "packages/*"
+  # The landing's product video: a local render tool with its own lockfile, kept out of
+  # the workspace so Vercel and the server build never install Remotion.
+  - "!packages/video"
 
 # esbuild's install script picks the correct platform binary and tsx (the
 # server dev runner) needs it at runtime. sharp/unrs-resolver are optional

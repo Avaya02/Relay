@@ -1,0 +1,279 @@
+/* The tour's own surfaces: the desk, window chrome, the terminal and the pointer.
+   Everything inside a window comes from the web app's stylesheets. */
+
+.tour {
+  overflow: hidden;
+  background: #141414;
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+/* Remotion renders frames out of order, in parallel tabs: a CSS transition never
+   gets to run, so all motion is set per frame instead. */
+.tour *,
+.tour *::before,
+.tour *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+.desk {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1320px;
+  height: 720px;
+  transform-origin: 0 0;
+}
+
+.win {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #0b0b0d;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.1),
+    0 28px 70px -28px rgb(0 0 0 / 0.85);
+}
+.win-chrome {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  padding: 0 14px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.07);
+  background: #131315;
+}
+.win-lights {
+  display: flex;
+  flex: none;
+  gap: 7px;
+}
+.win-lights i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.14);
+}
+.win-url {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  min-width: 0;
+  height: 26px;
+  border-radius: 7px;
+  background: rgb(255 255 255 / 0.05);
+  font: 12px/1 var(--font-mono);
+  color: var(--text-dim);
+}
+/* A person's name in their grey, as the room prints names. */
+.win-owner {
+  flex: none;
+  min-width: 64px;
+  font: 500 12.5px/1 var(--font-sans);
+  color: var(--hue);
+  text-align: right;
+}
+.win-body {
+  position: relative;
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  background: var(--bg);
+}
+
+.win--term,
+.win--term .win-chrome {
+  background: #0c0c0d;
+}
+.win--term .win-chrome {
+  height: 34px;
+}
+.win-title {
+  position: absolute;
+  right: 0;
+  left: 0;
+  font: 12px/1 var(--font-sans);
+  color: var(--text-faint);
+  text-align: center;
+}
+.term {
+  flex: 1;
+  min-height: 0;
+}
+/* relayrun prints plain console.log text: no colour of its own, so none here. */
+.term-body {
+  padding: 16px 20px;
+  font: 13px/1.65 var(--font-mono);
+  color: #e8e8e8;
+  white-space: pre;
+}
+.term-dim {
+  color: var(--text-faint);
+}
+.term-caret {
+  display: inline-block;
+  width: 0.62em;
+  height: 1.3em;
+  vertical-align: -0.3em;
+  background: #d4d4d4;
+}
+.term-caret--off {
+  background: transparent;
+}
+/* A terminal underlines a link once ⌘ is held over it. */
+.term-link[data-hover] {
+  text-decoration: underline 1px;
+  text-underline-offset: 3px;
+}
+
+.cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 30;
+  overflow: visible;
+  transform-origin: 1.5px 1.5px;
+  filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.45));
+}
+
+/* The landing at its own desktop width, so its type renders at the size it ships. */
+.mini {
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+}
+.mini-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  padding: 0 28px;
+  border-bottom: 1px solid var(--border);
+}
+.mini-nav-actions {
+  display: flex;
+  gap: 8px;
+}
+.mini-nav .btn-quiet,
+.mini-nav .btn-solid {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.mini-hero {
+  display: flex;
+  flex-direction: column;
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 88px 0 0;
+}
+
+/* Hover and press, which a scripted pointer can't trigger, restated from the
+   room's controls.css and the landing's hero.css. */
+.tour .cmd[data-hover] {
+  border-color: var(--text-faint);
+}
+.tour .rbtn--secondary[data-hover] {
+  border-color: var(--room-line-3);
+  background: var(--room-raised-3);
+}
+.tour .rbtn--primary[data-hover] {
+  background: #fff;
+}
+.tour .rbtn--ghost[data-hover] {
+  background: var(--room-raised-2);
+  color: var(--room-ink);
+}
+.tour .rbtn[data-press],
+.tour .cmd[data-press] {
+  transform: scale(0.97);
+}
+
+/* The dock's focus ring (dock.css), which a scripted caret can't earn either. */
+.tour .dock-card[data-focus] {
+  border-color: var(--driver);
+  box-shadow:
+    var(--room-shadow-dock),
+    0 0 0 3px color-mix(in oklch, var(--driver) 13%, transparent);
+}
+.tour-caret {
+  display: inline-block;
+  width: 1.5px;
+  height: 1.15em;
+  margin-left: 1px;
+  vertical-align: -0.2em;
+  background: var(--driver);
+}
+.tour-caret--lead {
+  margin: 0 1px 0 0;
+}
+.tour-placeholder {
+  color: var(--room-ink-3);
+}
+
+.tour-stage {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.tour-intro {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 1;
+  padding: 0 20px;
+}
+.tour-measure {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 99;
+  margin: 0;
+  padding: 8px 10px;
+  background: #000;
+  font: 600 15px/1.4 var(--font-mono);
+  color: #fff;
+}
+
+/* A transcript reads from the top until it overflows, then stays pinned to the
+   newest line, as the room's scroller does; 100cqh is the visible height. */
+.tour .droom-stream {
+  container-type: size;
+}
+.tour .droom-measure {
+  top: 0;
+  bottom: auto;
+  transform: translateY(min(0px, calc(100cqh - 100%)));
+}
+
+/* DriverStrip's popLayout swap: both names share one cell while they cross. */
+.tour-swap {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.tour-swap > .strip-who {
+  grid-area: 1 / 1;
+}
+
+/* The wide room keeps the desktop header's density, which the half-width
+   demo rules (demo-room.css) would otherwise tighten. */
+.tour-wide .room-head {
+  gap: 12px;
+  padding: 0 10px 0 12px;
+}
+.tour-wide .room-crumb {
+  max-width: none;
+}
+/* The conversation column, centred at the room's own measure. */
+.tour-wide .droom-measure {
+  padding-inline: max(1rem, calc((100% - var(--measure-conversation)) / 2));
+}
+.tour-wide .tour-intro {
+  padding-top: 32px;
+}

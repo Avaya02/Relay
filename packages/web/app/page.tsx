@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { DemoLedger } from "@/components/landing/DemoLedger";
+import { HeroLab } from "@/components/landing/hero-lab/HeroLab";
 import { RecentSessions } from "@/components/RecentSessions";
 import { CommandBlock } from "@/components/landing/CommandBlock";
-import { TwoScreens } from "@/components/landing/TwoScreens";
+import Image from "next/image";
+import { ContactDialog } from "@/components/landing/ContactDialog";
+import { ProductTour } from "@/components/landing/ProductTour";
 import { TopologyDiagram } from "@/components/landing/TopologyDiagram";
 
 // Chrome is achromatic; colour marks live state in the session panels only.
@@ -48,12 +50,12 @@ export default function Home() {
             <a className="landing-nav-link" href="#lock">
               What it is
             </a>
-            <a className="landing-nav-link" href="#how">
+            <a className="landing-nav-link" href="#tour">
               How it works
             </a>
             <a
               className="landing-nav-link"
-              href="https://docs.claude.com/en/api/agent-sdk/overview"
+              href="https://code.claude.com/docs/en/agent-sdk/overview"
               target="_blank"
               rel="noreferrer"
             >
@@ -83,7 +85,7 @@ export default function Home() {
 
         <section className="hero">
           <div className="hero-copy">
-            {/* Not badge--live: chrome is achromatic, so the dot pulses instead of using hue. */}
+            {/* Static: a pulse would claim something on this page is live. */}
             <span className="badge hero-eyebrow">
               <span className="badge-dot" aria-hidden />
               Live multiplayer
@@ -94,15 +96,17 @@ export default function Home() {
               <em>Together.</em>
             </h1>
             <p className="hero-sub">
-              Everyone on the link watches the same session as it runs. One
-              person drives at a time, and control passes mid-task.
+              Everyone on the link watches the same agent session as it runs.
+              One person has the wheel, everyone else can suggest the next
+              step, and the wheel can change hands mid-task.
             </p>
 
             <div className="hero-cta" id="start">
               <CommandBlock command="npx relayrun" />
               <span className="hero-cta-note">
-                Runs in your repo, on your machine. Prints a link to share.
-                Needs a Claude Code login or an Anthropic API key.
+                Run it in any git repository. It prints a link to share, and
+                the agent works in a sandboxed clone on your machine. Needs an
+                Anthropic API key or a Claude Code login.
               </span>
             </div>
 
@@ -130,10 +134,7 @@ export default function Home() {
           </div>
 
           <div className="hero-demo">
-            <DemoLedger />
-            <p className="hero-demo-note">
-              Recording of a real session — 13 tool calls, live repository.
-            </p>
+            <HeroLab />
           </div>
         </section>
 
@@ -145,35 +146,38 @@ export default function Home() {
               <h2 className="section-title">One writer. Never two.</h2>
               <p className="lock-lede">
                 Screen-sharing an agent gets you an audience. Relay gets you a
-                relay: exactly one person holds the wheel, the server enforces
-                it, and control passes cleanly when someone else should take
-                over.
+                relay: exactly one person has the wheel, the server enforces
+                it, and everyone else can suggest the next step or ask to
+                drive.
               </p>
             </div>
             <dl className="lock-facts">
               <div>
-                <dt>Request → hand over → release</dt>
+                <dt>Ask → hand over → release</dt>
                 <dd>
-                  A viewer asks, the driver grants. The lock moves; every screen
-                  updates at once.
+                  A watcher asks for the wheel and the driver hands it over, on
+                  every screen at once. A released wheel is free for anyone in
+                  the room to take.
                 </dd>
               </div>
               <div>
                 <dt>Enforced on the server</dt>
                 <dd>
-                  Not a disabled button. An instruction from anyone who
-                  isn&apos;t the driver is rejected before it reaches the agent.
+                  Not a disabled button. The server rejects any instruction,
+                  stop or publish that doesn&apos;t come from the driver, and
+                  runs instructions one at a time, in order.
                 </dd>
               </div>
               <div>
-                <dt>No input races, by construction</dt>
+                <dt>Suggestions wait for the driver</dt>
                 <dd>
-                  One writer means instructions arrive one at a time, in order
-                  — never two at once.
+                  Watchers can type too. Their suggestions wait in the dock,
+                  signed in their colour, and reach the agent only if the
+                  driver sends them.
                 </dd>
               </div>
             </dl>
-            <TwoScreens />
+            <ProductTour />
           </div>
         </section>
 
@@ -182,34 +186,38 @@ export default function Home() {
         <section className="lock" id="trust">
           <div className="lock-inner lock-grid">
             <div className="lock-head">
-              <h2 className="section-title">Your code stays on your machine.</h2>
+              <h2 className="section-title">Your repo stays on your machine.</h2>
               <p className="lock-lede">
-                The agent runs where the repository already is — your laptop,
-                your checkout, your credentials. What crosses the network is a
-                description of what happened, not the code it happened to.
+                The agent runs on your laptop, in a fresh clone of your current
+                commit, on your own Claude credentials. What crosses the network
+                is the session itself: the commands the agent runs and their
+                output, the files it opens, and the edits it makes.
               </p>
             </div>
             <dl className="lock-facts">
               <div>
                 <dt>No upload, no clone on a server</dt>
                 <dd>
-                  Nothing to hand over before you can start, and nothing of
-                  yours sitting on someone else&apos;s disk afterwards.
+                  Nothing to hand over before you start. The relay keeps the
+                  transcript so a finished session&apos;s link still opens; it
+                  never holds your repository.
                 </dd>
               </div>
               <div>
                 <dt>The server is a relay, not a runtime</dt>
                 <dd>
-                  It orders events, enforces the lock, and fans out the
-                  transcript — and that&apos;s the whole job. Your repository,
-                  shell and API keys never enter into it.
+                  It orders events, enforces the lock and fans out the
+                  transcript. Your shell and credentials never reach it; of an
+                  API key it sees only the last four characters.
                 </dd>
               </div>
               <div>
-                <dt>Any repository, no setup</dt>
+                <dt>Sandboxed by default</dt>
                 <dd>
-                  Whichever directory you run the command in. No connected
-                  accounts, no repo picker, no OAuth scope to grant.
+                  The agent&apos;s commands can write only inside the
+                  session&apos;s temporary folders, reach only package
+                  registries and GitHub, and can&apos;t read your SSH keys,
+                  cloud credentials or secret environment variables.
                 </dd>
               </div>
             </dl>
@@ -221,16 +229,17 @@ export default function Home() {
 
         <section className="how" id="how">
           <div className="how-inner">
-            <h2 className="section-title">What happens when you send one</h2>
+            <h2 className="section-title">What happens when you run it</h2>
             <ol className="steps">
               <li className="step">
                 <span className="step-n">01</span>
                 <div className="step-body">
                   <h3 className="step-title">You start the agent</h3>
                   <p className="step-text">
-                    <code>npx relayrun</code> in your repository. It works in
-                    a disposable clone, connects out to the relay, and prints a
-                    link. Nothing inbound, so no ports to open.
+                    <code>npx relayrun</code> in any git repository. The agent
+                    works in a temporary clone of your current commit; the CLI
+                    connects out to the relay and prints a link. Nothing
+                    inbound, so no ports to open.
                   </p>
                 </div>
               </li>
@@ -261,9 +270,10 @@ export default function Home() {
                 <div className="step-body">
                   <h3 className="step-title">The work becomes a branch</h3>
                   <p className="step-text">
-                    When a run finishes, the session&apos;s diff is real.
-                    Publish commits it to a branch in your own repository —
-                    ready to check out, already local.
+                    Every file the agent changes appears in the changes panel
+                    with its diff. Whoever has the wheel publishes the work as
+                    a branch in your repository, ready to check out, or as a
+                    pull request if relayrun was given a GitHub repo and token.
                   </p>
                 </div>
               </li>
@@ -278,31 +288,34 @@ export default function Home() {
               <div className="spec-row">
                 <dt>Engine</dt>
                 <dd>
-                  Claude Agent SDK — the same one Claude Code runs. Relay adds
-                  the room around it, not a different model.
+                  Claude Agent SDK, the same agent loop and tools that power
+                  Claude Code. Relay adds the room around it, not a different
+                  model.
                 </dd>
               </div>
               <div className="spec-row">
                 <dt>Topology</dt>
                 <dd>
                   The agent runs on the host&apos;s machine and streams events
-                  up over one WebSocket. The server coordinates; your code
-                  stays put.
+                  up over one WebSocket. The server coordinates; your
+                  repository stays put.
                 </dd>
               </div>
               <div className="spec-row">
                 <dt>Ordering</dt>
                 <dd>
                   A server-assigned <code>seq</code> on every event, from a
-                  single function. Clients only ever append.
+                  single function. Clients render in that order and never sort.
                 </dd>
               </div>
               <div className="spec-row">
                 <dt>Isolation</dt>
                 <dd>
-                  A disposable clone per session, discarded when the room
-                  empties. The agent has full shell access inside it, with the
-                  host&apos;s own permissions — the same trust as pairing.
+                  A temporary clone of your current commit per session,
+                  deleted when you stop relayrun. The agent&apos;s commands run
+                  in an OS sandbox by default; <code>--no-sandbox</code>{" "}
+                  removes it, for sessions where you trust everyone with the
+                  link.
                 </dd>
               </div>
               <div className="spec-row">
@@ -322,8 +335,9 @@ export default function Home() {
               <div className="spec-row">
                 <dt>Persistence</dt>
                 <dd>
-                  An optional Postgres mirror of the transcript, so a dead link
-                  renders a read-only replay instead of an error.
+                  relayrun.in mirrors transcripts to Postgres, so a finished
+                  session&apos;s link opens as a read-only replay instead of an
+                  error.
                 </dd>
               </div>
             </dl>
@@ -346,18 +360,16 @@ export default function Home() {
               <details className="faq-item" name="faq" open>
                 <summary className="faq-q">
                   <span className="step-n">01</span>
-                  <span className="faq-q-text">
-                    Does my code go to Anthropic?
-                  </span>
+                  <span className="faq-q-text">Where does my code go?</span>
                   <span className="faq-icon" aria-hidden>
                     +
                   </span>
                 </summary>
                 <p className="faq-a">
-                  Yes. The agent is the Claude Agent SDK, so file contents
-                  reach the Anthropic API exactly as they do in Claude Code.
-                  The repository itself doesn&apos;t — Relay&apos;s server
-                  only ever sees the event stream.
+                  The files the agent reads go to the Anthropic API, exactly as
+                  in Claude Code. They also appear in the session transcript,
+                  so everyone with the link sees them and the relay keeps them
+                  for replay. Your repository as a whole is never uploaded.
                 </p>
               </details>
 
@@ -372,10 +384,13 @@ export default function Home() {
                   </span>
                 </summary>
                 <p className="faq-a">
-                  Full shell access, with your own permissions, inside a
-                  disposable clone that&apos;s discarded when the room empties.
-                  Nothing touches your real checkout until you publish, which
-                  commits the diff to a branch in your own repository.
+                  It works in a temporary clone of your current commit, not
+                  your checkout. Its commands are sandboxed by default: writes
+                  stay in the session&apos;s folders, network reaches only
+                  package registries and GitHub, and your SSH keys, cloud
+                  credentials and secret environment variables are off-limits.
+                  Nothing reaches your repository until the driver publishes a
+                  branch.
                 </p>
               </details>
 
@@ -390,10 +405,12 @@ export default function Home() {
                   </span>
                 </summary>
                 <p className="faq-a">
-                  No. The lock lives on the server, not in the UI. Only the
-                  driver&apos;s own instructions ever reach the agent —
-                  enforced the same way whether you click a button or
-                  hand-craft a WebSocket frame yourself.
+                  Not while someone has the wheel. Watchers can suggest
+                  instructions and ask for the wheel; only the driver can send,
+                  stop or publish. The server checks every message, so a
+                  hand-crafted WebSocket frame gets the same answer as the
+                  button. When the wheel is free, anyone in the room can take
+                  it.
                 </p>
               </details>
 
@@ -408,9 +425,12 @@ export default function Home() {
                   </span>
                 </summary>
                 <p className="faq-a">
-                  The session stops. The agent runs on your machine, so it
-                  ends when your machine does — an honest limitation, not a
-                  feature we&apos;re hiding.
+                  The agent goes offline with it. A run in progress stops, and
+                  the room stays open with the full transcript. When your
+                  laptop wakes, relayrun reconnects to the session on its own,
+                  as long as the session hasn&apos;t closed. Nothing runs while
+                  it sleeps: that&apos;s the trade for keeping the repository
+                  on your machine.
                 </p>
               </details>
 
@@ -425,9 +445,10 @@ export default function Home() {
                   </span>
                 </summary>
                 <p className="faq-a">
-                  No. Point <code>npx relayrun</code> at whichever directory
-                  you&apos;re already in — no account to connect, nothing else
-                  needed.
+                  No. There&apos;s no Relay account and nothing to connect. You
+                  need Node 20.9 or later, a git repository, and an Anthropic
+                  API key or a Claude Code login. The sandbox runs on macOS,
+                  Linux and WSL2; Linux needs bubblewrap and socat.
                 </p>
               </details>
 
@@ -440,10 +461,20 @@ export default function Home() {
                   </span>
                 </summary>
                 <p className="faq-a">
-                  Nothing from Relay. Runs are billed to your own Claude Code
-                  login, or to your own Anthropic API key if you pass one —
-                  the credential never leaves your machine, and Relay never
-                  sees it.
+                  Nothing from Relay. Runs bill your own Anthropic API key
+                  (pass <code>--api-key</code>) or run on your own Claude Code
+                  login. The key is only ever sent to Anthropic; Relay sees its
+                  last four characters, so the room can show which key is
+                  paying. If someone else will drive, use a key:{" "}
+                  <a
+                    href="https://code.claude.com/docs/en/legal-and-compliance"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Anthropic&apos;s terms
+                  </a>{" "}
+                  don&apos;t allow routing other people&apos;s requests through
+                  a Free, Pro or Max plan.
                 </p>
               </details>
             </div>
@@ -458,36 +489,66 @@ export default function Home() {
         </section>
 
         <footer className="landing-foot">
-          <div className="landing-foot-brand">
-            <span className="landing-foot-mark">relay</span>
-            <p className="landing-foot-tag">Live agent sessions, shared.</p>
-            <span className="landing-foot-copy">© 2026</span>
+          <div className="landing-foot-top">
+            <div className="landing-foot-brand">
+              <span className="landing-foot-mark">relay</span>
+              <p className="landing-foot-tag">
+                Live agent sessions, shared. One person drives, everyone
+                watches, and the wheel changes hands{" "}
+                <span className="landing-foot-keep">mid-task.</span>
+              </p>
+            </div>
+
+            <nav className="landing-foot-col" aria-label="On this page">
+              <span className="landing-foot-head">Product</span>
+              <a href="#lock">What it is</a>
+              <a href="#tour">How it works</a>
+              <a href="#faq">Questions</a>
+              <a href="#start" onClick={handleGetStarted}>
+                Get started
+              </a>
+            </nav>
+
+            <nav className="landing-foot-col" aria-label="Elsewhere">
+              <span className="landing-foot-head">Resources</span>
+              <a href="https://github.com/Avaya02/Relay" target="_blank" rel="noreferrer">
+                GitHub ↗
+              </a>
+              <a href="https://www.npmjs.com/package/relayrun" target="_blank" rel="noreferrer">
+                relayrun on npm ↗
+              </a>
+              <a
+                href="https://code.claude.com/docs/en/agent-sdk/overview"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Agent SDK ↗
+              </a>
+              <a href="https://github.com/Avaya02/Relay/releases" target="_blank" rel="noreferrer">
+                Changelog ↗
+              </a>
+              <a href="https://github.com/Avaya02/Relay/issues/new" target="_blank" rel="noreferrer">
+                Report an issue ↗
+              </a>
+              <ContactDialog />
+            </nav>
           </div>
 
-          <nav className="landing-foot-col">
-            <span className="landing-foot-head">Elsewhere</span>
-            <a
-              href="https://www.npmjs.com/package/relayrun"
-              target="_blank"
-              rel="noreferrer"
-            >
-              relayrun on npm
-            </a>
-            <a
-              href="https://docs.claude.com/en/api/agent-sdk/overview"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Agent SDK ↗
-            </a>
-          </nav>
+          <div className="landing-foot-base">
+            <span>© 2026 Avaya Sharma</span>
+            <span>Open source, MIT licensed</span>
+          </div>
 
-          <nav className="landing-foot-col">
-            <span className="landing-foot-head">On this page</span>
-            <a href="#lock">What it is</a>
-            <a href="#how">How it works</a>
-            <a href="#faq">Questions</a>
-          </nav>
+          {/* An image, not a CSS background, so it waits for the scroll. Unoptimized:
+              re-encoding lossily smears the halftone screen (prepare-hero-image.py). */}
+          <Image
+            className="landing-foot-scene"
+            src="/foot-ridge.webp"
+            alt=""
+            width={2400}
+            height={960}
+            unoptimized
+          />
         </footer>
       </div>
     </div>

@@ -7,9 +7,8 @@
 @import "./styles/primitives.css";
 @import "./styles/landing.css";
 @import "./styles/hero.css";
-@import "./styles/ledger.css";
 @import "./styles/lock-trust.css";
-@import "./styles/two-screens.css";
+@import "./styles/product-tour.css";
 @import "./styles/how.css";
 @import "./styles/spec.css";
 @import "./styles/faq.css";
@@ -27,3 +26,6 @@
 @import "./styles/room/panels.css";
 @import "./styles/room/intro.css";
 @import "./styles/room/stream.css";
+/* Last: the landing's demos restyle the room's layout, never its look. */
+@import "./styles/demo-room.css";
+@import "./styles/hero-lab.css";

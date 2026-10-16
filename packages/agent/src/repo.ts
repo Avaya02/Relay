@@ -184,7 +184,7 @@ export function createRepo(config: RepoConfig) {
         { cwd: dir },
       );
 
-      // The clone is deleted when the room empties, so land the branch in the
+      // The clone is deleted when relayrun exits, so land the branch in the
       // user's repo; the per-session branch name never touches their checkout.
       await run("git", ["push", "--force", config.sourcePath, `HEAD:${branch}`], {
         cwd: dir,
