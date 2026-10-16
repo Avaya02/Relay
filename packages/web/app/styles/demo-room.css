@@ -4,7 +4,6 @@
 
 /* The landing is achromatic, so its demos print people in greys rather than the
    room's hues (white 18:1, the greys 9:1 and 5.4:1 on the room's raised ground). */
-.twoscreen,
 .hero-demo-frame {
   --hue-1: #fafafa;
   --hue-2: #b4b4b4;

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { HeroLab } from "@/components/landing/hero-lab/HeroLab";
 import { RecentSessions } from "@/components/RecentSessions";
 import { CommandBlock } from "@/components/landing/CommandBlock";
-import { TwoScreens } from "@/components/landing/TwoScreens";
+import { ProductTour } from "@/components/landing/ProductTour";
 import { TopologyDiagram } from "@/components/landing/TopologyDiagram";
 
 // Chrome is achromatic; colour marks live state in the session panels only.
@@ -175,7 +175,7 @@ export default function Home() {
                 </dd>
               </div>
             </dl>
-            <TwoScreens />
+            <ProductTour />
           </div>
         </section>
 

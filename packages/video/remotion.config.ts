@@ -10,6 +10,8 @@ Config.overrideBundlerConfig((config) =>
     ...config,
     resolve: {
       ...config.resolve,
+      // The web app's CSS points at its public folder with root-relative URLs.
+      roots: [path.join(web, "public")],
       alias: {
         ...(config.resolve?.alias as Record<string, string> | undefined),
         // The room's own avatars, icons and step labels, imported from the web app.

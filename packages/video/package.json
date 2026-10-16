@@ -5,7 +5,9 @@
   "packageManager": "pnpm@10.15.0",
   "scripts": {
     "studio": "remotion studio src/index.ts --port 3418",
-    "render": "remotion render src/index.ts tour out/tour-master.mp4 --scale 2 --crf 16",
+    "render": "remotion render src/index.ts tour out/tour-master.mp4 --scale 2 --crf 12 && remotion still src/index.ts poster out/poster.png --scale 2",
+    "encode": "sh scripts/encode.sh",
+    "measure": "remotion still src/index.ts tour out/measure.png --props={\"measure\":true} --frame",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
