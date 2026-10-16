@@ -15,7 +15,7 @@ ffmpeg -hide_banner -loglevel error -y -i out/tour-master.mp4 -an \
 # H.264 for the rest (Safari without an AV1 decoder), at 1920 to stay near the
 # AV1 file's size.
 ffmpeg -hide_banner -loglevel error -y -i out/tour-master.mp4 -an \
-  -vf scale=1920:1200:flags=lanczos -c:v libx264 -preset slow -tune animation -crf 25 \
+  -vf scale=1920:1200:flags=lanczos -c:v libx264 -preset veryslow -tune animation -crf 25 \
   -pix_fmt yuv420p -movflags +faststart "$out/relay-tour-h264.mp4"
 
 cwebp -quiet -q 80 -m 6 out/poster.png -o "$out/poster.webp"

@@ -6,7 +6,7 @@ import { Pause, Play } from "lucide-react";
 // A browser plays the first source it can decode: AV1 wherever there's a decoder,
 // H.264 for the rest (Safari on hardware without one). Rendered by packages/video.
 // Bump the version on every re-encode: browsers cache video by URL.
-const VERSION = 5;
+const VERSION = 6;
 const SOURCES = [
   { src: `/tour/relay-tour-av1.mp4?v=${VERSION}`, type: 'video/mp4; codecs="av01.0.12M.08"' },
   { src: `/tour/relay-tour-h264.mp4?v=${VERSION}`, type: 'video/mp4; codecs="avc1.640032"' },
@@ -106,7 +106,7 @@ export function ProductTour() {
   const current = CHAPTERS.findLastIndex((c) => time >= c.at);
 
   return (
-    <figure className="on-photo tour-figure">
+    <figure className="on-photo tour-figure" id="tour">
       <div className="tour-frame">
         {/* Hidden from assistive tech: the caption carries the same story as text. */}
         <video
@@ -191,17 +191,12 @@ export function ProductTour() {
         </span>
       </div>
 
-      <figcaption className="demo-note">
-        <span>
-          Scripted tour, not a recording of a live session.
-          <span className="sr-only">
-            {" "}
-            Avi copies npx relayrun from this page, runs it in a terminal, and opens the link it prints. In
-            the session he asks the agent to paginate an endpoint and invites Himanshu, whose screen shows the
-            same run as it happens. Himanshu asks for the wheel, Avi hands it over, and Himanshu&apos;s next
-            instruction runs on both screens.
-          </span>
-        </span>
+      {/* No visible caption; the player and the film carry it. */}
+      <figcaption className="sr-only">
+        Avi copies npx relayrun from this page, runs it in a terminal, and opens the link it prints. In the
+        session he asks the agent to paginate an endpoint and invites Himanshu, whose screen shows the same run
+        as it happens. Himanshu asks for the wheel, Avi hands it over, and Himanshu&apos;s next instruction runs
+        on both screens.
       </figcaption>
     </figure>
   );

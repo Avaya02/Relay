@@ -23,7 +23,6 @@ export function HeroDemo() {
       </div>
       <figcaption className="demo-note hero-demo-note">
         <span>
-          Scripted demo, not a live session.
           <span className="sr-only">
             {" "}
             Avi has the wheel while the agent adds a rate limiter. Himanshu suggests a test, Avi

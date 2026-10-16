@@ -1,54 +1,209 @@
+/* The page ends on the photograph the hero opened with: links over the dark top
+   of the frame, the ridge and the far range rising in beneath them. */
 .landing-foot {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   border-top: 1px solid var(--border);
-  padding: 2rem var(--gutter);
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
-  gap: clamp(1.5rem, 4vw, 3rem);
   font-family: var(--font-mono);
   font-size: 0.8125rem;
 }
+.landing-foot-top {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(1.5rem, 4vw, 3rem);
+  padding: clamp(2.5rem, 5vw, 4rem) var(--gutter) 0;
+}
 .landing-foot-mark {
   display: block;
-  font-family: var(--font-display);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-family: var(--font-wordmark);
+  font-size: 1.25rem;
   color: var(--text);
 }
 .landing-foot-tag {
-  margin: 0.625rem 0 0;
-  max-width: 26ch;
+  margin: 0.875rem 0 0;
+  max-width: 40ch;
   color: var(--text-dim);
+  line-height: 1.6;
   letter-spacing: -0.02em;
 }
-/* Faint, not dim at 0.7 opacity: that measured 4.3:1 on --bg. */
-.landing-foot-copy {
-  display: block;
-  margin-top: 1.25rem;
-  color: var(--text-faint);
+/* A line break after its hyphen read as "mid-" / "task.". */
+.landing-foot-keep {
+  white-space: nowrap;
 }
 .landing-foot-col {
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: 0.75rem;
 }
 .landing-foot-head {
-  color: var(--text-faint);
-  letter-spacing: 0.02em;
   margin-bottom: 0.25rem;
+  color: var(--text-faint);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
-.landing-foot-col a {
+.landing-foot-col a,
+.landing-foot-button {
+  width: fit-content;
   color: var(--text-dim);
   text-decoration: none;
-  width: fit-content;
   transition: color 150ms ease-out;
 }
-.landing-foot-col a:hover {
+/* Contact opens a dialog, so it's a button dressed as its neighbours. */
+.landing-foot-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.landing-foot-col a:hover,
+.landing-foot-button:hover {
   color: var(--text);
+}
+.landing-foot-col a:focus-visible,
+.landing-foot-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* On the ground, above the photograph: text over a halftone sky can't promise
+   a contrast ratio, and this row has to. */
+.landing-foot-base {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: clamp(2rem, 4vw, 3rem) var(--gutter) 0;
+  font-size: 0.75rem;
+  color: var(--text-faint);
+}
+
+/* Bleeds to the frame's rails and starts below the base row, which keeps its
+   contrast on plain ground; the mask lets it rise out of the page, not an edge. */
+.landing-foot-scene {
+  display: block;
+  width: 100%;
+  height: clamp(13rem, 30vw, 22rem);
+  margin-top: 1rem;
+  object-fit: cover;
+  object-position: center bottom;
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 55%);
+  pointer-events: none;
+  user-select: none;
 }
 
 @media (max-width: 640px) {
-  .landing-foot {
-    grid-template-columns: minmax(0, 1fr);
+  .landing-foot-top {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .landing-foot-brand {
+    grid-column: 1 / -1;
+  }
+  .landing-foot-base {
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+}
+
+/* Square and flat like the rest of the landing; the backdrop dims, never blurs. */
+.contact {
+  width: min(28rem, calc(100vw - 2rem));
+  /* Tailwind's reset zeroes the margin the browser centres a modal with. */
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--border-lit);
+  background: var(--surface);
+  color: var(--text);
+}
+.contact::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
+.contact-panel {
+  padding: 1.25rem 1.25rem 1rem;
+}
+.contact-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.contact-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.contact-close {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  margin-right: -0.5rem;
+  border: 0;
+  background: none;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.contact-close:hover {
+  color: var(--text);
+}
+.contact-lede {
+  margin: 0.5rem 0 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.contact-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--border);
+}
+/* .contact .contact-row outranks the footer column's fit-content links, which
+   the dialog sits inside. */
+.contact .contact-row {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 5.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 0;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--text);
+  text-decoration: none;
+}
+.contact-label {
+  color: var(--text-faint);
+}
+.contact-handle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.contact-arrow {
+  color: var(--text-faint);
+  transition: color 150ms ease-out;
+}
+.contact-row:hover .contact-arrow {
+  color: var(--text);
+}
+.contact-close:focus-visible,
+.contact-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .contact[open] {
+    animation: contact-in 160ms ease-out;
+  }
+}
+@keyframes contact-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
   }
 }

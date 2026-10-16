@@ -67,7 +67,6 @@ function LabHero({ variant }: { variant: "thread" | "terminal" }) {
       </PlayedCtx.Provider>
       <figcaption className="demo-note hero-demo-note">
         <span>
-          Scripted demo, not a live session.
           <span className="sr-only">
             {" "}
             Avi has the wheel while the agent adds a rate limiter. Himanshu suggests running the

@@ -43,6 +43,11 @@ OUTPUTS = [
     # lower half of the source photo carries the frame instead — one real
     # photograph, a genuinely different moment in it, not a repeat.
     ("packages/web/public/trust-ridge.webp", 2400, 720, 0.55),
+    # The footer's landscape: full measure, and tall enough to hold the whole
+    # lower third of the photograph. Shown fading in from the top, so it's the
+    # ridge meeting the far range at the bottom edge that carries it, where the
+    # trust band (masked from below) shows the cloud base instead.
+    ("packages/web/public/foot-ridge.webp", 2400, 960, 0.375),
 ]
 
 # The page ground, from tokens.css --bg. The photograph's black is mapped onto

@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { HeroLab } from "@/components/landing/hero-lab/HeroLab";
 import { RecentSessions } from "@/components/RecentSessions";
 import { CommandBlock } from "@/components/landing/CommandBlock";
+import Image from "next/image";
+import { ContactDialog } from "@/components/landing/ContactDialog";
 import { ProductTour } from "@/components/landing/ProductTour";
 import { TopologyDiagram } from "@/components/landing/TopologyDiagram";
 
@@ -48,7 +50,7 @@ export default function Home() {
             <a className="landing-nav-link" href="#lock">
               What it is
             </a>
-            <a className="landing-nav-link" href="#how">
+            <a className="landing-nav-link" href="#tour">
               How it works
             </a>
             <a
@@ -487,36 +489,66 @@ export default function Home() {
         </section>
 
         <footer className="landing-foot">
-          <div className="landing-foot-brand">
-            <span className="landing-foot-mark">relay</span>
-            <p className="landing-foot-tag">Live agent sessions, shared.</p>
-            <span className="landing-foot-copy">© 2026</span>
+          <div className="landing-foot-top">
+            <div className="landing-foot-brand">
+              <span className="landing-foot-mark">relay</span>
+              <p className="landing-foot-tag">
+                Live agent sessions, shared. One person drives, everyone
+                watches, and the wheel changes hands{" "}
+                <span className="landing-foot-keep">mid-task.</span>
+              </p>
+            </div>
+
+            <nav className="landing-foot-col" aria-label="On this page">
+              <span className="landing-foot-head">Product</span>
+              <a href="#lock">What it is</a>
+              <a href="#tour">How it works</a>
+              <a href="#faq">Questions</a>
+              <a href="#start" onClick={handleGetStarted}>
+                Get started
+              </a>
+            </nav>
+
+            <nav className="landing-foot-col" aria-label="Elsewhere">
+              <span className="landing-foot-head">Resources</span>
+              <a href="https://github.com/Avaya02/Relay" target="_blank" rel="noreferrer">
+                GitHub ↗
+              </a>
+              <a href="https://www.npmjs.com/package/relayrun" target="_blank" rel="noreferrer">
+                relayrun on npm ↗
+              </a>
+              <a
+                href="https://code.claude.com/docs/en/agent-sdk/overview"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Agent SDK ↗
+              </a>
+              <a href="https://github.com/Avaya02/Relay/releases" target="_blank" rel="noreferrer">
+                Changelog ↗
+              </a>
+              <a href="https://github.com/Avaya02/Relay/issues/new" target="_blank" rel="noreferrer">
+                Report an issue ↗
+              </a>
+              <ContactDialog />
+            </nav>
           </div>
 
-          <nav className="landing-foot-col">
-            <span className="landing-foot-head">Elsewhere</span>
-            <a
-              href="https://www.npmjs.com/package/relayrun"
-              target="_blank"
-              rel="noreferrer"
-            >
-              relayrun on npm
-            </a>
-            <a
-              href="https://code.claude.com/docs/en/agent-sdk/overview"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Agent SDK ↗
-            </a>
-          </nav>
+          <div className="landing-foot-base">
+            <span>© 2026 Avaya Sharma</span>
+            <span>Open source, MIT licensed</span>
+          </div>
 
-          <nav className="landing-foot-col">
-            <span className="landing-foot-head">On this page</span>
-            <a href="#lock">What it is</a>
-            <a href="#how">How it works</a>
-            <a href="#faq">Questions</a>
-          </nav>
+          {/* An image, not a CSS background, so it waits for the scroll. Unoptimized:
+              re-encoding lossily smears the halftone screen (prepare-hero-image.py). */}
+          <Image
+            className="landing-foot-scene"
+            src="/foot-ridge.webp"
+            alt=""
+            width={2400}
+            height={960}
+            unoptimized
+          />
         </footer>
       </div>
     </div>

@@ -2,6 +2,8 @@
 .tour-figure {
   margin-inline: 0;
   margin-bottom: 0;
+  /* "How it works" lands here; a little air above the frame on arrival. */
+  scroll-margin-top: 1.5rem;
 }
 
 /* The film's own desk tone, so the frame shows no second grey while it loads. */
